@@ -1,0 +1,9 @@
+{
+    "compilerOptions": {
+        "tsBuildInfoFile": "./node_modules/.cache/node.tsbuildinfo",
+        "lib": ["ESNext"],
+        "allowImportingTsExtensions": true
+    },
+    "include": ["./*.ts", "./*.js", "./*.mjs"],
+    "extends": "../../tsconfig.base.json"
+}

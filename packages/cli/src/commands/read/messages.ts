@@ -1,0 +1,56 @@
+import { Command } from "commander";
+import pc from "picocolors";
+import { createCrawler } from "../../crawler.ts";
+
+export const messagesCommand = new Command("messages")
+    .description("교수님께서 보낸 메시지 목록을 조회합니다")
+    .option("-p, --page <page>", "페이지 번호", "1")
+    .addHelpText(
+        "after",
+        `
+${pc.bold("예시:")}
+  ${pc.green("kampus read messages")}
+  ${pc.green("kampus read messages --page 2")}
+`
+    )
+    .action(async (opts: { page: string }) => {
+        const crawler = createCrawler();
+        const page = parseInt(opts.page, 10) || 1;
+        process.stdout.write(pc.dim("메시지 불러오는 중..."));
+        try {
+            const messages = await crawler.getMessages(page);
+            console.log(
+                `\r${pc.bold(
+                    pc.cyan(
+                        `✉️  메시지 목록 (페이지 ${page}, ${messages.length}건)`
+                    )
+                )}          `
+            );
+            console.log(pc.dim("─".repeat(72)));
+
+            if (messages.length === 0) {
+                console.log(pc.yellow("  조회된 메시지가 없습니다."));
+                return;
+            }
+
+            for (const msg of messages) {
+                const newBadge = msg.isNew
+                    ? `${pc.bgYellow(pc.black(" NEW "))} `
+                    : "      ";
+                console.log(
+                    `  ${newBadge}${pc.bold(msg.senderName)} ${pc.dim(`(ID: ${msg.senderId})`)} - ${pc.dim(msg.time)}`
+                );
+                const preview =
+                    msg.content.length > 60
+                        ? `${msg.content.slice(0, 59)}…`
+                        : msg.content;
+                console.log(`        ${pc.italic(preview)}`);
+                console.log();
+            }
+            console.log(pc.dim("─".repeat(72)));
+        } catch (err: unknown) {
+            const message = err instanceof Error ? err.message : String(err);
+            console.error(`\r${pc.red(`❌ 오류: ${message}`)}`);
+            process.exit(1);
+        }
+    });
