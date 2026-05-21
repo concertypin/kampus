@@ -1,9 +1,17 @@
 {
     "name": "ecampus-monorepo",
     "private": true,
-    "version": "0.0.0",
+    "version": "0.0.1",
     "type": "module",
     "license": "MPL-2.0",
+    "author": {
+        "name": "concertypin",
+        "url": "https://github.com/concertypin"
+    },
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/concertypin/kampus.git"
+    },
     "scripts": {
         "build": "pnpm --filter @concertypin/ecampus-crawler build && pnpm --filter @concertypin/kampus build",
         "dev": "pnpm --filter @concertypin/ecampus-crawler dev",

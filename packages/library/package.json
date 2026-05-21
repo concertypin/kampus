@@ -10,7 +10,8 @@
     },
     "repository": {
         "type": "git",
-        "url": "git+https://github.com/concertypin/assignment.git"
+        "url": "git+https://github.com/concertypin/kampus.git",
+        "directory": "packages/library"
     },
     "main": "./dist/index.js",
     "module": "./dist/index.js",

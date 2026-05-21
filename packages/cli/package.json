@@ -5,7 +5,8 @@
     "license": "MPL-2.0",
     "repository": {
         "type": "git",
-        "url": "git+https://github.com/concertypin/assignment.git"
+        "url": "git+https://github.com/concertypin/kampus.git",
+        "directory": "packages/cli"
     },
     "bin": {
         "kampus": "./dist/index.js"
@@ -13,6 +14,10 @@
     "files": [
         "dist"
     ],
+    "author": {
+        "name": "concertypin",
+        "url": "https://github.com/concertypin"
+    },
     "publishConfig": {
         "access": "public",
         "provenance": true,
