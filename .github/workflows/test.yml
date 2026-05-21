@@ -13,8 +13,8 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        shardIndex: [1, 2] # [1,2,3,4,5...]
-        shardTotal: [2] # [len(shardIndex)]
+        shardIndex: [1, 2]
+        shardTotal: [2]
     steps:
       - uses: actions/checkout@v4
 
@@ -29,7 +29,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: blob-report-${{ matrix.shardIndex }}
-          path: .vitest-reports/*
+          path: packages/library/.vitest-reports/*
           include-hidden-files: true
           retention-days: 1
 
@@ -50,7 +50,7 @@ jobs:
       - name: Download blob reports from GitHub Actions Artifacts
         uses: actions/download-artifact@v4
         with:
-          path: .vitest-reports
+          path: packages/library/.vitest-reports
           pattern: blob-report-*
           merge-multiple: true
 
