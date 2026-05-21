@@ -1,0 +1,27 @@
+name: Publish to npm
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm Environment
+        uses: concertypin/action/pnpm-install@master
+
+      - name: Build packages
+        run: pnpm build
+
+      - name: Publish to npm
+        run: pnpm -r publish --access public --no-git-checks

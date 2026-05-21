@@ -1,0 +1,29 @@
+{
+    "name": "@concertypin/kampus",
+    "version": "0.0.0",
+    "type": "module",
+    "license": "MPL-2.0",
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/concertypin/assignment.git"
+    },
+    "bin": {
+        "kampus": "./dist/index.js"
+    },
+    "publishConfig": {
+        "access": "public",
+        "provenance": true
+    },
+    "scripts": {
+        "dev": "vite build --watch",
+        "build": "vite build",
+        "lint": "oxlint . --fix"
+    },
+    "dependencies": {
+        "commander": "^14.0.0",
+        "picocolors": "^1.1.1"
+    },
+    "devDependencies": {
+        "@concertypin/ecampus-crawler": "workspace:*"
+    }
+}

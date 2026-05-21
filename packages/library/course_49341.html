@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html  dir="ltr" lang="en" xml:lang="en">
+<head>
+    <title>강남대학교 이러닝캠퍼스</title>
+    <link rel="shortcut icon" href="https://ecampus.kangnam.ac.kr/theme/image.php?theme=coursemosv2&amp;component=theme&amp;rev=1771490236&amp;image=favicon" />
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<meta name="keywords" content="moodle, Course: 3D콘텐츠기초프로그래밍" />
+<link rel="stylesheet" type="text/css" href="https://ecampus.kangnam.ac.kr/theme/yui_combo.php?rollup/3.17.2/yui-moodlesimple-min.css" /><script id="firstthemesheet" type="text/css">/** Required in order to fix style inclusion problems in IE with YUI **/</script><link rel="stylesheet" type="text/css" href="https://ecampus.kangnam.ac.kr/theme/styles.php?theme=coursemosv2&amp;rev=1771490236&amp;type=all" />
+<script type="text/javascript">
+//<![CDATA[
+var M = {}; M.yui = {};
+M.pageloadstarttime = new Date();
+M.cfg = {"wwwroot":"https:\/\/ecampus.kangnam.ac.kr","sesskey":"4RmIAmSjtV","loadingicon":"https:\/\/ecampus.kangnam.ac.kr\/theme\/image.php?theme=coursemosv2&component=core&rev=1771490236&image=i%2Floading_small","themerev":"1771490236","slasharguments":0,"theme":"coursemosv2","jsrev":"1771490236","admin":"admin","svgicons":true};var yui1ConfigFn = function(me) {if(/-skin|reset|fonts|grids|base/.test(me.name)){me.type='css';me.path=me.path.replace(/\.js/,'.css');me.path=me.path.replace(/\/yui2-skin/,'/assets/skins/sam/yui2-skin')}};
+var yui2ConfigFn = function(me) {var parts=me.name.replace(/^moodle-/,'').split('-'),component=parts.shift(),module=parts[0],min='-min';if(/-(skin|core)$/.test(me.name)){parts.pop();me.type='css';min=''}
+if(module){var filename=parts.join('-');me.path=component+'/'+module+'/'+filename+min+'.'+me.type}else{me.path=component+'/'+component+'.'+me.type}};
+YUI_config = {"debug":false,"base":"https:\/\/ecampus.kangnam.ac.kr\/lib\/yuilib\/3.17.2\/","comboBase":"https:\/\/ecampus.kangnam.ac.kr\/theme\/yui_combo.php?","combine":true,"filter":null,"insertBefore":"firstthemesheet","groups":{"yui2":{"base":"https:\/\/ecampus.kangnam.ac.kr\/lib\/yuilib\/2in3\/2.9.0\/build\/","comboBase":"https:\/\/ecampus.kangnam.ac.kr\/theme\/yui_combo.php?","combine":true,"ext":false,"root":"2in3\/2.9.0\/build\/","patterns":{"yui2-":{"group":"yui2","configFn":yui1ConfigFn}}},"moodle":{"name":"moodle","base":"https:\/\/ecampus.kangnam.ac.kr\/theme\/yui_combo.php?m\/1771490236\/","combine":true,"comboBase":"https:\/\/ecampus.kangnam.ac.kr\/theme\/yui_combo.php?","ext":false,"root":"m\/1771490236\/","patterns":{"moodle-":{"group":"moodle","configFn":yui2ConfigFn}},"filter":null,"modules":{"moodle-core-actionmenu":{"requires":["base","event","node-event-simulate"]},"moodle-core-blocks":{"requires":["base","node","io","dom","dd","dd-scroll","moodle-core-dragdrop","moodle-core-notification"]},"moodle-core-checknet":{"requires":["base-base","moodle-core-notification-alert","io-base"]},"moodle-core-chooserdialogue":{"requires":["base","panel","moodle-core-notification"]},"moodle-core-dock":{"requires":["base","node","event-custom","event-mouseenter","event-resize","escape","moodle-core-dock-loader","moodle-core-event"]},"moodle-core-dock-loader":{"requires":["escape"]},"moodle-core-dragdrop":{"requires":["base","node","io","dom","dd","event-key","event-focus","moodle-core-notification"]},"moodle-core-event":{"requires":["event-custom"]},"moodle-core-formautosubmit":{"requires":["base","event-key"]},"moodle-core-formchangechecker":{"requires":["base","event-focus","moodle-core-event"]},"moodle-core-handlebars":{"condition":{"trigger":"handlebars","when":"after"}},"moodle-core-languninstallconfirm":{"requires":["base","node","moodle-core-notification-confirm","moodle-core-notification-alert"]},"moodle-core-lockscroll":{"requires":["plugin","base-build"]},"moodle-core-maintenancemodetimer":{"requires":["base","node"]},"moodle-core-notification":{"requires":["moodle-core-notification-dialogue","moodle-core-notification-alert","moodle-core-notification-confirm","moodle-core-notification-exception","moodle-core-notification-ajaxexception"]},"moodle-core-notification-dialogue":{"requires":["base","node","panel","escape","event-key","dd-plugin","moodle-core-widget-focusafterclose","moodle-core-lockscroll"]},"moodle-core-notification-alert":{"requires":["moodle-core-notification-dialogue"]},"moodle-core-notification-confirm":{"requires":["moodle-core-notification-dialogue"]},"moodle-core-notification-exception":{"requires":["moodle-core-notification-dialogue"]},"moodle-core-notification-ajaxexception":{"requires":["moodle-core-notification-dialogue"]},"moodle-core-popuphelp":{"requires":["moodle-core-tooltip"]},"moodle-core-tooltip":{"requires":["base","node","io-base","moodle-core-notification-dialogue","json-parse","widget-position","widget-position-align","event-outside","cache-base"]},"moodle-core_availability-form":{"requires":["base","node","event","event-delegate","panel","moodle-core-notification-dialogue","json"]},"moodle-backup-backupselectall":{"requires":["node","event","node-event-simulate","anim"]},"moodle-backup-confirmcancel":{"requires":["node","node-event-simulate","moodle-core-notification-confirm"]},"moodle-calendar-info":{"requires":["base","node","event-mouseenter","event-key","overlay","moodle-calendar-info-skin"]},"moodle-course-categoryexpander":{"requires":["node","event-key"]},"moodle-course-dragdrop":{"requires":["base","node","io","dom","dd","dd-scroll","moodle-core-dragdrop","moodle-core-notification","moodle-course-coursebase","moodle-course-util"]},"moodle-course-formatchooser":{"requires":["base","node","node-event-simulate"]},"moodle-course-management":{"requires":["base","node","io-base","moodle-core-notification-exception","json-parse","dd-constrain","dd-proxy","dd-drop","dd-delegate","node-event-delegate"]},"moodle-course-modchooser":{"requires":["moodle-core-chooserdialogue","moodle-course-coursebase"]},"moodle-course-toolboxes":{"requires":["node","base","event-key","node","io","moodle-course-coursebase","moodle-course-util"]},"moodle-course-util":{"requires":["node"],"use":["moodle-course-util-base"],"submodules":{"moodle-course-util-base":{},"moodle-course-util-section":{"requires":["node","moodle-course-util-base"]},"moodle-course-util-cm":{"requires":["node","moodle-course-util-base"]}}},"moodle-form-dateselector":{"requires":["base","node","overlay","calendar"]},"moodle-form-passwordunmask":{"requires":[]},"moodle-form-shortforms":{"requires":["node","base","selector-css3","moodle-core-event"]},"moodle-form-showadvanced":{"requires":["node","base","selector-css3"]},"moodle-core_message-messenger":{"requires":["escape","handlebars","io-base","moodle-core-notification-ajaxexception","moodle-core-notification-alert","moodle-core-notification-dialogue","moodle-core-notification-exception"]},"moodle-question-chooser":{"requires":["moodle-core-chooserdialogue"]},"moodle-question-preview":{"requires":["base","dom","event-delegate","event-key","core_question_engine"]},"moodle-question-qbankmanager":{"requires":["node","selector-css3"]},"moodle-question-searchform":{"requires":["base","node"]},"moodle-availability_completion-form":{"requires":["base","node","event","moodle-core_availability-form"]},"moodle-availability_date-form":{"requires":["base","node","event","io","moodle-core_availability-form"]},"moodle-availability_grade-form":{"requires":["base","node","event","moodle-core_availability-form"]},"moodle-availability_group-form":{"requires":["base","node","event","moodle-core_availability-form"]},"moodle-availability_grouping-form":{"requires":["base","node","event","moodle-core_availability-form"]},"moodle-availability_profile-form":{"requires":["base","node","event","moodle-core_availability-form"]},"moodle-qtype_ddimageortext-dd":{"requires":["node","dd","dd-drop","dd-constrain"]},"moodle-qtype_ddimageortext-form":{"requires":["moodle-qtype_ddimageortext-dd","form_filepicker"]},"moodle-qtype_ddmarker-dd":{"requires":["node","event-resize","dd","dd-drop","dd-constrain","graphics"]},"moodle-qtype_ddmarker-form":{"requires":["moodle-qtype_ddmarker-dd","form_filepicker","graphics","escape"]},"moodle-qtype_ddwtos-dd":{"requires":["node","dd","dd-drop","dd-constrain"]},"moodle-qtype_stack-input":{"requires":["node","event-valuechange","moodle-core-event","io","json-parse"]},"moodle-mod_assign-history":{"requires":["node","transition"]},"moodle-mod_forum-subscriptiontoggle":{"requires":["base-base","io-base"]},"moodle-mod_quiz-autosave":{"requires":["base","node","event","event-valuechange","node-event-delegate","io-form"]},"moodle-mod_quiz-dragdrop":{"requires":["base","node","io","dom","dd","dd-scroll","moodle-core-dragdrop","moodle-core-notification","moodle-mod_quiz-quizbase","moodle-mod_quiz-util-base","moodle-mod_quiz-util-page","moodle-mod_quiz-util-slot","moodle-course-util"]},"moodle-mod_quiz-modform":{"requires":["base","node","event"]},"moodle-mod_quiz-questionchooser":{"requires":["moodle-core-chooserdialogue","moodle-mod_quiz-util","querystring-parse"]},"moodle-mod_quiz-quizbase":{"requires":["base","node"]},"moodle-mod_quiz-quizquestionbank":{"requires":["base","event","node","io","io-form","yui-later","moodle-question-qbankmanager","moodle-core-notification-dialogue"]},"moodle-mod_quiz-randomquestion":{"requires":["base","event","node","io","moodle-core-notification-dialogue"]},"moodle-mod_quiz-repaginate":{"requires":["base","event","node","io","moodle-core-notification-dialogue"]},"moodle-mod_quiz-toolboxes":{"requires":["base","node","event","event-key","io","moodle-mod_quiz-quizbase","moodle-mod_quiz-util-slot","moodle-core-notification-ajaxexception"]},"moodle-mod_quiz-util":{"requires":["node","moodle-core-actionmenu"],"use":["moodle-mod_quiz-util-base"],"submodules":{"moodle-mod_quiz-util-base":{},"moodle-mod_quiz-util-slot":{"requires":["node","moodle-mod_quiz-util-base"]},"moodle-mod_quiz-util-page":{"requires":["node","moodle-mod_quiz-util-base"]}}},"moodle-message_airnotifier-toolboxes":{"requires":["base","node","io"]},"moodle-block_navigation-navigation":{"requires":["base","io-base","node","event-synthetic","event-delegate","json-parse"]},"moodle-filter_glossary-autolinker":{"requires":["base","node","io-base","json-parse","event-delegate","overlay","moodle-core-event","moodle-core-notification-alert","moodle-core-notification-exception","moodle-core-notification-ajaxexception"]},"moodle-filter_mathjaxloader-loader":{"requires":["moodle-core-event"]},"moodle-editor_atto-editor":{"requires":["node","transition","io","overlay","escape","event","event-simulate","event-custom","node-event-html5","node-event-simulate","yui-throttle","moodle-core-notification-dialogue","moodle-core-notification-confirm","moodle-editor_atto-rangy","handlebars","timers","querystring-stringify"]},"moodle-editor_atto-plugin":{"requires":["node","base","escape","event","event-outside","handlebars","event-custom","timers","moodle-editor_atto-menu"]},"moodle-editor_atto-menu":{"requires":["moodle-core-notification-dialogue","node","event","event-custom"]},"moodle-editor_atto-rangy":{"requires":[]},"moodle-report_eventlist-eventfilter":{"requires":["base","event","node","node-event-delegate","datatable","autocomplete","autocomplete-filters"]},"moodle-report_loglive-fetchlogs":{"requires":["base","event","node","io","node-event-delegate"]},"moodle-gradereport_grader-gradereporttable":{"requires":["base","node","event","handlebars","overlay","event-hover"]},"moodle-gradereport_history-userselector":{"requires":["escape","event-delegate","event-key","handlebars","io-base","json-parse","moodle-core-notification-dialogue"]},"moodle-tool_capability-search":{"requires":["base","node"]},"moodle-tool_lp-dragdrop-reorder":{"requires":["moodle-core-dragdrop"]},"moodle-tool_monitor-dropdown":{"requires":["base","event","node"]},"moodle-assignfeedback_editpdf-editor":{"requires":["base","event","node","io","graphics","json","event-move","event-resize","transition","querystring-stringify-simple","moodle-core-notification-dialog","moodle-core-notification-exception","moodle-core-notification-ajaxexception"]},"moodle-atto_accessibilitychecker-button":{"requires":["color-base","moodle-editor_atto-plugin"]},"moodle-atto_accessibilityhelper-button":{"requires":["moodle-editor_atto-plugin"]},"moodle-atto_align-button":{"requires":["moodle-editor_atto-plugin"]},"moodle-atto_bold-button":{"requires":["moodle-editor_atto-plugin"]},"moodle-atto_charmap-button":{"requires":["moodle-editor_atto-plugin"]},"moodle-atto_clear-button":{"requires":["moodle-editor_atto-plugin"]},"moodle-atto_collapse-button":{"requires":["moodle-editor_atto-plugin"]},"moodle-atto_coursemosvimeo-button":{"requires":["moodle-editor_atto-plugin"]},"moodle-atto_emoticon-button":{"requires":["moodle-editor_atto-plugin"]},"moodle-atto_equation-button":{"requires":["moodle-editor_atto-plugin","moodle-core-event","io","event-valuechange","tabview","array-extras"]},"moodle-atto_html-button":{"requires":["moodle-editor_atto-plugin","event-valuechange"]},"moodle-atto_image-button":{"requires":["moodle-editor_atto-plugin"]},"moodle-atto_indent-button":{"requires":["moodle-editor_atto-plugin"]},"moodle-atto_italic-button":{"requires":["moodle-editor_atto-plugin"]},"moodle-atto_link-button":{"requires":["moodle-editor_atto-plugin"]},"moodle-atto_managefiles-button":{"requires":["moodle-editor_atto-plugin"]},"moodle-atto_managefiles-usedfiles":{"requires":["node","escape"]},"moodle-atto_media-button":{"requires":["moodle-editor_atto-plugin"]},"moodle-atto_noautolink-button":{"requires":["moodle-editor_atto-plugin"]},"moodle-atto_orderedlist-button":{"requires":["moodle-editor_atto-plugin"]},"moodle-atto_pasteimage-button":{"requires":["moodle-editor_atto-plugin"]},"moodle-atto_pbltemplate-button":{"requires":["moodle-editor_atto-plugin"]},"moodle-atto_poodll-button":{"requires":["moodle-editor_atto-plugin"]},"moodle-atto_rtl-button":{"requires":["moodle-editor_atto-plugin"]},"moodle-atto_strike-button":{"requires":["moodle-editor_atto-plugin"]},"moodle-atto_subscript-button":{"requires":["moodle-editor_atto-plugin"]},"moodle-atto_superscript-button":{"requires":["moodle-editor_atto-plugin"]},"moodle-atto_table-button":{"requires":["moodle-editor_atto-plugin","moodle-editor_atto-menu","event","event-valuechange"]},"moodle-atto_title-button":{"requires":["moodle-editor_atto-plugin"]},"moodle-atto_underline-button":{"requires":["moodle-editor_atto-plugin"]},"moodle-atto_undo-button":{"requires":["moodle-editor_atto-plugin"]},"moodle-atto_unorderedlist-button":{"requires":["moodle-editor_atto-plugin"]}}},"gallery":{"name":"gallery","base":"https:\/\/ecampus.kangnam.ac.kr\/lib\/yuilib\/gallery\/","combine":true,"comboBase":"https:\/\/ecampus.kangnam.ac.kr\/theme\/yui_combo.php?","ext":false,"root":"gallery\/1771490236\/","patterns":{"gallery-":{"group":"gallery"}}}},"modules":{"core_filepicker":{"name":"core_filepicker","fullpath":"https:\/\/ecampus.kangnam.ac.kr\/lib\/javascript.php?rev=1771490236&jsfile=%2Frepository%2Ffilepicker.js","requires":["base","node","node-event-simulate","json","async-queue","io-base","io-upload-iframe","io-form","yui2-treeview","panel","cookie","datatable","datatable-sort","resize-plugin","dd-plugin","escape","moodle-core_filepicker"]},"core_comment":{"name":"core_comment","fullpath":"https:\/\/ecampus.kangnam.ac.kr\/lib\/javascript.php?rev=1771490236&jsfile=%2Fcomment%2Fcomment.js","requires":["base","io-base","node","json","yui2-animation","overlay","escape"]}}};
+M.yui.loader = {modules: {}};
+
+//]]>
+</script>
+
+<meta property="og:type" content="website" />
+<meta property="og:title" content="강남대학교 이캠퍼스(e-Campus)" />
+<meta property="og:description" content="KANGNAM University, Center for Teaching and Learning" />
+<meta property="og:image" content="null" />
+<meta property="og:url" content="http://ecampus.kangnam.ac.kr" />
+
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-R44HCG4DF1"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-R44HCG4DF1');
+</script>    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no, target-densitydpi=medium-dpi, minimal-ui" />
+</head>
+
+<body  id="page-course-view-ubsweeks" class="format-ubsweeks  path-course path-course-view gecko dir-ltr lang-en yui-skin-sam yui3-skin-sam ecampus-kangnam-ac-kr pagelayout-course course-49341 context-797134 category-76 coursemos-layout-course page-xs coursemos-layout-coursehome has-region-side-pre empty-region-side-pre has-region-side-post empty-region-side-post content-only layout-option-langmenu">
+	<div class="skiplinks">
+    <a href="#maincontent" class="skip">Skip to main content</a>
+</div><script type="text/javascript" src="https://ecampus.kangnam.ac.kr/theme/yui_combo.php?rollup/3.17.2/yui-moodlesimple-min.js&amp;rollup/1771490236/mcore-min.js"></script><script type="text/javascript" src="https://ecampus.kangnam.ac.kr/lib/jquery/jquery-1.11.2.min.js"></script>
+<script type="text/javascript" src="https://ecampus.kangnam.ac.kr/lib/jquery/ui-1.12.1/jquery-ui.min.js"></script>
+<script type="text/javascript" src="https://ecampus.kangnam.ac.kr/theme/coursemosv2/jquery/bootstrap.min.js"></script>
+<script type="text/javascript" src="https://ecampus.kangnam.ac.kr/theme/coursemosv2/jquery/jquery.cookie.js"></script>
+<script type="text/javascript" src="https://ecampus.kangnam.ac.kr/theme/coursemosv2/jquery/jquery.validate.min.js"></script>
+<script type="text/javascript" src="https://ecampus.kangnam.ac.kr/theme/coursemosv2/jquery/jquery.validate.methods.js"></script>
+<script type="text/javascript" src="https://ecampus.kangnam.ac.kr/theme/coursemosv2/jquery/jquery.tableHeadFixer.js"></script>
+<script type="text/javascript" src="https://ecampus.kangnam.ac.kr/theme/coursemosv2/jquery/bootstrap-datepicker.js"></script>
+<script type="text/javascript" src="https://ecampus.kangnam.ac.kr/theme/coursemosv2/jquery/jquery-sortable.js"></script>
+<script type="text/javascript" src="https://ecampus.kangnam.ac.kr/theme/coursemosv2/jquery/moment.min.js"></script>
+<script type="text/javascript" src="https://ecampus.kangnam.ac.kr/theme/coursemosv2/jquery/fullcalendar.js"></script>
+<script type="text/javascript" src="https://ecampus.kangnam.ac.kr/theme/coursemosv2/jquery/gcal.js"></script>
+<script type="text/javascript" src="https://ecampus.kangnam.ac.kr/theme/coursemosv2/jquery/jquery.filedownload.js"></script>
+<script type="text/javascript" src="https://ecampus.kangnam.ac.kr/theme/coursemosv2/jquery/timer.jquery.js"></script>
+<script type="text/javascript" src="https://ecampus.kangnam.ac.kr/theme/coursemosv2/jquery/jquery.validate.en.js"></script>
+<script type="text/javascript" src="https://ecampus.kangnam.ac.kr/theme/coursemosv2/jquery/jquery.mCustomScrollbar.concat.min.js"></script>
+<script type="text/javascript" src="https://ecampus.kangnam.ac.kr/theme/coursemosv2/jquery/jquery.headroom.min.js"></script>
+<script type="text/javascript" src="https://ecampus.kangnam.ac.kr/lib/javascript.php?rev=1771490236&amp;jsfile=%2Flib%2Fjavascript-static.js"></script>
+<script type="text/javascript" src="https://ecampus.kangnam.ac.kr/theme/javascript.php?theme=coursemosv2&amp;rev=1771490236&amp;type=head"></script>
+<script type="text/javascript">
+//<![CDATA[
+document.body.className += ' jsenabled';
+//]]>
+</script>
+
+
+<style type="text/css">
+#page-local-agreement .content-agreement { max-width: 980px; }
+#page-local-agreement .content-agreement .agreement-control { text-align: center; }
+body{
+/* 모바일 화면일때 파일 선택도구 보이게 화면조정(jeenlee_190322) */
+ @media (max-width: 767px) {
+	.moodle-dialogue-base .moodle-dialogue-fullscreen .moodle-dialogue-content { top: 91px;}
+	/* 모바일상에 파일첨부 레이아웃 재조정_jeenlee_2019.03.19 */
+	.mobiletheme .file-picker .fp-repo-items {
+    margin: 10px 0 0 0;
+	}
+	.mobiletheme .fp-content-center {
+		padding: 20px 10px;
+	}
+	/* 모바일화면일때 파일첨부가 중앙으로 오도록 수정(jeenlee_190322) */
+	.fp-repo-items .control-group .control-label {
+		display: none;
+	}
+	.fp-repo-items .control-group .controls {
+		margin-left: 100px;
+	}
+ }
+}
+</style>	<script type="text/javascript">
+		theme_coursemosv2.lang = 'en';
+    </script>
+	<div id="page" class="">
+		<div id="page-header">
+			<nav class="navbar navbar-default navbar-fixed-top headroom">
+	<div class="container-fluid">
+		<div class="navbar-brand">
+			<a href="https://ecampus.kangnam.ac.kr" class="logo"><span class="sr-only">CyberCampus</span></a>
+		</div>
+		
+		<div class="usermenu">
+		<ul class="nav nav-pills" role="tablist"><li class="user-info-change"><li class="user_department hidden-xs">EUNCHAN BANG</li><li class="user-info-menu"><a class="user-info-popover" tabindex="0" role="button" data-toggle="popover" data-placement="bottom" title="내정보"><img src="https://ecampus.kangnam.ac.kr/theme/image.php?theme=coursemosv2&amp;component=core&amp;rev=1771490236&amp;image=u%2Ff2" alt="Picture of EUNCHAN BANG" class="userpicture" /></a><div class="user-info-box popover-box"><div class="dropdown dropdown-lang"><a id="user-info-lang" href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false"><img src="https://ecampus.kangnam.ac.kr/theme/image.php?theme=coursemosv2&amp;component=theme_coursemosv2&amp;rev=1771490236&amp;image=flag%2Fen" alt="" />&nbsp;&nbsp;English ‎(en)‎ <span class="caret"></span> </a><ul class="dropdown-menu" aria-labelledby="user-info-lang"><li><a href="https://ecampus.kangnam.ac.kr/course/view.php?id=49341&amp;lang=en" title="English ‎(en)‎" class="a-lang" data-lang="en"><img src="https://ecampus.kangnam.ac.kr/theme/image.php?theme=coursemosv2&amp;component=theme_coursemosv2&amp;rev=1771490236&amp;image=flag%2Fen" alt="en" class="lang_flag" /> English ‎(en)‎</a></li><li><a href="https://ecampus.kangnam.ac.kr/course/view.php?id=49341&amp;lang=ja" title="日本語 ‎(ja)‎" class="a-lang" data-lang="ja"><img src="https://ecampus.kangnam.ac.kr/theme/image.php?theme=coursemosv2&amp;component=theme_coursemosv2&amp;rev=1771490236&amp;image=flag%2Fja" alt="ja" class="lang_flag" /> 日本語 ‎(ja)‎</a></li><li><a href="https://ecampus.kangnam.ac.kr/course/view.php?id=49341&amp;lang=ko" title="한국어 ‎(ko)‎" class="a-lang" data-lang="ko"><img src="https://ecampus.kangnam.ac.kr/theme/image.php?theme=coursemosv2&amp;component=theme_coursemosv2&amp;rev=1771490236&amp;image=flag%2Fko" alt="ko" class="lang_flag" /> 한국어 ‎(ko)‎</a></li><li><a href="https://ecampus.kangnam.ac.kr/course/view.php?id=49341&amp;lang=zh_cn" title="简体中文 ‎(zh_cn)‎" class="a-lang" data-lang="zh_cn"><img src="https://ecampus.kangnam.ac.kr/theme/image.php?theme=coursemosv2&amp;component=theme_coursemosv2&amp;rev=1771490236&amp;image=flag%2Fzh_cn" alt="zh_cn" class="lang_flag" /> 简体中文 ‎(zh_cn)‎</a></li></ul></div><div class="user-info-picture"><img src="https://ecampus.kangnam.ac.kr/theme/image.php?theme=coursemosv2&amp;component=core&amp;rev=1771490236&amp;image=u%2Ff1" alt="Picture of EUNCHAN BANG" class="userpicture" /><h4>EUNCHAN BANG</h4><p class="department">컴퓨터공학부</p></div><ul class="user-info-submenu clearfix"><li class="items"><a href="https://ecampus.kangnam.ac.kr/user/edit.php?id=101943">Update profile</a></li><li class="items"><a href="https://ecampus.kangnam.ac.kr/login/logout.php?sesskey=4RmIAmSjtV">Log out</a></li></ul><ul class="user-info-shortcut"><li><a href="https://ecampus.kangnam.ac.kr/user/files.php">Manage file</a></li></ul></div></li><li class="user-courses"><a class="user-courses-popover icon-a" tabindex="0" role="button" data-toggle="popover" data-placement="bottom"><div class="icon icon-my"></div></a><div class="user-courses-box popover-box"><div class="popover-header">My Course (0)</div><ul class="my-course-lists"><li class="nocourses">Loading...</li></ul><div class="popover-footer"><a href="https://ecampus.kangnam.ac.kr">MY COURSES</a></div></div></li><li class="user-notification"><a class="icon-a user-noti-popover" tabindex="0" role="button" data-toggle="popover" data-placement="bottom" title="알림"><div class="icon icon-noti"></div></a><div class="user-noti-box popover-box"><div class="popover-header"><span>All Notifications</span> <img src="https://ecampus.kangnam.ac.kr/theme/image.php?theme=coursemosv2&amp;component=theme_coursemosv2&amp;rev=1771490236&amp;image=layout%2Fpopover-icon" alt="" class="gear" /></div><div class="user-noti-lists"><div class="nomessage">Loading...</div></div><div class="popover-footer"><a href="https://ecampus.kangnam.ac.kr/local/ubnotification/">View all</a></div></div></li><li class="user-message"><a class="icon-a user-message-popover" tabindex="0" role="button" data-toggle="popover" data-placement="bottom" title="메세지"><div class="icon icon-msg"></div><span class="badge">5</span></a><div class="user-message-box popover-box"><div class="popover-header">Message <img src="https://ecampus.kangnam.ac.kr/theme/image.php?theme=coursemosv2&amp;component=theme_coursemosv2&amp;rev=1771490236&amp;image=layout%2Fpopover-icon" alt="" class="gear" /></div><div class="user-message-lists"><div class="nomessage">Loading...</div></div><div class="popover-footer"><a href="#" class="btn-allread-message">Read all messages.</a><span class="popover-bar">&nbsp;</span><a href="https://ecampus.kangnam.ac.kr/local/ubmessage/">View All</a></div></div></li><li class="user-product"><a class="user-menu-product icon-a" tabindex="0" role="button" data-toggle="popover" title="메뉴"><div class="icon icon-menu"></div></a><div class="hide menu-product"><div class="menu-product-itl"><h5>원격교육지원센터 안내 <a href="https://dec.kangnam.ac.kr/"  target="_blank"><img src="https://ecampus.kangnam.ac.kr/theme/image.php?theme=coursemosv2&amp;component=theme_coursemosv2&amp;rev=1771490236&amp;image=layout%2Fitl_home" alt="" /></a></h5><ul><li><a href="https://ctl.kangnam.ac.kr/main/index.jsp" target="_blank">교수학습지원센터</a></li><li><a href="https://career.kangnam.ac.kr/" target="_blank">진로취창업지원센터</a></li><li><a href="https://jcenter.kangnam.ac.kr/" target="_blank">장애학생지원센터</a></li></ul></div><div class="menu-product-family"><h5>학교 서비스</h5><div class="container-fluid"><div class="row"><div class="col-xs-5"><a href="http://web.kangnam.ac.kr/" target="_blank">강남대학교</a></div><div class="col-xs-7"><a href="https://knusso.kangnam.ac.kr/login.jsp" target="_blank">종합정보시스템</a></div><div class="col-xs-5"><a href="http://kangnam.certpia.com/" target="_blank">인터넷증명발급</a></div><div class="col-xs-7"><a href="https://lib.kangnam.ac.kr/" target="_blank">중앙도서관</a></div><div class="col-xs-5"><a href="https://kangnam.copykiller.com/" target="_blank" title="카피킬러 캠퍼스">카피킬러 캠퍼스</a></div><div class="col-xs-7"><a href="http://www.kmooc.kr/" target="_blank" title="K-MOOC">K-MOOC</a></div><div class="col-xs-5"><a href="https://efolio.kangnam.ac.kr/" target="_blank">e-포트폴리오</a></div><div class="col-xs-7"><a href="https://verius.kangnam.ac.kr/main.do" target="_blank">참인재시스템</a></div></div></div></div></div></li><li class="active user-login user-logout hidden-xs"><a href="https://ecampus.kangnam.ac.kr/login/logout.php?sesskey=4RmIAmSjtV" class="btn btn-person">Log out</a></li></ul>		</div>
+		
+		<div class="coursename"><h1><a href="https://ecampus.kangnam.ac.kr/course/view.php?id=49341">Introduction to 3D Content Programming[01]</a></h1></div>	</div>
+</nav>		</div>
+		
+		<div id="page-lnb">
+			<ul class="left-menus">
+	<li class=""><a href="https://ecampus.kangnam.ac.kr" class="left-menu-link left-menu-link-mypage" title="My Page" data-toggle="tooltip" data-placement="right"><h5 class="">My Page</h5></a><ul><li class=""><a href="https://ecampus.kangnam.ac.kr" title="">Dashboard</a></li><li class=""><a href="https://ecampus.kangnam.ac.kr/user/files.php" title="">Manage file</a></li><li class=""><a href="https://ecampus.kangnam.ac.kr/mod/ubboard/my.php" title="">Notice Board</a></li><li class=""><a href="https://ecampus.kangnam.ac.kr/user/edit.php?id=101943" title="">Update profile</a></li></ul></li><li class=""><a href="https://ecampus.kangnam.ac.kr" class="left-menu-link left-menu-link-mycourses" title="Curriculum" data-toggle="tooltip" data-placement="right"><h5 class="">Curriculum</h5></a><ul><li class=""><a href="https://ecampus.kangnam.ac.kr/local/ubion/user/?ctype=R" title="">My Course</a></li><li class=""><a href="https://ecampus.kangnam.ac.kr/local/ubassistant/" title="">Assistant/Auditor Request</a></li></ul></li><li class=""><a href="https://ecampus.kangnam.ac.kr/local/ubonline/" class="left-menu-link left-menu-link-online" title="Non-curriculum" data-toggle="tooltip" data-placement="right"><h5 class="">Non-curriculum</h5></a><ul><li class=""><a href="https://ecampus.kangnam.ac.kr/local/ubonline/my.php" title="">My Course</a></li><li class=""><a href="https://ecampus.kangnam.ac.kr/local/ubonline/" title="">Enrollment</a></li><li class=""><a href="https://ecampus.kangnam.ac.kr/local/ubonline/history.php" title="">Completion Check</a></li></ul></li><li class=""><a href="https://ecampus.kangnam.ac.kr/local/ubeclass/my.php" class="left-menu-link left-menu-link-eclass" title="e-Class" data-toggle="tooltip" data-placement="right"><h5 class="nosubmenu">e-Class</h5></a></li><li class=""><a href="https://ecampus.kangnam.ac.kr/local/ubmessage/" class="left-menu-link left-menu-link-message" title="Message" data-toggle="tooltip" data-placement="right"><h5 class="nosubmenu">Message</h5></a></li><li class=""><a href="https://ecampus.kangnam.ac.kr/mod/ubboard/view.php?id=1" class="left-menu-link left-menu-link-guide" title="Guide" data-toggle="tooltip" data-placement="right"><h5 class="">Guide</h5></a><ul><li class=""><a href="https://ecampus.kangnam.ac.kr/mod/ubboard/view.php?id=1" title="">Announcements</a></li><li class=""><a href="https://ecampus.kangnam.ac.kr/mod/ubboard/view.php?id=2" title="">Q&A</a></li><li class=""><a href="https://ecampus.kangnam.ac.kr/mod/ubboard/view.php?id=3" title="">FAQ</a></li><li class=""><a href="https://ecampus.kangnam.ac.kr/local/ubion/manual/" title="">Manual</a></li></ul></li></ul>
+
+<div class="left-banner">
+<div class="itl_info"><h5>Call us</h5><div class="itl_desc"><p class="tell">031-280-3446<br/>031-280-3447<br/>031-280-3448</p><p class="name">E-learning Support</p></div></div></div>
+<div class="app-link">
+    <a href="https://play.google.com/store/apps/details?id=kr.coursemos.android2" class="margin" target="_blank" title="android">
+        <img src="https://ecampus.kangnam.ac.kr/theme/image.php?theme=coursemosv2&amp;component=theme_coursemosv2&amp;rev=1771490236&amp;image=layout%2Fapp_android" alt="android" class="img-default" />
+        <img src="https://ecampus.kangnam.ac.kr/theme/image.php?theme=coursemosv2&amp;component=theme_coursemosv2&amp;rev=1771490236&amp;image=layout%2Fapp_mobile_android" alt="android" class="img-small" />
+    </a>
+    <a href="https://apps.apple.com/kr/app/koseumoseu2/id1142523906?l=en" target="_blank" title="ios">
+        <img src="https://ecampus.kangnam.ac.kr/theme/image.php?theme=coursemosv2&amp;component=theme_coursemosv2&amp;rev=1771490236&amp;image=layout%2Fapp_ios" alt="android" class="img-default" />
+        <img src="https://ecampus.kangnam.ac.kr/theme/image.php?theme=coursemosv2&amp;component=theme_coursemosv2&amp;rev=1771490236&amp;image=layout%2Fapp_mobile_ios" alt="android" class="img-small" />
+    </a>
+</div>		</div>
+		<div id="page-mask">
+						<div id="page-container" class="">
+								<div class="course-header ">	
+					<div class="professor-info">
+						<div class="container-fluid">
+							<div class="row">
+								<div class="col-sm-8 col-profinfo">
+																		
+									<div class="media">
+										<div class="media-left media-middle">
+											<img src="https://ecampus.kangnam.ac.kr/pluginfile.php?file=%2F417494%2Fuser%2Ficon%2Fcoursemosv2%2Ff1&amp;rev=12166688" alt="WOONG CHOI" />										</div>
+										<div class="media-body">
+																						<h4 class="media-heading">
+												WOONG CHOI											</h4>
+											
+																						
+											<ul class="prof_menus">
+												
+																							</ul>
+										</div>
+									</div>
+								</div>
+								<div class="col-sm-4 upcommings hidden-xs"><div class="pull-right"><a href="https://ecampus.kangnam.ac.kr/mod/ubboard/view.php?id=647637" class="more">More</a></div><h4>Announcements</h4><ul><li><a href="https://ecampus.kangnam.ac.kr/mod/ubboard/article.php?id=647637&bwid=253107"><span class="date" title="10/05/26">10/05/26</span><h5 title="[중요]주간 활동보고서 작성 및 제출">[중요]주간 활동보고서 작성 및 제출</h5></a></li><li><a href="https://ecampus.kangnam.ac.kr/mod/ubboard/article.php?id=647637&bwid=253106"><span class="date" title="10/05/26">10/05/26</span><h5 title="[중요]기여도점수">[중요]기여도점수</h5></a></li><li><a href="https://ecampus.kangnam.ac.kr/mod/ubboard/article.php?id=647637&bwid=253105"><span class="date" title="10/05/26">10/05/26</span><h5 title="[중요]중간발표에 관해서">[중요]중간발표에 관해서</h5></a></li><li><a href="https://ecampus.kangnam.ac.kr/mod/ubboard/article.php?id=647637&bwid=248614"><span class="date" title="15/04/26">15/04/26</span><h5 title="[중요]중간고사 및 시험범위">[중요]중간고사 및 시험범위</h5></a></li></ul></div>							</div>
+						</div>
+					</div>
+									</div>
+				<div id="page-submenu">
+	<div id="coursemos-course-menu">
+		<ul class="course-menus">
+			<li>
+	<div class="block block-coursemos block-coursehome "  data-name="coursehome">
+		<div class="header">
+			<div class="block_action">
+				<img class="block-hider-hide" alt="Hide block" src="https://ecampus.kangnam.ac.kr/theme/image.php?theme=coursemosv2&amp;component=core&amp;rev=1771490236&amp;image=t%2Fswitch_minus" title="Hide block" />
+				<img class="block-hider-show" alt="Show block" src="https://ecampus.kangnam.ac.kr/theme/image.php?theme=coursemosv2&amp;component=core&amp;rev=1771490236&amp;image=t%2Fswitch_plus" title="Show block" />
+			</div>
+			<h2><a href="https://ecampus.kangnam.ac.kr/course/view.php?id=49341">Course Home</a></h2>
+		</div>
+		<div class="content">
+						<ul class="topmenu">
+				<li class="expand"><a href="#" title="Course Info" class="" >Course Info <span class="caret"></span></a><ul><li><a href="#"  title='Syllabus' class='submenu-syllabus' onclick="window.open('https://app.kangnam.ac.kr/knumis/sbr/syllabus2020.jsp?schl_year=2026&schl_smst=1&subj_numb=EA04102&lctr_clas=01&empl_numb=108985&rz=CHq9M6li62xueCscUSp/sw==','copyright','width=850,height=650,scrollbars=yes,left='+(screen.availWidth/2-300)+',top='+(screen.availHeight/2-375)+''); return false;">Syllabus</a></li></ul></li><li class="expand"><a href="#" title="Grade/Attendance" class="" >Grade/Attendance <span class="caret"></span></a><ul><li><a href="https://ecampus.kangnam.ac.kr/report/ubcompletion/progress.php?id=49341" title="Online-Attendance" class="submenu-progress " >Online-Attendance</a></li><li><a href="https://ecampus.kangnam.ac.kr/grade/report/user/index.php?id=49341" title="Grades" class="submenu-grade " >Grades</a></li></ul></li><li class=""><a href="#" title="Students Notifications" class="" >Students Notifications <span class="caret"></span></a><ul><li><a href="https://ecampus.kangnam.ac.kr/local/ubmessage/send.php?id=49341" title="Sending Message" class="submenu-message " >Sending Message</a></li></ul></li><li class=""><a href="#" title="Others" class="" >Others <span class="caret"></span></a><ul><li><a href="https://ecampus.kangnam.ac.kr/local/ubcommunication/group/user_group.php?id=49341" title="Group members" class="submenu-group_member " >Group members</a></li></ul></li>			</ul>
+			
+					</div>
+	</div>
+</li>
+	<li>
+		<div class="block block-coursemos block-quick-mod "  data-name="quick-mod">
+			<div class="header">
+				<div class="block_action">
+					<img class="block-hider-hide" alt="Hide block" src="https://ecampus.kangnam.ac.kr/theme/image.php?theme=coursemosv2&amp;component=core&amp;rev=1771490236&amp;image=t%2Fswitch_minus" title="Hide block" />
+					<img class="block-hider-show" alt="Show block" src="https://ecampus.kangnam.ac.kr/theme/image.php?theme=coursemosv2&amp;component=core&amp;rev=1771490236&amp;image=t%2Fswitch_plus" title="Show block" />
+				</div>
+				<h2>Activities/Resources</h2>
+			</div>
+			<div class="content">
+				<ul class="add_activities">
+					<li><img src="https://ecampus.kangnam.ac.kr/theme/image.php?theme=coursemosv2&amp;component=assign&amp;rev=1771490236&amp;image=icon" alt="" class="moduleicon" /> <a href="https://ecampus.kangnam.ac.kr/mod/assign/index.php?id=49341">Assignment</a></li><li><img src="https://ecampus.kangnam.ac.kr/theme/image.php?theme=coursemosv2&amp;component=ubfile&amp;rev=1771490236&amp;image=icon" alt="" class="moduleicon" /> <a href="https://ecampus.kangnam.ac.kr/mod/ubfile/index.php?id=49341">file</a></li><li class="extra_modules"><img src="https://ecampus.kangnam.ac.kr/theme/image.php?theme=coursemosv2&amp;component=ubboard&amp;rev=1771490236&amp;image=icon" alt="" class="moduleicon" /> <a href="https://ecampus.kangnam.ac.kr/mod/ubboard/index.php?id=49341">Board</a></li>				</ul>
+							</div>
+		</div>
+	</li>
+		<li>
+		<div class="block block-course-sections block-coursemos "  data-name="course-sections">
+			<div class="header">
+				<div class="block_action">
+					<img class="block-hider-hide" alt="Hide block" src="https://ecampus.kangnam.ac.kr/theme/image.php?theme=coursemosv2&amp;component=core&amp;rev=1771490236&amp;image=t%2Fswitch_minus" title="Hide block" />
+					<img class="block-hider-show" alt="Show block" src="https://ecampus.kangnam.ac.kr/theme/image.php?theme=coursemosv2&amp;component=core&amp;rev=1771490236&amp;image=t%2Fswitch_plus" title="Show block" />
+				</div>
+				<h2>Course Contents</h2>
+			</div>
+		
+			<div class="content mCustomScrollbar">
+				
+				<ul class="sections "><li class="section-item "><a href="https://ecampus.kangnam.ac.kr/course/view.php?id=49341#section-0" title="Course Summary" class="btn-modedit">Course Summary</a><span class="weekinfo small" title="24 February ~ 02 March">24 February ~ 02 March</span></li><li class="section-item "><a href="https://ecampus.kangnam.ac.kr/course/view.php?id=49341#section-1" title="1주차" class="btn-modedit">1주차</a><span class="weekinfo small" title=""></span></li><li class="section-item "><a href="https://ecampus.kangnam.ac.kr/course/view.php?id=49341#section-2" title="2주차" class="btn-modedit">2주차</a><span class="weekinfo small" title=""></span></li><li class="section-item "><a href="https://ecampus.kangnam.ac.kr/course/view.php?id=49341#section-3" title="3주차" class="btn-modedit">3주차</a><span class="weekinfo small" title=""></span></li><li class="section-item "><a href="https://ecampus.kangnam.ac.kr/course/view.php?id=49341#section-4" title="4주차" class="btn-modedit">4주차</a><span class="weekinfo small" title=""></span></li><li class="section-item "><a href="https://ecampus.kangnam.ac.kr/course/view.php?id=49341#section-5" title="5주차" class="btn-modedit">5주차</a><span class="weekinfo small" title=""></span></li><li class="section-item "><a href="https://ecampus.kangnam.ac.kr/course/view.php?id=49341#section-6" title="6주차" class="btn-modedit">6주차</a><span class="weekinfo small" title=""></span></li><li class="section-item "><a href="https://ecampus.kangnam.ac.kr/course/view.php?id=49341#section-7" title="7주차" class="btn-modedit">7주차</a><span class="weekinfo small" title=""></span></li><li class="section-item "><a href="https://ecampus.kangnam.ac.kr/course/view.php?id=49341#section-8" title="8주차" class="btn-modedit">8주차</a><span class="weekinfo small" title=""></span></li><li class="section-item "><a href="https://ecampus.kangnam.ac.kr/course/view.php?id=49341#section-9" title="9주차" class="btn-modedit">9주차</a><span class="weekinfo small" title=""></span></li><li class="section-item "><a href="https://ecampus.kangnam.ac.kr/course/view.php?id=49341#section-10" title="10주차" class="btn-modedit">10주차</a><span class="weekinfo small" title=""></span></li><li class="section-item "><a href="https://ecampus.kangnam.ac.kr/course/view.php?id=49341#section-11" title="11주차" class="btn-modedit">11주차</a><span class="weekinfo small" title=""></span></li><li class="section-item current"><a href="https://ecampus.kangnam.ac.kr/course/view.php?id=49341#section-12" title="12주차" class="btn-modedit">12주차</a><span class="weekinfo small" title=""></span></li><li class="section-item "><a href="https://ecampus.kangnam.ac.kr/course/view.php?id=49341#section-13" title="13주차" class="btn-modedit">13주차</a><span class="weekinfo small" title=""></span></li><li class="section-item "><a href="https://ecampus.kangnam.ac.kr/course/view.php?id=49341#section-14" title="14주차" class="btn-modedit">14주차</a><span class="weekinfo small" title=""></span></li><li class="section-item "><a href="https://ecampus.kangnam.ac.kr/course/view.php?id=49341#section-15" title="15주차" class="btn-modedit">15주차</a><span class="weekinfo small" title=""></span></li></ul>			</div>
+		</div>
+	</li>
+			</ul>
+		<aside id="block-region-side-pre" class="block-region" data-blockregion="side-pre" data-droptarget="1"></aside>        <aside id="block-region-side-post" class="block-region" data-blockregion="side-post" data-droptarget="1"></aside>	</div>
+	
+</div>
+				
+				
+				<div id="page-content" class="clearfix">
+					<div id="page-content-wrap">
+												<div id="region-main">
+							<span class="notifications" id="user-notifications"></span><div role="main"><span id="maincontent"></span><div class="course-content"><div class="course_box course_box0"><h2 class="main">Course Summary</h2><ul class="weeks ubsweeks"><li id="section-0" class="section main clearfix" role="region" aria-label="Course Summary"><span class="hidden sectionname">Course Summary</span><div class="left side"><img width="1" height="1" class="spacer" alt="" src="https://ecampus.kangnam.ac.kr/theme/image.php?theme=coursemosv2&amp;component=core&amp;rev=1771490236&amp;image=spacer"/></div><div class="right side"><img width="1" height="1" class="spacer" alt="" src="https://ecampus.kangnam.ac.kr/theme/image.php?theme=coursemosv2&amp;component=core&amp;rev=1771490236&amp;image=spacer"/></div><div class="content"><h3 class="sectionname accesshide"><span><a href="https://ecampus.kangnam.ac.kr/course/view.php?id=49341#section-0">Course Summary</a></span></h3><div class="summary"></div><ul class="section img-text"><li class="activity ubboard modtype_ubboard " id="module-647637"><div class=""><div class="mod-indent-outer"><div class="mod-indent"></div><div><div class="activityinstance"><a class="" onclick="" href="https://ecampus.kangnam.ac.kr/mod/ubboard/view.php?id=647637"><img src="https://ecampus.kangnam.ac.kr/theme/image.php?theme=coursemosv2&amp;component=local_ubion&amp;rev=1771490236&amp;image=course_format%2Fmod_icon%2Fubboard_notice" alt="Board" class="activityicon" /><span class="instancename">공지사항<span class="accesshide " > Board</span></span></a></div></div></div></div></li><li class="activity ubboard modtype_ubboard " id="module-647638"><div class=""><div class="mod-indent-outer"><div class="mod-indent"></div><div><div class="activityinstance"><a class="" onclick="" href="https://ecampus.kangnam.ac.kr/mod/ubboard/view.php?id=647638"><img src="https://ecampus.kangnam.ac.kr/theme/image.php?theme=coursemosv2&amp;component=local_ubion&amp;rev=1771490236&amp;image=course_format%2Fmod_icon%2Fubboard_qna" alt="Board" class="activityicon" /><span class="instancename">강좌 Q&amp;A<span class="accesshide " > Board</span></span></a></div></div></div></div></li></ul></div></li></ul></div><div class="course_box course_box_current"><h2 class="main">Current week course</h2><ul class="weeks ubsweeks"><li id="section-12" class="section main clearfix current" role="region" aria-label="12주차"><span class="hidden sectionname">12주차</span><div class="left side"><span class="accesshide " >This week</span></div><div class="right side"><img width="1" height="1" class="spacer" alt="" src="https://ecampus.kangnam.ac.kr/theme/image.php?theme=coursemosv2&amp;component=core&amp;rev=1771490236&amp;image=spacer"/></div><div class="content"><h3 class="sectionname"><span><a href="https://ecampus.kangnam.ac.kr/course/view.php?id=49341#section-12">12주차</a></span></h3><div class="summary"></div><ul class="section img-text"><li class="activity assign modtype_assign " id="module-677173"><div class=""><div class="mod-indent-outer"><div class="mod-indent"></div><div><div class="activityinstance"><a class="" onclick="" href="https://ecampus.kangnam.ac.kr/mod/assign/view.php?id=677173"><img src="https://ecampus.kangnam.ac.kr/theme/image.php?theme=coursemosv2&amp;component=assign&amp;rev=1771490236&amp;image=icon" alt="Assignment" class="activityicon" /><span class="instancename">12주차 활동보고서<span class="accesshide " > Assignment</span></span></a></div></div></div></div></li></ul></div></li></ul></div><div class="user_attendance course_box"><h2 class="main">Progress status</h2><div class="user_attendance_table"><ul class="attendance"><li class="attendance_section inactive piece_15""><p class="sname" data-target="1">1</p>-</li><li class="attendance_section inactive piece_15""><p class="sname" data-target="2">2</p>-</li><li class="attendance_section inactive piece_15""><p class="sname" data-target="3">3</p>-</li><li class="attendance_section inactive piece_15""><p class="sname" data-target="4">4</p>-</li><li class="attendance_section inactive piece_15""><p class="sname" data-target="5">5</p>-</li><li class="attendance_section inactive piece_15""><p class="sname" data-target="6">6</p>-</li><li class="attendance_section inactive piece_15""><p class="sname" data-target="7">7</p>-</li><li class="attendance_section inactive piece_15""><p class="sname" data-target="8">8</p>-</li><li class="attendance_section inactive piece_15""><p class="sname" data-target="9">9</p>-</li><li class="attendance_section inactive piece_15""><p class="sname" data-target="10">10</p>-</li><li class="attendance_section inactive piece_15""><p class="sname" data-target="11">11</p>-</li><li class="attendance_section inactive piece_15""><p class="sname" data-target="12">12</p>-</li><li class="attendance_section inactive piece_15""><p class="sname" data-target="13">13</p>-</li><li class="attendance_section inactive piece_15""><p class="sname" data-target="14">14</p>-</li><li class="attendance_section inactive piece_15""><p class="sname" data-target="15">15</p>-</li>	</ul><div class="att_count"><p class="count01">Attendance<span> 0</span></p><p class="count02">Absence<span> 0</span></p></div></div><p style="margin:10px">- 진도 현황은 주차별 영상의 재생 결과를 안내하기 위한 서비스로 온라인강좌를 수강하면 실시간으로 출석 여부가 자동 기록되며 익일 본교의 전자출결시스템에 반영됩니다.<br/>
+- 진도 현황은 실제 성적에 반영되는 출결과 다를 수 있으니 최종 출석 결과는 반드시 모바일 전자출결시스템을 통해 확인해 주시기 바랍니다.</p></div><div class="total_sections"><div class="course_box"><div class="course-filter"><select id="select-course-filter" class="form-control form-control-auto"><option value="">All</option><option value="assign">Assignment</option><option value="ubboard">Board</option><option value="ubfile">file</option></select></div><h2 class="main">All week course<span class="icons"></span></h2><ul class="weeks ubsweeks"><li id="section-1" class="section main clearfix" role="region" aria-label="1주차"><span class="hidden sectionname">1주차</span><div class="left side"><img width="1" height="1" class="spacer" alt="" src="https://ecampus.kangnam.ac.kr/theme/image.php?theme=coursemosv2&amp;component=core&amp;rev=1771490236&amp;image=spacer"/></div><div class="right side"><img width="1" height="1" class="spacer" alt="" src="https://ecampus.kangnam.ac.kr/theme/image.php?theme=coursemosv2&amp;component=core&amp;rev=1771490236&amp;image=spacer"/></div><div class="content"><h3 class="sectionname"><span><a href="https://ecampus.kangnam.ac.kr/course/view.php?id=49341#section-1">1주차</a></span></h3><div class="summary"></div><ul class="section img-text"><li class="activity ubfile modtype_ubfile " id="module-647639"><div class=""><div class="mod-indent-outer"><div class="mod-indent"></div><div><div class="activityinstance"><a class="" onclick="" href="https://ecampus.kangnam.ac.kr/mod/ubfile/view.php?id=647639"><img src="https://ecampus.kangnam.ac.kr/theme/image.php?theme=coursemosv2&amp;component=core&amp;rev=1771490236&amp;image=f%2Fpdf-24" alt="file" class="activityicon" /><span class="instancename">강의자료<span class="accesshide " > file</span></span></a> <span class="displayoptions"><span class="text-info">&nbsp;2.2MB PDF document</span></span></div></div></div></div></li></ul></div></li><li id="section-2" class="section main clearfix" role="region" aria-label="2주차"><span class="hidden sectionname">2주차</span><div class="left side"><img width="1" height="1" class="spacer" alt="" src="https://ecampus.kangnam.ac.kr/theme/image.php?theme=coursemosv2&amp;component=core&amp;rev=1771490236&amp;image=spacer"/></div><div class="right side"><img width="1" height="1" class="spacer" alt="" src="https://ecampus.kangnam.ac.kr/theme/image.php?theme=coursemosv2&amp;component=core&amp;rev=1771490236&amp;image=spacer"/></div><div class="content"><h3 class="sectionname"><span><a href="https://ecampus.kangnam.ac.kr/course/view.php?id=49341#section-2">2주차</a></span></h3><div class="summary"></div><ul class="section img-text"><li class="activity ubfile modtype_ubfile " id="module-652405"><div class=""><div class="mod-indent-outer"><div class="mod-indent"></div><div><div class="activityinstance"><a class="" onclick="" href="https://ecampus.kangnam.ac.kr/mod/ubfile/view.php?id=652405"><img src="https://ecampus.kangnam.ac.kr/theme/image.php?theme=coursemosv2&amp;component=core&amp;rev=1771490236&amp;image=f%2Fpdf-24" alt="file" class="activityicon" /><span class="instancename">강의자료<span class="accesshide " > file</span></span></a> <span class="displayoptions"><span class="text-info">&nbsp;85.5KB PDF document</span></span></div></div></div></div></li></ul></div></li><li id="section-3" class="section main clearfix" role="region" aria-label="3주차"><span class="hidden sectionname">3주차</span><div class="left side"><img width="1" height="1" class="spacer" alt="" src="https://ecampus.kangnam.ac.kr/theme/image.php?theme=coursemosv2&amp;component=core&amp;rev=1771490236&amp;image=spacer"/></div><div class="right side"><img width="1" height="1" class="spacer" alt="" src="https://ecampus.kangnam.ac.kr/theme/image.php?theme=coursemosv2&amp;component=core&amp;rev=1771490236&amp;image=spacer"/></div><div class="content"><h3 class="sectionname"><span><a href="https://ecampus.kangnam.ac.kr/course/view.php?id=49341#section-3">3주차</a></span></h3><div class="summary"></div></div></li><li id="section-4" class="section main clearfix" role="region" aria-label="4주차"><span class="hidden sectionname">4주차</span><div class="left side"><img width="1" height="1" class="spacer" alt="" src="https://ecampus.kangnam.ac.kr/theme/image.php?theme=coursemosv2&amp;component=core&amp;rev=1771490236&amp;image=spacer"/></div><div class="right side"><img width="1" height="1" class="spacer" alt="" src="https://ecampus.kangnam.ac.kr/theme/image.php?theme=coursemosv2&amp;component=core&amp;rev=1771490236&amp;image=spacer"/></div><div class="content"><h3 class="sectionname"><span><a href="https://ecampus.kangnam.ac.kr/course/view.php?id=49341#section-4">4주차</a></span></h3><div class="summary"></div></div></li><li id="section-5" class="section main clearfix" role="region" aria-label="5주차"><span class="hidden sectionname">5주차</span><div class="left side"><img width="1" height="1" class="spacer" alt="" src="https://ecampus.kangnam.ac.kr/theme/image.php?theme=coursemosv2&amp;component=core&amp;rev=1771490236&amp;image=spacer"/></div><div class="right side"><img width="1" height="1" class="spacer" alt="" src="https://ecampus.kangnam.ac.kr/theme/image.php?theme=coursemosv2&amp;component=core&amp;rev=1771490236&amp;image=spacer"/></div><div class="content"><h3 class="sectionname"><span><a href="https://ecampus.kangnam.ac.kr/course/view.php?id=49341#section-5">5주차</a></span></h3><div class="summary"></div></div></li><li id="section-6" class="section main clearfix" role="region" aria-label="6주차"><span class="hidden sectionname">6주차</span><div class="left side"><img width="1" height="1" class="spacer" alt="" src="https://ecampus.kangnam.ac.kr/theme/image.php?theme=coursemosv2&amp;component=core&amp;rev=1771490236&amp;image=spacer"/></div><div class="right side"><img width="1" height="1" class="spacer" alt="" src="https://ecampus.kangnam.ac.kr/theme/image.php?theme=coursemosv2&amp;component=core&amp;rev=1771490236&amp;image=spacer"/></div><div class="content"><h3 class="sectionname"><span><a href="https://ecampus.kangnam.ac.kr/course/view.php?id=49341#section-6">6주차</a></span></h3><div class="summary"></div></div></li><li id="section-7" class="section main clearfix" role="region" aria-label="7주차"><span class="hidden sectionname">7주차</span><div class="left side"><img width="1" height="1" class="spacer" alt="" src="https://ecampus.kangnam.ac.kr/theme/image.php?theme=coursemosv2&amp;component=core&amp;rev=1771490236&amp;image=spacer"/></div><div class="right side"><img width="1" height="1" class="spacer" alt="" src="https://ecampus.kangnam.ac.kr/theme/image.php?theme=coursemosv2&amp;component=core&amp;rev=1771490236&amp;image=spacer"/></div><div class="content"><h3 class="sectionname"><span><a href="https://ecampus.kangnam.ac.kr/course/view.php?id=49341#section-7">7주차</a></span></h3><div class="summary"></div></div></li><li id="section-8" class="section main clearfix" role="region" aria-label="8주차"><span class="hidden sectionname">8주차</span><div class="left side"><img width="1" height="1" class="spacer" alt="" src="https://ecampus.kangnam.ac.kr/theme/image.php?theme=coursemosv2&amp;component=core&amp;rev=1771490236&amp;image=spacer"/></div><div class="right side"><img width="1" height="1" class="spacer" alt="" src="https://ecampus.kangnam.ac.kr/theme/image.php?theme=coursemosv2&amp;component=core&amp;rev=1771490236&amp;image=spacer"/></div><div class="content"><h3 class="sectionname"><span><a href="https://ecampus.kangnam.ac.kr/course/view.php?id=49341#section-8">8주차</a></span></h3><div class="summary"></div></div></li><li id="section-9" class="section main clearfix" role="region" aria-label="9주차"><span class="hidden sectionname">9주차</span><div class="left side"><img width="1" height="1" class="spacer" alt="" src="https://ecampus.kangnam.ac.kr/theme/image.php?theme=coursemosv2&amp;component=core&amp;rev=1771490236&amp;image=spacer"/></div><div class="right side"><img width="1" height="1" class="spacer" alt="" src="https://ecampus.kangnam.ac.kr/theme/image.php?theme=coursemosv2&amp;component=core&amp;rev=1771490236&amp;image=spacer"/></div><div class="content"><h3 class="sectionname"><span><a href="https://ecampus.kangnam.ac.kr/course/view.php?id=49341#section-9">9주차</a></span></h3><div class="summary"></div><ul class="section img-text"><li class="activity ubfile modtype_ubfile " id="module-670794"><div class=""><div class="mod-indent-outer"><div class="mod-indent"></div><div><div class="activityinstance"><a class="" onclick="" href="https://ecampus.kangnam.ac.kr/mod/ubfile/view.php?id=670794"><img src="https://ecampus.kangnam.ac.kr/theme/image.php?theme=coursemosv2&amp;component=core&amp;rev=1771490236&amp;image=f%2Fpdf-24" alt="file" class="activityicon" /><span class="instancename">강의자료<span class="accesshide " > file</span></span></a> <span class="displayoptions"><span class="text-info">&nbsp;454KB PDF document</span></span></div></div></div></div></li></ul></div></li><li id="section-10" class="section main clearfix" role="region" aria-label="10주차"><span class="hidden sectionname">10주차</span><div class="left side"><img width="1" height="1" class="spacer" alt="" src="https://ecampus.kangnam.ac.kr/theme/image.php?theme=coursemosv2&amp;component=core&amp;rev=1771490236&amp;image=spacer"/></div><div class="right side"><img width="1" height="1" class="spacer" alt="" src="https://ecampus.kangnam.ac.kr/theme/image.php?theme=coursemosv2&amp;component=core&amp;rev=1771490236&amp;image=spacer"/></div><div class="content"><h3 class="sectionname"><span><a href="https://ecampus.kangnam.ac.kr/course/view.php?id=49341#section-10">10주차</a></span></h3><div class="summary"></div></div></li><li id="section-11" class="section main clearfix" role="region" aria-label="11주차"><span class="hidden sectionname">11주차</span><div class="left side"><img width="1" height="1" class="spacer" alt="" src="https://ecampus.kangnam.ac.kr/theme/image.php?theme=coursemosv2&amp;component=core&amp;rev=1771490236&amp;image=spacer"/></div><div class="right side"><img width="1" height="1" class="spacer" alt="" src="https://ecampus.kangnam.ac.kr/theme/image.php?theme=coursemosv2&amp;component=core&amp;rev=1771490236&amp;image=spacer"/></div><div class="content"><h3 class="sectionname"><span><a href="https://ecampus.kangnam.ac.kr/course/view.php?id=49341#section-11">11주차</a></span></h3><div class="summary"></div><ul class="section img-text"><li class="activity assign modtype_assign " id="module-674989"><div class=""><div class="mod-indent-outer"><div class="mod-indent"></div><div><div class="activityinstance"><a class="" onclick="" href="https://ecampus.kangnam.ac.kr/mod/assign/view.php?id=674989"><img src="https://ecampus.kangnam.ac.kr/theme/image.php?theme=coursemosv2&amp;component=assign&amp;rev=1771490236&amp;image=icon" alt="Assignment" class="activityicon" /><span class="instancename">11주차 활동보고서<span class="accesshide " > Assignment</span></span></a></div></div></div></div></li></ul></div></li><li id="section-12" class="section main clearfix current" role="region" aria-label="12주차"><span class="hidden sectionname">12주차</span><div class="left side"><span class="accesshide " >This week</span></div><div class="right side"><img width="1" height="1" class="spacer" alt="" src="https://ecampus.kangnam.ac.kr/theme/image.php?theme=coursemosv2&amp;component=core&amp;rev=1771490236&amp;image=spacer"/></div><div class="content"><h3 class="sectionname"><span><a href="https://ecampus.kangnam.ac.kr/course/view.php?id=49341#section-12">12주차</a></span></h3><div class="summary"></div><ul class="section img-text"><li class="activity assign modtype_assign " id="module-677173"><div class=""><div class="mod-indent-outer"><div class="mod-indent"></div><div><div class="activityinstance"><a class="" onclick="" href="https://ecampus.kangnam.ac.kr/mod/assign/view.php?id=677173"><img src="https://ecampus.kangnam.ac.kr/theme/image.php?theme=coursemosv2&amp;component=assign&amp;rev=1771490236&amp;image=icon" alt="Assignment" class="activityicon" /><span class="instancename">12주차 활동보고서<span class="accesshide " > Assignment</span></span></a></div></div></div></div></li></ul></div></li><li id="section-13" class="section main clearfix" role="region" aria-label="13주차"><span class="hidden sectionname">13주차</span><div class="left side"><img width="1" height="1" class="spacer" alt="" src="https://ecampus.kangnam.ac.kr/theme/image.php?theme=coursemosv2&amp;component=core&amp;rev=1771490236&amp;image=spacer"/></div><div class="right side"><img width="1" height="1" class="spacer" alt="" src="https://ecampus.kangnam.ac.kr/theme/image.php?theme=coursemosv2&amp;component=core&amp;rev=1771490236&amp;image=spacer"/></div><div class="content"><h3 class="sectionname"><span><a href="https://ecampus.kangnam.ac.kr/course/view.php?id=49341#section-13">13주차</a></span></h3><div class="summary"></div></div></li><li id="section-14" class="section main clearfix" role="region" aria-label="14주차"><span class="hidden sectionname">14주차</span><div class="left side"><img width="1" height="1" class="spacer" alt="" src="https://ecampus.kangnam.ac.kr/theme/image.php?theme=coursemosv2&amp;component=core&amp;rev=1771490236&amp;image=spacer"/></div><div class="right side"><img width="1" height="1" class="spacer" alt="" src="https://ecampus.kangnam.ac.kr/theme/image.php?theme=coursemosv2&amp;component=core&amp;rev=1771490236&amp;image=spacer"/></div><div class="content"><h3 class="sectionname"><span><a href="https://ecampus.kangnam.ac.kr/course/view.php?id=49341#section-14">14주차</a></span></h3><div class="summary"></div></div></li><li id="section-15" class="section main clearfix" role="region" aria-label="15주차"><span class="hidden sectionname">15주차</span><div class="left side"><img width="1" height="1" class="spacer" alt="" src="https://ecampus.kangnam.ac.kr/theme/image.php?theme=coursemosv2&amp;component=core&amp;rev=1771490236&amp;image=spacer"/></div><div class="right side"><img width="1" height="1" class="spacer" alt="" src="https://ecampus.kangnam.ac.kr/theme/image.php?theme=coursemosv2&amp;component=core&amp;rev=1771490236&amp;image=spacer"/></div><div class="content"><h3 class="sectionname"><span><a href="https://ecampus.kangnam.ac.kr/course/view.php?id=49341#section-15">15주차</a></span></h3><div class="summary"></div></div></li></ul></div></div></div></div>				            
+			            </div>
+		            </div>
+				</div>
+								<div class="coursemos-course-menu-expand">
+					<button type="button" class="nobtn btn-course-menu btn-course-menu-open"></button>
+					<button type="button" class="nobtn btn-course-menu btn-course-menu-close"></button>
+				</div>
+							</div>
+		</div>
+		
+		<div id="page-footer">
+			<ul class="footer-menus pull-left">
+		<li>
+	
+	<a href="http://web.kangnam.ac.kr/ofuseContsLst/e4058249224f49ab163131ce104214fb.do" target="_blank">Privacy Policy</a>
+	<a class="privacy_policy" href="https://113366.com/kangnam" target="_blank">Remote service</a>	
+	</li>
+</ul>
+<!-- 
+<div class="helpdesk">
+	<a href="#" class="nobtn">도움말</a>
+</div>
+ -->
+<div class="address">
+	<!-- 40, Gangnam-ro, Giheung-gu, Yongin-si, Gyeonggi-do, Republic of Korea<span class="tell">Tel : +82-031-280-3446~8</span></a> <br/> -->
+	<span class="copyright">
+			</span>
+</div>
+<div id="back-top">
+	<a href="#top"><span></span></a>
+</div>
+<div id="ajax_loading_submit">&nbsp;</div>
+<div id="ajax_loading_container">
+	<div id="ajax_loading_submit_img">
+		<img src="https://ecampus.kangnam.ac.kr/theme/image.php?theme=coursemosv2&amp;component=theme_coursemosv2&amp;rev=1771490236&amp;image=ajax-loader" alt="loading..." /> Loading...
+	</div>
+	<div id="ajax_loading_message">
+		<p class="save_msg">Data is saved. Please wait.</p>
+		<p class="refresh_msg">Long period of time, if refresh(F5) while loading page please.</p>
+	</div>
+</div>	
+		</div>
+	</div>
+	
+<script type="text/javascript" src="https://s3.ap-northeast-2.amazonaws.com/code.coursemos.co.kr/flexiblepage_cm32.js?v=0.18"></script>
+<script type="text/javascript" src="https://s3.ap-northeast-2.amazonaws.com/code.coursemos.co.kr/annote_supporter.js?v=0.01"></script><script type="text/javascript">
+//<![CDATA[
+var require = {
+    baseUrl : 'https://ecampus.kangnam.ac.kr/lib/requirejs.php?file=%2F1771490236%2F',
+    // We only support AMD modules with an explicit define() statement.
+    enforceDefine: true,
+    skipDataMain: true,
+    waitSeconds : 0,
+
+    paths: {
+        jquery: 'https://ecampus.kangnam.ac.kr/lib/javascript.php?file=%2F1771490236%2Flib/jquery/jquery-1.11.2.min.js',
+        jqueryui: 'https://ecampus.kangnam.ac.kr/lib/javascript.php?file=%2F1771490236%2Flib/jquery/ui-1.12.1/jquery-ui.min.js',
+        jqueryprivate: 'https://ecampus.kangnam.ac.kr/lib/javascript.php?file=%2F1771490236%2Flib/requirejs/jquery-private.js'
+    },
+
+    // Custom jquery config map.
+    map: {
+      // '*' means all modules will get 'jqueryprivate'
+      // for their 'jquery' dependency.
+      '*': { jquery: 'jqueryprivate' },
+
+      // 'jquery-private' wants the real jQuery module
+      // though. If this line was not here, there would
+      // be an unresolvable cyclic dependency.
+      jqueryprivate: { jquery: 'jquery' }
+    }
+};
+
+//]]>
+</script>
+<script type="text/javascript" src="https://ecampus.kangnam.ac.kr/lib/javascript.php?rev=1771490236&amp;jsfile=%2Flib%2Frequirejs%2Frequire.min.js"></script>
+<script type="text/javascript">
+//<![CDATA[
+require(['core/first'], function() {
+;
+require(["media_videojs/loader"], function(loader) {
+    loader.setUp(function(videojs) {
+        videojs.options.flash.swf = "https://ecampus.kangnam.ac.kr/media/player/videojs/videojs/video-js.swf";
+videojs.addLanguage("en",{
+ "Play": "Play",
+ "Pause": "Pause",
+ "Current Time": "Current Time",
+ "Duration Time": "Duration Time",
+ "Remaining Time": "Remaining Time",
+ "Stream Type": "Stream Type",
+ "LIVE": "LIVE",
+ "Loaded": "Loaded",
+ "Progress": "Progress",
+ "Fullscreen": "Fullscreen",
+ "Non-Fullscreen": "Non-Fullscreen",
+ "Mute": "Mute",
+ "Unmute": "Unmute",
+ "Playback Rate": "Playback Rate",
+ "Subtitles": "Subtitles",
+ "subtitles off": "subtitles off",
+ "Captions": "Captions",
+ "captions off": "captions off",
+ "Chapters": "Chapters",
+ "Close Modal Dialog": "Close Modal Dialog",
+ "Descriptions": "Descriptions",
+ "descriptions off": "descriptions off",
+ "Audio Track": "Audio Track",
+ "You aborted the media playback": "You aborted the media playback",
+ "A network error caused the media download to fail part-way.": "A network error caused the media download to fail part-way.",
+ "The media could not be loaded, either because the server or network failed or because the format is not supported.": "The media could not be loaded, either because the server or network failed or because the format is not supported.",
+ "The media playback was aborted due to a corruption problem or because the media used features your browser did not support.": "The media playback was aborted due to a corruption problem or because the media used features your browser did not support.",
+ "No compatible source was found for this media.": "No compatible source was found for this media.",
+ "The media is encrypted and we do not have the keys to decrypt it.": "The media is encrypted and we do not have the keys to decrypt it.",
+ "Play Video": "Play Video",
+ "Close": "Close",
+ "Modal Window": "Modal Window",
+ "This is a modal window": "This is a modal window",
+ "This modal can be closed by pressing the Escape key or activating the close button.": "This modal can be closed by pressing the Escape key or activating the close button.",
+ ", opens captions settings dialog": ", opens captions settings dialog",
+ ", opens subtitles settings dialog": ", opens subtitles settings dialog",
+ ", opens descriptions settings dialog": ", opens descriptions settings dialog",
+ ", selected": ", selected"
+});
+
+    });
+});;
+function legacy_activity_onclick_handler_1(e) { e.halt(); window.open('/mod/vod/viewer.php?id=107581', '', 'width=1005,height=755,toolbar=no,location=no,menubar=no,copyhistory=no,status=no,directories=no,scrollbars=yes,resizable=yes'); return false; };
+function legacy_activity_onclick_handler_2(e) { e.halt(); window.open('https://ecampus.kangnam.ac.kr/mod/ubfile/viewer.php?id=229341', 'documentviewer', 'width=1005,height=755,toolbar=no,location=no,menubar=no,copyhistory=no,status=no,directories=no,scrollbars=yes,resizable=1'); return false; };
+function legacy_activity_onclick_handler_3(e) { e.halt(); window.open('https://ecampus.kangnam.ac.kr/mod/ubfile/viewer.php?id=229343', 'documentviewer', 'width=1005,height=755,toolbar=no,location=no,menubar=no,copyhistory=no,status=no,directories=no,scrollbars=yes,resizable=1'); return false; };
+require(["block_settings/settingsblock"], function(amd) { amd.init("17", null); });;
+
+require(['core/yui'], function(Y) {
+    M.util.init_skiplink(Y);
+});
+;
+require(["core/notification"], function(amd) { amd.init(797134, []); });;
+require(["core/log"], function(amd) { amd.setConfig({"level":"warn"}); });
+});
+//]]>
+</script>
+<script type="text/javascript" src="https://ecampus.kangnam.ac.kr/theme/javascript.php?theme=coursemosv2&amp;rev=1771490236&amp;type=footer"></script>
+<script type="text/javascript" src="https://ecampus.kangnam.ac.kr/lib/javascript.php?rev=1771490236&amp;jsfile=%2Fcourse%2Fformat%2Fubsweeks%2Fformat.js"></script>
+<script type="text/javascript">
+//<![CDATA[
+M.str = {"moodle":{"lastmodified":"Last modified","name":"Name","error":"Error","info":"Information","yes":"Yes","no":"No","morehelp":"More help","loadinghelp":"Loading...","cancel":"Cancel","confirm":"Confirm","areyousure":"Are you sure?","closebuttontitle":"Close","unknownerror":"Unknown error"},"repository":{"type":"Type","size":"Size","invalidjson":"Invalid JSON string","nofilesattached":"No files attached","filepicker":"File picker","logout":"Logout","nofilesavailable":"No files available","norepositoriesavailable":"Sorry, none of your current repositories can return files in the required format.","fileexistsdialogheader":"File exists","fileexistsdialog_editor":"A file with that name has already been attached to the text you are editing.","fileexistsdialog_filemanager":"A file with that name has already been attached","renameto":"Rename to \"{$a}\"","referencesexist":"There are {$a} alias\/shortcut files that use this file as their source","select":"Select"},"admin":{"confirmdeletecomments":"You are about to delete comments, are you sure?","confirmation":"Confirmation"}};
+//]]>
+</script>
+<script type="text/javascript">
+//<![CDATA[
+(function() {setTimeout("fix_column_widths()", 20);
+M.util.help_popups.setup(Y);
+Y.use("moodle-core-popuphelp",function() {M.core.init_popuphelp();
+});
+ M.util.js_pending('random6a0db4721bdb82'); Y.on('domready', function() { M.util.js_complete("init");  M.util.js_complete('random6a0db4721bdb82'); });
+})();
+//]]>
+</script>
+</body>
+</html>
