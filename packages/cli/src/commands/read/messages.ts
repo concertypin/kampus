@@ -27,28 +27,23 @@ ${pc.bold("예시:")}
                     )
                 )}          `
             );
-            console.log(pc.dim("─".repeat(72)));
 
             if (messages.length === 0) {
-                console.log(pc.yellow("  조회된 메시지가 없습니다."));
+                console.log(pc.yellow("조회된 메시지가 없습니다."));
                 return;
             }
 
             for (const msg of messages) {
-                const newBadge = msg.isNew
-                    ? `${pc.bgYellow(pc.black(" NEW "))} `
-                    : "      ";
+                const newBadge = msg.isNew ? pc.yellow(" [NEW]") : "";
+                console.log(pc.dim("─".repeat(40)));
                 console.log(
-                    `  ${newBadge}${pc.bold(msg.senderName)} ${pc.dim(`(ID: ${msg.senderId})`)} - ${pc.dim(msg.time)}`
+                    `${pc.bold("보낸이")}: ${msg.senderName}${newBadge}`
                 );
-                const preview =
-                    msg.content.length > 60
-                        ? `${msg.content.slice(0, 59)}…`
-                        : msg.content;
-                console.log(`        ${pc.italic(preview)}`);
-                console.log();
+                console.log(`${pc.bold("보낸이 ID")}: ${msg.senderId}`);
+                console.log(`${pc.bold("시간")}: ${msg.time}`);
+                console.log(`${pc.bold("내용")}: ${msg.content}`);
             }
-            console.log(pc.dim("─".repeat(72)));
+            console.log(pc.dim("─".repeat(40)));
         } catch (err: unknown) {
             const message = err instanceof Error ? err.message : String(err);
             console.error(`\r${pc.red(`❌ 오류: ${message}`)}`);

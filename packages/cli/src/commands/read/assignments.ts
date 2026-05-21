@@ -25,33 +25,27 @@ ${pc.bold("예시:")}
                     )
                 )}          `
             );
-            console.log(pc.dim("─".repeat(80)));
-            console.log(
-                pc.bold(
-                    `  ${"주차".padEnd(8)} ${"과제명".padEnd(24)} ${"마감일시".padEnd(18)} ${"제출 상태".padEnd(14)} ${"학점"}`
-                )
-            );
-            console.log(pc.dim("─".repeat(80)));
 
             if (assignments.length === 0) {
-                console.log(pc.yellow("  조회된 과제가 없습니다."));
+                console.log(pc.yellow("조회된 과제가 없습니다."));
                 return;
             }
 
             for (const a of assignments) {
-                const name =
-                    a.name.length > 22 ? `${a.name.slice(0, 21)}…` : a.name;
                 const submitted =
                     a.submissionStatus.toLowerCase().includes("제출") ||
                     a.submissionStatus.toLowerCase().includes("submitted");
                 const statusStr = submitted
-                    ? pc.green(a.submissionStatus.padEnd(14))
-                    : pc.red(a.submissionStatus.padEnd(14));
-                console.log(
-                    `  ${a.week.padEnd(8)} ${name.padEnd(24)} ${a.dueDate.padEnd(18)} ${statusStr} ${pc.yellow(a.grade)}`
-                );
+                    ? pc.green(a.submissionStatus)
+                    : pc.red(a.submissionStatus);
+                console.log(pc.dim("─".repeat(40)));
+                console.log(`${pc.bold("주차")}: ${a.week}`);
+                console.log(`${pc.bold("과제명")}: ${a.name}`);
+                console.log(`${pc.bold("마감일시")}: ${a.dueDate}`);
+                console.log(`${pc.bold("제출 상태")}: ${statusStr}`);
+                console.log(`${pc.bold("학점")}: ${pc.yellow(a.grade)}`);
             }
-            console.log(pc.dim("─".repeat(80)));
+            console.log(pc.dim("─".repeat(40)));
         } catch (err: unknown) {
             const message = err instanceof Error ? err.message : String(err);
             console.error(`\r${pc.red(`❌ 오류: ${message}`)}`);

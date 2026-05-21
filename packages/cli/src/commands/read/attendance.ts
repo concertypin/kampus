@@ -25,30 +25,22 @@ ${pc.bold("예시:")}
                     )
                 )}          `
             );
-            console.log(pc.dim("─".repeat(72)));
-            console.log(
-                pc.bold(
-                    `  ${"주차".padEnd(4)} ${"제목".padEnd(28)} ${"필요시간".padEnd(8)} ${"시청시간".padEnd(8)} ${"상태".padEnd(4)}`
-                )
-            );
-            console.log(pc.dim("─".repeat(72)));
 
             if (items.length === 0) {
-                console.log(pc.yellow("  조회된 항목이 없습니다."));
+                console.log(pc.yellow("조회된 항목이 없습니다."));
                 return;
             }
 
             for (const item of items) {
                 const statusColor = item.status === "O" ? pc.green : pc.red;
-                const title =
-                    item.title.length > 26
-                        ? `${item.title.slice(0, 25)}…`
-                        : item.title;
-                console.log(
-                    `  ${String(item.week).padEnd(4)} ${title.padEnd(28)} ${item.requiredTime.padEnd(8)} ${item.watchedTime.padEnd(8)} ${statusColor(item.status.padEnd(4))}`
-                );
+                console.log(pc.dim("─".repeat(40)));
+                console.log(`${pc.bold("주차")}: ${item.week}`);
+                console.log(`${pc.bold("제목")}: ${item.title}`);
+                console.log(`${pc.bold("필요시간")}: ${item.requiredTime}`);
+                console.log(`${pc.bold("시청시간")}: ${item.watchedTime}`);
+                console.log(`${pc.bold("상태")}: ${statusColor(item.status)}`);
             }
-            console.log(pc.dim("─".repeat(72)));
+            console.log(pc.dim("─".repeat(40)));
         } catch (err: unknown) {
             const message = err instanceof Error ? err.message : String(err);
             console.error(`\r${pc.red(`❌ 오류: ${message}`)}`);

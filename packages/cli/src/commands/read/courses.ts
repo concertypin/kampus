@@ -29,23 +29,20 @@ ${pc.bold("예시:")}
                     pc.cyan(`📚 수강 과목 목록 (${courses.length}개)`)
                 )}          `
             );
-            console.log(pc.dim("─".repeat(60)));
 
             if (courses.length === 0) {
-                console.log(pc.yellow("  조회된 과목이 없습니다."));
+                console.log(pc.yellow("조회된 과목이 없습니다."));
                 return;
             }
 
             for (const course of courses) {
-                const badge =
-                    course.type === "regular"
-                        ? pc.bgBlue(pc.white(" 일반 "))
-                        : pc.bgMagenta(pc.white(" 비교과 "));
-                console.log(
-                    `  ${badge} ${pc.bold(course.name)} ${pc.dim(`(ID: ${course.id})`)}`
-                );
+                const typeLabel = course.type === "regular" ? "일반" : "비교과";
+                console.log(pc.dim("─".repeat(40)));
+                console.log(`${pc.bold("과목명")}: ${course.name}`);
+                console.log(`${pc.bold("ID")}: ${course.id}`);
+                console.log(`${pc.bold("유형")}: ${typeLabel}`);
             }
-            console.log(pc.dim("─".repeat(60)));
+            console.log(pc.dim("─".repeat(40)));
         } catch (err: unknown) {
             const message = err instanceof Error ? err.message : String(err);
             console.error(`\r${pc.red(`❌ 오류: ${message}`)}`);
