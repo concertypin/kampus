@@ -5,6 +5,7 @@ import { fileURLToPath } from "node:url";
 import dts from "vite-plugin-dts";
 import { globSync } from "node:fs";
 import path from "node:path";
+import { builtinModules } from "node:module";
 
 type Config = Required<UserConfig>;
 
@@ -47,6 +48,11 @@ export default defineConfig({
             fileName: "index",
         },
         rolldownOptions: {
+            external: [
+                ...builtinModules,
+                ...builtinModules.map((m) => `node:${m}`),
+                "linkedom",
+            ],
             output: {
                 entryFileNames: "[name].js",
                 chunkFileNames: "internal/[name]-[hash].js",
