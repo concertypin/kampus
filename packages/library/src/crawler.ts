@@ -183,6 +183,16 @@ export class Crawler {
         try {
             const cookie = await authLogin(username, password);
             await this.setSession(cookie);
+
+            // Verify the session cookie actually grants access.
+            // Moodle may issue a session cookie even on failed authentication,
+            // so we must confirm the session is valid before reporting success.
+            const isValid = await this.checkSession();
+            if (!isValid) {
+                await this.clearSession();
+                throw new Error("Login failed: invalid credentials");
+            }
+
             log.info("Login successful");
         } catch (error) {
             log.error("Login failed:", error);
