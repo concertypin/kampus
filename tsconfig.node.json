@@ -2,9 +2,8 @@
     "compilerOptions": {
         "tsBuildInfoFile": "./node_modules/.cache/node.tsbuildinfo",
         "lib": ["ESNext"],
-        "types": ["node", "vite/client"],
-        "allowImportingTsExtensions": true
+        "types": ["node"]
     },
     "include": ["./*.ts", "./*.js", "./*.mjs", "scripts/**/*.ts"],
-    "extends": "../../tsconfig.base.json"
+    "extends": "./tsconfig.base.json"
 }

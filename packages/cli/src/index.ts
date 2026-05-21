@@ -1,8 +1,12 @@
 import { Command } from "commander";
 import pc from "picocolors";
 import { type LogLevel } from "@concertypin/ecampus-crawler";
-import { loginCommand } from "./commands/login.ts";
-import { readCommand } from "./commands/read/index.ts";
+import { authCommand } from "./commands/auth/index.ts";
+import { coursesCommand } from "./commands/courses/index.ts";
+import { attendanceCommand } from "./commands/attendance/index.ts";
+import { assignmentsCommand } from "./commands/assignments/index.ts";
+import { quizzesCommand } from "./commands/quizzes/index.ts";
+import { messagesCommand } from "./commands/messages/index.ts";
 
 const program = new Command();
 
@@ -22,12 +26,14 @@ program
         "after",
         `
 ${pc.bold("사용 예시:")}
-  ${pc.green("kampus login <학번> <비밀번호>")}         로그인 후 세션 저장
-  ${pc.green("kampus read courses")}                   수강 과목 목록 조회
-  ${pc.green("kampus read attendance <courseId>")}     특정 과목 출석 조회
-  ${pc.green("kampus read assignments <courseId>")}    특정 과목 과제 목록 조회
-  ${pc.green("kampus read quizzes <courseId>")}        특정 과목 퀴즈 목록 조회
-  ${pc.green("kampus read messages")}                  교수님 메시지 조회
+  ${pc.green("kampus auth login [학번]")}               로그인 후 세션 저장
+  ${pc.green("kampus auth check")}                      세션 유효성 확인
+  ${pc.green("kampus auth logout")}                     세션 삭제
+  ${pc.green("kampus courses list")}                    수강 과목 목록 조회
+  ${pc.green("kampus attendance list <courseId>")}      특정 과목 출석 조회
+  ${pc.green("kampus assignments list <courseId>")}     특정 과목 과제 목록 조회
+  ${pc.green("kampus quizzes list <courseId>")}         특정 과목 퀴즈 목록 조회
+  ${pc.green("kampus messages list")}                   교수님 메시지 조회
 
 ${pc.bold("로깅 옵션:")}
   ${pc.green("--verbose")}    info 레벨 (일반 정보)
@@ -36,8 +42,12 @@ ${pc.bold("로깅 옵션:")}
 `
     );
 
-program.addCommand(loginCommand);
-program.addCommand(readCommand);
+program.addCommand(authCommand);
+program.addCommand(coursesCommand);
+program.addCommand(attendanceCommand);
+program.addCommand(assignmentsCommand);
+program.addCommand(quizzesCommand);
+program.addCommand(messagesCommand);
 
 program.parseAsync(process.argv).catch((err: unknown) => {
     const message = err instanceof Error ? err.message : String(err);

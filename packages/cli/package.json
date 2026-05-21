@@ -27,13 +27,15 @@
         "dev": "pnpm build && pnpm start",
         "start": "node ./dist/index.js",
         "build": "vite build",
-        "lint": "oxlint . --fix"
+        "lint": "oxlint . --fix",
+        "test": "vitest run"
     },
     "dependencies": {
         "commander": "^14.0.0",
         "picocolors": "^1.1.1"
     },
     "devDependencies": {
-        "@concertypin/ecampus-crawler": "workspace:*"
+        "@concertypin/ecampus-crawler": "workspace:*",
+        "vitest": "^4.1.6"
     }
 }

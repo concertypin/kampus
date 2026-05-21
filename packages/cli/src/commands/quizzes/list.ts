@@ -3,14 +3,14 @@ import pc from "picocolors";
 import { createCrawler } from "../../crawler.ts";
 import { getLogLevel } from "../../index.ts";
 
-export const quizzesCommand = new Command("quizzes")
+export const listCommand = new Command("list")
     .description("특정 과목의 퀴즈 목록을 조회합니다")
-    .argument("<courseId>", "과목 ID (courses 명령어로 확인)")
+    .argument("<courseId>", "과목 ID (courses list 명령어로 확인)")
     .addHelpText(
         "after",
         `
 ${pc.bold("예시:")}
-  ${pc.green("kampus read quizzes 50541")}
+  ${pc.green("kampus quizzes list 50541")}
 `
     )
     .action(async (courseId: string) => {

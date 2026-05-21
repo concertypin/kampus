@@ -1,14 +1,24 @@
 import type { SessionStorage } from "./storage";
-import * as fs from "node:fs/promises";
-import * as path from "node:path";
+import { isNode } from "../env";
 
 /**
  * File-based implementation of SessionStorage.
+ * Uses Node.js fs/path APIs. Throws if used in non-Node environments.
  */
 export class FileStorage implements SessionStorage {
-    constructor(private filePath: string) {}
+    private filePath: string;
+
+    constructor(filePath: string) {
+        if (!isNode) {
+            throw new Error(
+                "FileStorage is only supported in Node.js environments. Use MemoryStorage in Deno."
+            );
+        }
+        this.filePath = filePath;
+    }
 
     private async readData(): Promise<Record<string, string>> {
+        const fs = await import("node:fs/promises");
         try {
             const content = await fs.readFile(this.filePath, "utf-8");
             return JSON.parse(content) as Record<string, string>;
@@ -21,6 +31,8 @@ export class FileStorage implements SessionStorage {
     }
 
     private async writeData(data: Record<string, string>): Promise<void> {
+        const fs = await import("node:fs/promises");
+        const path = await import("node:path");
         await fs.mkdir(path.dirname(this.filePath), { recursive: true });
         await fs.writeFile(
             this.filePath,
@@ -49,6 +61,7 @@ export class FileStorage implements SessionStorage {
     }
 
     async clear(): Promise<void> {
+        const fs = await import("node:fs/promises");
         try {
             await fs.unlink(this.filePath);
         } catch (err: unknown) {

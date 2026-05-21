@@ -3,15 +3,15 @@ import pc from "picocolors";
 import { createCrawler } from "../../crawler.ts";
 import { getLogLevel } from "../../index.ts";
 
-export const coursesCommand = new Command("courses")
+export const listCommand = new Command("list")
     .description("수강 중인 과목 목록을 조회합니다")
     .option("--type <type>", "과목 유형 필터 (regular | non-curriculum)")
     .addHelpText(
         "after",
         `
 ${pc.bold("예시:")}
-  ${pc.green("kampus read courses")}
-  ${pc.green("kampus read courses --type regular")}
+  ${pc.green("kampus courses list")}
+  ${pc.green("kampus courses list --type regular")}
 `
     )
     .action(async (opts: { type?: string }) => {

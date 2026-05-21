@@ -57,6 +57,9 @@ importers:
       '@concertypin/ecampus-crawler':
         specifier: workspace:*
         version: link:../library
+      vitest:
+        specifier: ^4.1.6
+        version: 4.1.6(@types/node@25.9.1)(@vitest/coverage-v8@4.1.6)(vite@8.0.13(@types/node@25.9.1)(esbuild@0.27.3)(jiti@2.6.1)(yaml@2.8.2))
 
   packages/library:
     dependencies:

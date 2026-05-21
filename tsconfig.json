@@ -1,7 +1,14 @@
 {
     "references": [
-        { "path": "./packages/library" },
-        { "path": "./packages/cli" }
+        {
+            "path": "./packages/library"
+        },
+        {
+            "path": "./packages/cli"
+        },
+        {
+            "path": "./tsconfig.node.json"
+        }
     ],
     "include": []
 }

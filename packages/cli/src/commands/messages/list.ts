@@ -3,15 +3,15 @@ import pc from "picocolors";
 import { createCrawler } from "../../crawler.ts";
 import { getLogLevel } from "../../index.ts";
 
-export const messagesCommand = new Command("messages")
+export const listCommand = new Command("list")
     .description("교수님께서 보낸 메시지 목록을 조회합니다")
     .option("-p, --page <page>", "페이지 번호", "1")
     .addHelpText(
         "after",
         `
 ${pc.bold("예시:")}
-  ${pc.green("kampus read messages")}
-  ${pc.green("kampus read messages --page 2")}
+  ${pc.green("kampus messages list")}
+  ${pc.green("kampus messages list --page 2")}
 `
     )
     .action(async (opts: { page: string }) => {

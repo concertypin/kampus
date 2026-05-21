@@ -1,3 +1,4 @@
+/// <reference types="node" />
 /**
  * @fileoverview
  * This script benchmarks the execution time of the `pnpm lint` command, which runs ESLint on the project.

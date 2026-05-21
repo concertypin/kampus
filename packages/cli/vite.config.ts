@@ -2,7 +2,6 @@
 
 import { type UserConfig, defineConfig } from "vite";
 import { fileURLToPath } from "node:url";
-
 type Config = Required<UserConfig>;
 
 const resolve: Config["resolve"] = {
@@ -28,7 +27,22 @@ function shebangPlugin(): NonNullable<Config["plugins"]>[number] {
     };
 }
 
+const testConfig: Config["test"] = {
+    coverage: {
+        enabled: true,
+        include: ["src/**/*.ts"],
+        provider: "v8",
+        reportOnFailure: true,
+        reporter: ["text", "json-summary", "html"],
+    },
+    environment: "node",
+    exclude: ["**/node_modules/**", "**/dist/**"],
+    globals: true,
+    include: ["tests/**/*.test.ts"],
+    setupFiles: "./tests/setup.ts",
+};
 export default defineConfig({
+    test: testConfig,
     build: {
         lib: {
             entry: fileURLToPath(new URL("src/index.ts", import.meta.url)),

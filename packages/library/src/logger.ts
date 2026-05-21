@@ -22,14 +22,16 @@ const LOG_LEVEL_MAP: Record<LogLevel, number> = {
 };
 
 /**
- * Custom reporter that writes to stderr to avoid mixing with stdin prompts
+ * Custom reporter that writes to stderr to avoid mixing with stdin prompts.
+ * Uses console.error which works in both Node.js and Deno.
  */
 const stderrReporter = {
     log: (logObj: LogObject): void => {
         const tag = logObj.tag ? `${logObj.tag}:` : "";
         const type = logObj.type;
         const message = logObj.args.join(" ");
-        process.stderr.write(`${tag}${type} ${message}\n`);
+        // oxlint-disable-next-line no-console
+        console.error(`${tag}${type} ${message}`);
     },
 };
 
