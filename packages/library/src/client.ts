@@ -56,11 +56,11 @@ export async function fetchWithBase(
             headers.append(key, value);
         }
     }
-
     const mergedOptions = {
         ...baseHeaders,
         ...options,
         headers,
     } satisfies RequestInit;
+
     return fetch(fullUrl, mergedOptions);
 }

@@ -1,6 +1,7 @@
 import { Command } from "commander";
 import pc from "picocolors";
 import { createCrawler } from "../../crawler.ts";
+import { getLogLevel } from "../../index.ts";
 
 export const messagesCommand = new Command("messages")
     .description("교수님께서 보낸 메시지 목록을 조회합니다")
@@ -14,7 +15,7 @@ ${pc.bold("예시:")}
 `
     )
     .action(async (opts: { page: string }) => {
-        const crawler = createCrawler();
+        const crawler = createCrawler(getLogLevel());
         const page = parseInt(opts.page, 10) || 1;
         process.stdout.write(pc.dim("메시지 불러오는 중..."));
         try {
@@ -51,6 +52,6 @@ ${pc.bold("예시:")}
         } catch (err: unknown) {
             const message = err instanceof Error ? err.message : String(err);
             console.error(`\r${pc.red(`❌ 오류: ${message}`)}`);
-            process.exit(1);
+            process.exitCode = 1;
         }
     });

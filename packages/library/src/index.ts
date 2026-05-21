@@ -15,3 +15,9 @@ export { MemoryStorage } from "./storage/memory";
 export { FileStorage } from "./storage/file";
 export { login } from "./auth";
 export { fetchWithBase } from "./client";
+export {
+    type LogLevel,
+    setLogLevel,
+    getLogger,
+    createTaggedLogger,
+} from "./logger";

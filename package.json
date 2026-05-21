@@ -14,7 +14,9 @@
     },
     "scripts": {
         "build": "pnpm --filter @concertypin/ecampus-crawler build && pnpm --filter @concertypin/kampus build",
-        "dev": "pnpm --filter @concertypin/ecampus-crawler dev",
+        "predev": "pnpm run build",
+        "dev": "pnpm run start",
+        "start": "pnpm --filter @concertypin/kampus start",
         "format": "prettier --write . --cache --list-different",
         "lint:check": "oxlint .",
         "lint": "oxlint . --fix",

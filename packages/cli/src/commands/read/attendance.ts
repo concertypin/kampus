@@ -1,6 +1,7 @@
 import { Command } from "commander";
 import pc from "picocolors";
 import { createCrawler } from "../../crawler.ts";
+import { getLogLevel } from "../../index.ts";
 
 export const attendanceCommand = new Command("attendance")
     .description("특정 과목의 출석 현황을 조회합니다")
@@ -13,7 +14,7 @@ ${pc.bold("예시:")}
 `
     )
     .action(async (courseId: string) => {
-        const crawler = createCrawler();
+        const crawler = createCrawler(getLogLevel());
         process.stdout.write(pc.dim("출석 정보 불러오는 중..."));
         try {
             const items = await crawler.getAttendance(courseId);
@@ -51,6 +52,6 @@ ${pc.bold("예시:")}
         } catch (err: unknown) {
             const message = err instanceof Error ? err.message : String(err);
             console.error(`\r${pc.red(`❌ 오류: ${message}`)}`);
-            process.exit(1);
+            process.exitCode = 1;
         }
     });

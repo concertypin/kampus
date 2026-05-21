@@ -3,11 +3,13 @@ import { fetchWithBase, BASE_URL } from "./client";
 import type { SessionStorage } from "./storage/storage";
 import { MemoryStorage } from "./storage/memory";
 import { login as authLogin } from "./auth";
+import { getLogger, setLogLevel, type LogLevel } from "./logger";
 
 export interface CrawlerOptions {
     storage?: SessionStorage;
     baseUrl?: string;
     timeout?: number;
+    logLevel?: LogLevel;
 }
 
 export interface Course {
@@ -83,6 +85,9 @@ export class Crawler {
         this.storage = options.storage || new MemoryStorage();
         this.baseUrl = options.baseUrl || BASE_URL;
         this.timeout = options.timeout || 10000;
+        if (options.logLevel) {
+            setLogLevel(options.logLevel);
+        }
     }
 
     async getSession(): Promise<string | undefined> {
@@ -103,6 +108,8 @@ export class Crawler {
     }
 
     async fetch(url: string, options: RequestInit = {}): Promise<Response> {
+        const log = getLogger().withTag("fetch");
+        const startTime = Date.now();
         const cookie = await this.getSession();
         const headers = new Headers(options.headers);
         if (cookie) {
@@ -110,6 +117,17 @@ export class Crawler {
         }
 
         const path = (url.startsWith("/") ? url : `/${url}`) as `/${string}`;
+        const method = options.method || "GET";
+
+        log.trace(`→ ${method} ${path}`);
+        if (cookie) {
+            // Mask cookie value for security (show only first and last 3 chars)
+            const maskedCookie =
+                cookie.length > 6
+                    ? `${cookie.slice(0, 3)}...${cookie.slice(-3)}`
+                    : "***";
+            log.trace(`  Cookie: ${maskedCookie}`);
+        }
 
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), this.timeout);
@@ -121,13 +139,27 @@ export class Crawler {
                 headers,
                 signal: controller.signal,
             });
+        } catch (error) {
+            log.error(`✗ ${method} ${path} - Request failed:`, error);
+            throw error;
         } finally {
             clearTimeout(timeoutId);
         }
 
+        const elapsed = Date.now() - startTime;
+        log.trace(`← ${response.status} ${response.statusText} (${elapsed}ms)`);
+
+        // Log response headers at trace level
+        const responseHeaders: Record<string, string> = {};
+        response.headers.forEach((value, key) => {
+            responseHeaders[key] = value;
+        });
+        log.trace("  Response headers:", responseHeaders);
+
         if (response.status === 303) {
             const location = response.headers.get("Location");
             if (location) {
+                log.trace(`  → Redirect to: ${location}`);
                 let redirectUrl = location;
                 if (location.startsWith(this.baseUrl)) {
                     redirectUrl = location.substring(this.baseUrl.length);
@@ -146,27 +178,42 @@ export class Crawler {
     }
 
     async login(username: string, password: string): Promise<void> {
-        const cookie = await authLogin(username, password);
-        await this.setSession(cookie);
+        const log = getLogger().withTag("auth");
+        log.info("Attempting login...");
+        try {
+            const cookie = await authLogin(username, password);
+            await this.setSession(cookie);
+            log.info("Login successful");
+        } catch (error) {
+            log.error("Login failed:", error);
+            throw error;
+        }
     }
 
     async checkSession(): Promise<boolean> {
+        const log = getLogger().withTag("session");
+        log.debug("Checking session validity...");
         try {
             const response = await this.fetch("/");
             if (response.status !== 200) {
+                log.debug("Session check failed: non-200 status");
                 return false;
             }
             const html = await response.text();
-            return (
+            const isValid =
                 html.includes("/login/logout.php") ||
-                html.includes("user-info-menu")
-            );
-        } catch {
+                html.includes("user-info-menu");
+            log.debug(`Session ${isValid ? "valid" : "invalid"}`);
+            return isValid;
+        } catch (error) {
+            log.debug("Session check failed with error:", error);
             return false;
         }
     }
 
     async getCourses(type?: "regular" | "non-curriculum"): Promise<Course[]> {
+        const log = getLogger().withTag("courses");
+        log.info("Fetching courses...");
         const response = await this.fetch("/");
         const html = await response.text();
         const doc = this.parseHtml(html);
@@ -213,13 +260,20 @@ export class Crawler {
             });
         }
 
-        if (type) {
-            return courses.filter((c) => c.type === type);
-        }
-        return courses;
+        const result = type ? courses.filter((c) => c.type === type) : courses;
+        log.info(
+            `Found ${result.length} courses${type ? ` (type: ${type})` : ""}`
+        );
+        log.debug(
+            "Courses:",
+            result.map((c) => `${c.name} (${c.id})`)
+        );
+        return result;
     }
 
     async getAttendance(courseId: string): Promise<AttendanceItem[]> {
+        const log = getLogger().withTag("attendance");
+        log.info(`Fetching attendance for course ${courseId}...`);
         const response = await this.fetch(
             `/report/ubcompletion/progress.php?id=${courseId}`
         );
@@ -293,10 +347,14 @@ export class Crawler {
             });
         }
 
+        log.info(`Found ${items.length} attendance items`);
+        log.debug("Attendance items:", items);
         return items;
     }
 
     async getMessages(page: number = 1): Promise<MessageItem[]> {
+        const log = getLogger().withTag("messages");
+        log.info(`Fetching messages (page ${page})...`);
         const response = await this.fetch(
             `/local/ubmessage/index.php?page=${page}`
         );
@@ -345,10 +403,15 @@ export class Crawler {
             });
         }
 
+        const newCount = messages.filter((m) => m.isNew).length;
+        log.info(`Found ${messages.length} messages (${newCount} new)`);
+        log.debug("Messages:", messages);
         return messages;
     }
 
     async getAssignments(courseId: string): Promise<AssignmentItem[]> {
+        const log = getLogger().withTag("assignments");
+        log.info(`Fetching assignments for course ${courseId}...`);
         const response = await this.fetch(
             `/mod/assign/index.php?id=${courseId}`
         );
@@ -384,10 +447,14 @@ export class Crawler {
             });
         }
 
+        log.info(`Found ${assignments.length} assignments`);
+        log.debug("Assignments:", assignments);
         return assignments;
     }
 
     async getQuizzes(courseId: string): Promise<QuizItem[]> {
+        const log = getLogger().withTag("quizzes");
+        log.info(`Fetching quizzes for course ${courseId}...`);
         const response = await this.fetch(`/mod/quiz/index.php?id=${courseId}`);
         const html = await response.text();
         const doc = this.parseHtml(html);
@@ -419,10 +486,14 @@ export class Crawler {
             });
         }
 
+        log.info(`Found ${quizzes.length} quizzes`);
+        log.debug("Quizzes:", quizzes);
         return quizzes;
     }
 
     async getWeeklyActivities(courseId: string): Promise<WeeklyActivity[]> {
+        const log = getLogger().withTag("activities");
+        log.info(`Fetching weekly activities for course ${courseId}...`);
         const response = await this.fetch(`/course/view.php?id=${courseId}`);
         const html = await response.text();
         const doc = this.parseHtml(html);
@@ -488,6 +559,14 @@ export class Crawler {
             });
         }
 
+        const totalActivities = weeklyActivities.reduce(
+            (sum, w) => sum + w.activities.length,
+            0
+        );
+        log.info(
+            `Found ${weeklyActivities.length} weeks with ${totalActivities} activities`
+        );
+        log.debug("Weekly activities:", weeklyActivities);
         return weeklyActivities;
     }
 }

@@ -1,6 +1,6 @@
 import { fetchWithBase } from "@/client";
 
-const loginEndpoint = "/login/index.php";
+const loginEndpoint = "/login.php";
 
 /*
 
@@ -50,17 +50,14 @@ export async function login(
             password,
         }),
     });
-    if (
-        response.status === 303 &&
-        response.headers.get("Location") === "https://ecampus.kangnam.ac.kr/"
-    ) {
-        const moodleSessionCookie = response.headers
-            .getSetCookie()
-            .find((cookie: string) => cookie.startsWith("MoodleSession="));
-        if (moodleSessionCookie) {
-            return moodleSessionCookie;
-        }
-        throw new Error("MoodleSession cookie not found in response.");
+    const moodleSessionCookie = response.headers
+        .getSetCookie()
+        .find((cookie: string) => cookie.startsWith("MoodleSession="));
+    if (moodleSessionCookie) {
+        return moodleSessionCookie;
     }
-    throw new Error(`Login failed with status ${response.status}`);
+
+    throw new Error(
+        `MoodleSession cookie not found in response ${response.status}.`
+    );
 }
