@@ -3,6 +3,7 @@ import { Command } from "commander";
 import pc from "picocolors";
 import { createCrawler } from "../../crawler.ts";
 import { getLogLevel } from "../../log-level.ts";
+import { readPasswordInteractive } from "../lib/password-input.ts";
 
 async function readInputInteractive(prompt: string): Promise<string> {
     const rl = createInterface({
@@ -15,69 +16,6 @@ async function readInputInteractive(prompt: string): Promise<string> {
             rl.close();
             resolve(answer.trimEnd());
         });
-    });
-}
-
-async function readPasswordInteractive(prompt: string): Promise<string> {
-    process.stdout.write(prompt);
-
-    return new Promise<string>((resolve) => {
-        const stdin = process.stdin;
-        const wasRaw = stdin.isTTY;
-        if (wasRaw) {
-            stdin.setRawMode(true);
-        }
-
-        let password = "";
-
-        const onData = (buf: Buffer): void => {
-            const str = buf.toString("utf-8");
-
-            for (const char of str) {
-                if (char === "\r" || char === "\n") {
-                    cleanup();
-                    process.stdout.write("\n");
-                    resolve(password);
-                    return;
-                }
-
-                if (char === "\u0003") {
-                    // Ctrl+C
-                    cleanup();
-                    process.exit(0);
-                }
-
-                if (char === "\u0008" || char === "\u007f") {
-                    // Backspace
-                    if (password.length > 0) {
-                        password = password.slice(0, -1);
-                        process.stdout.write("\b \b");
-                    }
-                    continue;
-                }
-
-                password += char;
-                process.stdout.write("*");
-            }
-        };
-
-        const onError = (): void => {
-            cleanup();
-            resolve("");
-        };
-
-        const cleanup = (): void => {
-            stdin.removeListener("data", onData);
-            stdin.removeListener("error", onError);
-            if (wasRaw) {
-                stdin.setRawMode(false);
-            }
-            stdin.pause();
-        };
-
-        stdin.on("data", onData);
-        stdin.on("error", onError);
-        stdin.resume();
     });
 }
 
