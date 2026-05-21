@@ -31,32 +31,34 @@ async function readPasswordInteractive(prompt: string): Promise<string> {
         let password = "";
 
         const onData = (buf: Buffer): void => {
-            const char = buf.toString("utf-8");
+            const str = buf.toString("utf-8");
 
-            if (char === "\r" || char === "\n") {
-                cleanup();
-                process.stdout.write("\n");
-                resolve(password);
-                return;
-            }
-
-            if (char === "\u0003") {
-                // Ctrl+C
-                cleanup();
-                process.exit(0);
-            }
-
-            if (char === "\u0008" || char === "\u007f") {
-                // Backspace
-                if (password.length > 0) {
-                    password = password.slice(0, -1);
-                    process.stdout.write("\b \b");
+            for (const char of str) {
+                if (char === "\r" || char === "\n") {
+                    cleanup();
+                    process.stdout.write("\n");
+                    resolve(password);
+                    return;
                 }
-                return;
-            }
 
-            password += char;
-            process.stdout.write("*");
+                if (char === "\u0003") {
+                    // Ctrl+C
+                    cleanup();
+                    process.exit(0);
+                }
+
+                if (char === "\u0008" || char === "\u007f") {
+                    // Backspace
+                    if (password.length > 0) {
+                        password = password.slice(0, -1);
+                        process.stdout.write("\b \b");
+                    }
+                    continue;
+                }
+
+                password += char;
+                process.stdout.write("*");
+            }
         };
 
         const onError = (): void => {
