@@ -1,7 +1,7 @@
 import { Command } from "commander";
 import pc from "picocolors";
 import { createCrawler } from "../../crawler.ts";
-import { getLogLevel } from "../../index.ts";
+import { getLogLevel } from "../../log-level.ts";
 
 export const listCommand = new Command("list")
     .description("특정 과목의 과제 목록을 조회합니다")

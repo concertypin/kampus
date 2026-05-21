@@ -1,6 +1,6 @@
 import { Command } from "commander";
 import pc from "picocolors";
-import { type LogLevel } from "@concertypin/ecampus-crawler";
+import { setProgramOptsFn } from "./log-level.ts";
 import { authCommand } from "./commands/auth/index.ts";
 import { coursesCommand } from "./commands/courses/index.ts";
 import { attendanceCommand } from "./commands/attendance/index.ts";
@@ -9,6 +9,9 @@ import { quizzesCommand } from "./commands/quizzes/index.ts";
 import { messagesCommand } from "./commands/messages/index.ts";
 
 const program = new Command();
+
+// Register the global opts provider before any command action runs
+setProgramOptsFn(() => program.opts());
 
 program
     .name("kampus")
@@ -54,14 +57,3 @@ program.parseAsync(process.argv).catch((err: unknown) => {
     console.error(pc.red(`오류: ${message}`));
     process.exitCode = 1;
 });
-
-/**
- * Get the log level from global CLI options
- */
-export function getLogLevel(): LogLevel | undefined {
-    const opts = program.opts();
-    if (opts.trace) return "trace";
-    if (opts.debug) return "debug";
-    if (opts.verbose) return "info";
-    return undefined;
-}

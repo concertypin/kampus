@@ -1,7 +1,7 @@
 import { Command } from "commander";
 import pc from "picocolors";
 import { createCrawler } from "../../crawler.ts";
-import { getLogLevel } from "../../index.ts";
+import { getLogLevel } from "../../log-level.ts";
 
 export const checkCommand = new Command("check")
     .description("현재 저장된 세션이 유효한지 확인합니다")

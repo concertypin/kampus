@@ -11,7 +11,7 @@ vi.mock("@/crawler", () => ({
 }));
 
 // Mock the getLogLevel function
-vi.mock("@/index", () => ({
+vi.mock("@/log-level", () => ({
     getLogLevel: vi.fn<() => LogLevel | undefined>(() => undefined),
 }));
 
@@ -40,7 +40,7 @@ describe("auth logout command", () => {
         expect(args.length).toBe(0);
     });
 
-    it("should call clearSession", async () => {
+    it("should call clearSession with --force", async () => {
         clearSessionMock.mockResolvedValue(undefined);
 
         const program = new Command();
@@ -49,11 +49,30 @@ describe("auth logout command", () => {
 
         const consoleSpy = vi.spyOn(console, "log");
 
-        await program.parseAsync(["auth", "logout"], { from: "user" });
+        await program.parseAsync(["auth", "logout", "--force"], {
+            from: "user",
+        });
 
         expect(clearSessionMock).toHaveBeenCalled();
         expect(consoleSpy).toHaveBeenCalledWith(
             expect.stringContaining("세션")
+        );
+
+        consoleSpy.mockRestore();
+    });
+
+    it("should cancel without --force when not TTY", async () => {
+        const program = new Command();
+        program.addCommand(authCommand);
+        program.exitOverride();
+
+        const consoleSpy = vi.spyOn(console, "log");
+
+        await program.parseAsync(["auth", "logout"], { from: "user" });
+
+        expect(clearSessionMock).not.toHaveBeenCalled();
+        expect(consoleSpy).toHaveBeenCalledWith(
+            expect.stringContaining("취소")
         );
 
         consoleSpy.mockRestore();
@@ -69,7 +88,9 @@ describe("auth logout command", () => {
         const consoleErrorSpy = vi.spyOn(console, "error");
 
         try {
-            await program.parseAsync(["auth", "logout"], { from: "user" });
+            await program.parseAsync(["auth", "logout", "--force"], {
+                from: "user",
+            });
         } catch {
             // Expected
         }

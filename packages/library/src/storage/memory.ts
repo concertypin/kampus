@@ -6,23 +6,22 @@ import type { SessionStorage } from "./storage";
 export class MemoryStorage implements SessionStorage {
     private data = new Map<string, string>();
 
-    async get(key: string): Promise<string | undefined> {
-        await Promise.resolve();
-        return this.data.get(key);
+    get(key: string): Promise<string | undefined> {
+        return Promise.resolve(this.data.get(key));
     }
 
-    async set(key: string, value: string): Promise<void> {
-        await Promise.resolve();
+    set(key: string, value: string): Promise<void> {
         this.data.set(key, value);
+        return Promise.resolve();
     }
 
-    async delete(key: string): Promise<void> {
-        await Promise.resolve();
+    delete(key: string): Promise<void> {
         this.data.delete(key);
+        return Promise.resolve();
     }
 
-    async clear(): Promise<void> {
-        await Promise.resolve();
+    clear(): Promise<void> {
         this.data.clear();
+        return Promise.resolve();
     }
 }

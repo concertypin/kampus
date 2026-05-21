@@ -4,6 +4,11 @@ import { isNode } from "../env";
 /**
  * File-based implementation of SessionStorage.
  * Uses Node.js fs/path APIs. Throws if used in non-Node environments.
+ *
+ * **Note on concurrency**: The read-modify-write pattern in set() and delete()
+ * is not atomic. Concurrent writes from multiple processes or rapid sequential
+ * calls may cause lost updates. For CLI usage, this is acceptable — the tool
+ * does not access the session file from multiple processes simultaneously.
  */
 export class FileStorage implements SessionStorage {
     private filePath: string;

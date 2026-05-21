@@ -2,7 +2,7 @@ import { createInterface } from "node:readline";
 import { Command } from "commander";
 import pc from "picocolors";
 import { createCrawler } from "../../crawler.ts";
-import { getLogLevel } from "../../index.ts";
+import { getLogLevel } from "../../log-level.ts";
 
 async function readInputInteractive(prompt: string): Promise<string> {
     const rl = createInterface({
@@ -15,6 +15,67 @@ async function readInputInteractive(prompt: string): Promise<string> {
             rl.close();
             resolve(answer.trimEnd());
         });
+    });
+}
+
+async function readPasswordInteractive(prompt: string): Promise<string> {
+    process.stdout.write(prompt);
+
+    return new Promise<string>((resolve) => {
+        const stdin = process.stdin;
+        const wasRaw = stdin.isTTY;
+        if (wasRaw) {
+            stdin.setRawMode(true);
+        }
+
+        let password = "";
+
+        const onData = (buf: Buffer): void => {
+            const char = buf.toString("utf-8");
+
+            if (char === "\r" || char === "\n") {
+                cleanup();
+                process.stdout.write("\n");
+                resolve(password);
+                return;
+            }
+
+            if (char === "\u0003") {
+                // Ctrl+C
+                cleanup();
+                process.exit(0);
+            }
+
+            if (char === "\u0008" || char === "\u007f") {
+                // Backspace
+                if (password.length > 0) {
+                    password = password.slice(0, -1);
+                    process.stdout.write("\b \b");
+                }
+                return;
+            }
+
+            password += char;
+            process.stdout.write("*");
+        };
+
+        const onError = (): void => {
+            cleanup();
+            resolve("");
+        };
+
+        const cleanup = (): void => {
+            stdin.removeListener("data", onData);
+            stdin.removeListener("error", onError);
+            if (wasRaw) {
+                stdin.setRawMode(false);
+            }
+            stdin.pause();
+        };
+
+        stdin.on("data", onData);
+        stdin.on("error", onError);
+        stdin.resume();
     });
 }
 
@@ -42,7 +103,7 @@ export const loginCommand = new Command("login")
 ${pc.bold("예시:")}
   ${pc.green("kampus auth login 202100000")}             ID를 인자로 전달, PW는 stdin
   ${pc.green("kampus auth login 202100000 --force")}    기존 세션 무시하고 재로그인
-  ${pc.green("kampus auth login < input.txt")}          ID와 PW를 파일에서 읽기 (한 줄씩)
+  ${pc.green("kampus auth login < input.txt")}          파이프 입력 (첫 줄=ID, 둘째 줄=PW)
   ${pc.green("kampus auth login")}                      인터랙티브 ID/PW 입력
 `
     )
@@ -64,14 +125,29 @@ ${pc.bold("예시:")}
             }
         }
 
-        // Read ID if not provided
         let userId = id;
-        if (!userId) {
-            if (process.stdin.isTTY) {
+        let password = "";
+
+        if (process.stdin.isTTY) {
+            // Interactive mode: prompt for ID then password
+            if (!userId) {
                 userId = await readInputInteractive(pc.dim("학번/아이디: "));
+            }
+            if (!userId) {
+                console.error(pc.red("❌ 학번/아이디가 필요합니다."));
+                process.exitCode = 1;
+                return;
+            }
+            password = await readPasswordInteractive(pc.dim("비밀번호: "));
+        } else {
+            // Piped mode: read stdin once, split by newline
+            const input = await readInputPiped();
+            const lines = input.split(/\r?\n/);
+            if (!userId) {
+                userId = lines[0];
+                password = lines[1] ?? "";
             } else {
-                process.stdout.write(pc.dim("학번/아이디: "));
-                userId = await readInputPiped();
+                password = lines[0] ?? "";
             }
             if (!userId) {
                 console.error(pc.red("❌ 학번/아이디가 필요합니다."));
@@ -80,14 +156,6 @@ ${pc.bold("예시:")}
             }
         }
 
-        // Read password (always from stdin)
-        let password: string | undefined;
-        if (process.stdin.isTTY) {
-            password = await readInputInteractive(pc.dim("비밀번호: "));
-        } else {
-            process.stdout.write(pc.dim("비밀번호: "));
-            password = await readInputPiped();
-        }
         if (!password) {
             console.error(pc.red("❌ 비밀번호가 필요합니다."));
             process.exitCode = 1;

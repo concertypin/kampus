@@ -12,7 +12,7 @@ vi.mock("@/crawler", () => ({
 }));
 
 // Mock the getLogLevel function
-vi.mock("@/index", () => ({
+vi.mock("@/log-level", () => ({
     getLogLevel: vi.fn<() => LogLevel | undefined>(() => undefined),
 }));
 
