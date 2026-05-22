@@ -54,6 +54,17 @@ export interface QuizItem {
     grade: string;
 }
 
+export interface QuizDetail {
+    id: string;
+    name: string;
+    description: string;
+    attemptsAllowed: string;
+    openedAt: string;
+    closedAt: string;
+    timeLimit: string;
+    attemptStatus: "not_started" | "in_progress" | "finished" | "unknown";
+}
+
 export interface ActivityItem {
     id: string;
     type: "assign" | "quiz" | "ubfile" | "vod" | "ubboard" | "other";
@@ -695,6 +706,116 @@ export class Crawler {
         log.info(`Found ${quizzes.length} quizzes`);
         log.debug("Quizzes:", quizzes);
         return quizzes;
+    }
+
+    /**
+     * Get detailed information about a single quiz.
+     * @param cmid - The course module ID (cmid) of the quiz, as returned in QuizItem.id
+     */
+    async getQuizDetail(cmid: string): Promise<QuizDetail> {
+        const log = getLogger().withTag("quiz-detail");
+        log.info(`Fetching quiz detail for cmid=${cmid}...`);
+
+        const response = await this.fetch(`/mod/quiz/view.php?id=${cmid}`);
+        const html = await response.text();
+        const doc = this.parseHtml(html);
+
+        // Quiz name from the <h2> inside the main content area
+        const name =
+            normalizeText(doc.querySelector('[role="main"] h2')?.textContent) ||
+            normalizeText(doc.querySelector("h2")?.textContent);
+
+        // Description from the intro box — use textContent for clean decoded text
+        const introEl = doc.querySelector("#intro .no-overflow");
+        const description = (introEl?.textContent ?? "")
+            .replace(/\s+/g, " ")
+            .trim();
+
+        // Parse the quiz info box (.quizinfo well)
+        const infoBox = doc.querySelector(".quizinfo");
+        let attemptsAllowed = "";
+        let openedAt = "";
+        let closedAt = "";
+        let timeLimit = "";
+
+        if (infoBox) {
+            const infoParagraphs = infoBox.querySelectorAll("p");
+            for (const p of infoParagraphs) {
+                const text = normalizeText(p.textContent);
+                if (text.toLowerCase().includes("attempts allowed")) {
+                    attemptsAllowed = text.replace(
+                        /^attempts allowed:\s*/i,
+                        ""
+                    );
+                } else if (
+                    text.toLowerCase().includes("will close") ||
+                    text.toLowerCase().includes("closed")
+                ) {
+                    // "This quiz will close at 2026-05-25 23:55" or "This quiz closed at ..."
+                    closedAt = text
+                        .replace(/^this quiz (will close|closed)( at)?\s*/i, "")
+                        .replace(/\.$/, "");
+                } else if (text.toLowerCase().includes("opened")) {
+                    // "This quiz opened at 2026-05-19 09:00"
+                    openedAt = text
+                        .replace(/^this quiz opened( at)?\s*/i, "")
+                        .replace(/\.$/, "");
+                } else if (text.toLowerCase().includes("time limit")) {
+                    timeLimit = text.replace(/^time limit:\s*/i, "");
+                }
+            }
+        }
+
+        // Determine attempt status
+        let attemptStatus: QuizDetail["attemptStatus"] = "unknown";
+        const attemptBox = doc.querySelector(".quizattempt");
+
+        if (attemptBox) {
+            const startButton = attemptBox.querySelector(
+                ".quizstartbuttondiv input[type='submit']"
+            );
+            const summaryTable = attemptBox.querySelector(
+                "table.generaltable, table.quizattemptsummary"
+            );
+
+            if (startButton) {
+                // "Attempt quiz now" or "Re-attempt quiz" button is visible
+                // Check if there's an existing attempt summary to distinguish
+                // between "not_started" and "finished" (with re-attempt allowed)
+                const existingAttempts =
+                    attemptBox.querySelectorAll("table tbody tr");
+                if (existingAttempts.length > 0) {
+                    attemptStatus = "finished";
+                } else {
+                    attemptStatus = "not_started";
+                }
+            } else if (summaryTable) {
+                // No start button but there's a summary table — check for in-progress
+                const continueLink = attemptBox.querySelector(
+                    "a[href*='attempt.php']"
+                );
+                if (continueLink) {
+                    attemptStatus = "in_progress";
+                } else {
+                    attemptStatus = "finished";
+                }
+            }
+        }
+
+        const detail: QuizDetail = {
+            id: cmid,
+            name,
+            description,
+            attemptsAllowed,
+            openedAt,
+            closedAt,
+            timeLimit,
+            attemptStatus,
+        };
+
+        log.info(`Quiz detail: ${name}`);
+        log.debug("Quiz detail:", detail);
+        return detail;
     }
 
     async getWeeklyActivities(courseId: string): Promise<WeeklyActivity[]> {

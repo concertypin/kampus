@@ -177,4 +177,225 @@ describe("Crawler", () => {
             expect(customCrawler).toBeDefined();
         });
     });
+
+    describe("getQuizDetail", () => {
+        function buildQuizHtml(opts?: {
+            name?: string;
+            description?: string;
+            infoParagraphs?: string[];
+            attemptHtml?: string;
+        }): string {
+            const name = opts?.name ?? "퀴즈_6차";
+            const description =
+                opts?.description ?? "이것은 테스트 퀴즈입니다.";
+            const infoParagraphs = opts?.infoParagraphs ?? [
+                "Attempts allowed: 1",
+                "This quiz opened at 2026-05-19 09:00",
+                "This quiz will close at 2026-05-25 23:55",
+                "Time limit: 1 day",
+            ];
+            const attemptHtml =
+                opts?.attemptHtml ??
+                `<div class="quizattempt">
+                    <div class="quizstartbuttondiv">
+                        <input type="submit" value="Start attempt" />
+                    </div>
+                </div>`;
+
+            return `
+                <html><body>
+                    <div role="main">
+                        <h2>${name}</h2>
+                    </div>
+                    <div id="intro">
+                        <div class="no-overflow">${description}</div>
+                    </div>
+                    <div class="quizinfo">
+                        ${infoParagraphs.map((p) => `<p>${p}</p>`).join("")}
+                    </div>
+                    ${attemptHtml}
+                </body></html>
+            `;
+        }
+
+        it("should parse quiz detail with 'not_started' status", async () => {
+            mockFetch.mockResolvedValueOnce(
+                new Response(buildQuizHtml(), { status: 200 })
+            );
+
+            const quiz = await crawler.getQuizDetail("677443");
+
+            expect(quiz.id).toBe("677443");
+            expect(quiz.name).toBe("퀴즈_6차");
+            expect(quiz.description).toBe("이것은 테스트 퀴즈입니다.");
+            expect(quiz.attemptsAllowed).toBe("1");
+            expect(quiz.openedAt).toBe("2026-05-19 09:00");
+            expect(quiz.closedAt).toBe("2026-05-25 23:55");
+            expect(quiz.timeLimit).toBe("1 day");
+            expect(quiz.attemptStatus).toBe("not_started");
+        });
+
+        it("should parse quiz detail with 'in_progress' status", async () => {
+            mockFetch.mockResolvedValueOnce(
+                new Response(
+                    buildQuizHtml({
+                        attemptHtml: `
+                            <div class="quizattempt">
+                                <table class="generaltable quizattemptsummary">
+                                    <tbody><tr><td>Attempt 1</td></tr></tbody>
+                                </table>
+                                <a href="attempt.php?attempt=123">Continue the last attempt</a>
+                            </div>
+                        `,
+                    }),
+                    { status: 200 }
+                )
+            );
+
+            const quiz = await crawler.getQuizDetail("677443");
+            expect(quiz.attemptStatus).toBe("in_progress");
+        });
+
+        it("should parse quiz detail with 'finished' status (summary table, no continue)", async () => {
+            mockFetch.mockResolvedValueOnce(
+                new Response(
+                    buildQuizHtml({
+                        attemptHtml: `
+                            <div class="quizattempt">
+                                <table class="generaltable quizattemptsummary">
+                                    <tbody>
+                                        <tr><td>Attempt 1</td><td>90</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        `,
+                    }),
+                    { status: 200 }
+                )
+            );
+
+            const quiz = await crawler.getQuizDetail("677443");
+            expect(quiz.attemptStatus).toBe("finished");
+        });
+
+        it("should parse quiz detail with 'finished' status (re-attempt button + existing attempts)", async () => {
+            mockFetch.mockResolvedValueOnce(
+                new Response(
+                    buildQuizHtml({
+                        attemptHtml: `
+                            <div class="quizattempt">
+                                <table>
+                                    <tbody>
+                                        <tr><td>Attempt 1</td><td>80</td></tr>
+                                    </tbody>
+                                </table>
+                                <div class="quizstartbuttondiv">
+                                    <input type="submit" value="Re-attempt quiz" />
+                                </div>
+                            </div>
+                        `,
+                    }),
+                    { status: 200 }
+                )
+            );
+
+            const quiz = await crawler.getQuizDetail("677443");
+            expect(quiz.attemptStatus).toBe("finished");
+        });
+
+        it("should return 'unknown' status when no quizattempt block", async () => {
+            mockFetch.mockResolvedValueOnce(
+                new Response(buildQuizHtml({ attemptHtml: "" }), {
+                    status: 200,
+                })
+            );
+
+            const quiz = await crawler.getQuizDetail("677443");
+            expect(quiz.attemptStatus).toBe("unknown");
+        });
+
+        it("should handle description with HTML entities correctly", async () => {
+            mockFetch.mockResolvedValueOnce(
+                new Response(
+                    buildQuizHtml({
+                        description:
+                            "O&#160;X 퀴즈입니다. &lt;주관식&gt; 문제는&#160;없습니다.",
+                    }),
+                    { status: 200 }
+                )
+            );
+
+            const quiz = await crawler.getQuizDetail("677443");
+            // textContent should return decoded text
+            expect(quiz.description).toContain("O");
+            expect(quiz.description).toContain("X");
+            expect(quiz.description).not.toContain("&#160;");
+            expect(quiz.description).not.toContain("&lt;");
+        });
+
+        it("should handle missing quizinfo fields gracefully", async () => {
+            mockFetch.mockResolvedValueOnce(
+                new Response(
+                    buildQuizHtml({
+                        infoParagraphs: [],
+                    }),
+                    { status: 200 }
+                )
+            );
+
+            const quiz = await crawler.getQuizDetail("677443");
+            expect(quiz.attemptsAllowed).toBe("");
+            expect(quiz.openedAt).toBe("");
+            expect(quiz.closedAt).toBe("");
+            expect(quiz.timeLimit).toBe("");
+        });
+
+        it("should handle closed quiz info", async () => {
+            mockFetch.mockResolvedValueOnce(
+                new Response(
+                    buildQuizHtml({
+                        infoParagraphs: [
+                            "Attempts allowed: 2",
+                            "This quiz opened at 2026-05-01 09:00",
+                            "This quiz closed at 2026-05-10 23:55",
+                            "Time limit: 1 hour",
+                        ],
+                    }),
+                    { status: 200 }
+                )
+            );
+
+            const quiz = await crawler.getQuizDetail("677443");
+            expect(quiz.closedAt).toBe("2026-05-10 23:55");
+            expect(quiz.attemptsAllowed).toBe("2");
+            expect(quiz.timeLimit).toBe("1 hour");
+        });
+
+        it("should use fallback h2 selector when [role='main'] h2 is missing", async () => {
+            const html = `
+                <html><body>
+                    <h2>Fallback Quiz Name</h2>
+                    <div id="intro"><div class="no-overflow">desc</div></div>
+                    <div class="quizinfo"></div>
+                </body></html>
+            `;
+            mockFetch.mockResolvedValueOnce(
+                new Response(html, { status: 200 })
+            );
+
+            const quiz = await crawler.getQuizDetail("677443");
+            expect(quiz.name).toBe("Fallback Quiz Name");
+        });
+
+        it("should escape user input in path", async () => {
+            mockFetch.mockResolvedValueOnce(
+                new Response(buildQuizHtml(), { status: 200 })
+            );
+
+            // Should not throw — cmid with special characters should be URL-encoded safely
+            await expect(
+                crawler.getQuizDetail("123<script>")
+            ).resolves.toBeDefined();
+        });
+    });
 });

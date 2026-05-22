@@ -6,6 +6,7 @@ export {
     type MessageItem,
     type AssignmentItem,
     type QuizItem,
+    type QuizDetail,
     type ActivityItem,
     type WeeklyActivity,
 } from "./crawler";

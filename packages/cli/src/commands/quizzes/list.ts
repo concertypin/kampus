@@ -33,6 +33,7 @@ ${pc.bold("예시:")}
 
             for (const q of quizzes) {
                 console.log(pc.dim("─".repeat(40)));
+                console.log(`${pc.bold("ID")}: ${pc.dim(q.id)}`);
                 console.log(`${pc.bold("주차")}: ${q.week}`);
                 console.log(`${pc.bold("퀴즈명")}: ${q.name}`);
                 console.log(`${pc.bold("마감일시")}: ${q.closesAt}`);

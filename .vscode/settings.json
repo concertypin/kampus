@@ -3,5 +3,11 @@
         "editor.defaultFormatter": "esbenp.prettier-vscode",
         "editor.tabSize": 4
     },
-    "js/ts.preferences.preferTypeOnlyAutoImports": true
+    "js/ts.preferences.preferTypeOnlyAutoImports": true,
+    "chat.tools.terminal.autoApprove": {
+        "/^cd /c/Users/PC/Projects/VSCode/assignment && pnpm --silent kampus courses list 2>&1$/": {
+            "approve": true,
+            "matchCommandLine": true
+        }
+    }
 }
