@@ -41,6 +41,7 @@ ${pc.bold("예시:")}
                 console.log(pc.dim("─".repeat(40)));
                 console.log(`${pc.bold("주차")}: ${a.week}`);
                 console.log(`${pc.bold("과제명")}: ${a.name}`);
+                console.log(`${pc.bold("ID")}: ${pc.dim(a.id)}`);
                 console.log(`${pc.bold("마감일시")}: ${a.dueDate}`);
                 console.log(`${pc.bold("제출 상태")}: ${statusStr}`);
                 console.log(`${pc.bold("학점")}: ${pc.yellow(a.grade)}`);

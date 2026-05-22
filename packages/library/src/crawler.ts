@@ -46,6 +46,17 @@ export interface AssignmentItem {
     grade: string;
 }
 
+export interface AssignmentDetail {
+    id: string;
+    name: string;
+    description: string;
+    submissionStatus: string;
+    gradingStatus: string;
+    dueDate: string;
+    timeRemaining: string;
+    lastModified: string;
+}
+
 export interface QuizItem {
     id: string;
     week: string;
@@ -615,6 +626,83 @@ export class Crawler {
         log.info(`Found ${assignments.length} assignments`);
         log.debug("Assignments:", assignments);
         return assignments;
+    }
+
+    /**
+     * Get detailed information about a single assignment.
+     * @param cmid - The course module ID (cmid) of the assignment, as returned in AssignmentItem.id
+     */
+    async getAssignmentDetail(cmid: string): Promise<AssignmentDetail> {
+        const log = getLogger().withTag("assignment-detail");
+        log.info(`Fetching assignment detail for cmid=${cmid}...`);
+
+        const response = await this.fetch(`/mod/assign/view.php?id=${cmid}`);
+        const html = await response.text();
+        const doc = this.parseHtml(html);
+
+        // Assignment name from the <h2> inside the main content area
+        const name =
+            normalizeText(doc.querySelector('[role="main"] h2')?.textContent) ||
+            normalizeText(doc.querySelector("h2")?.textContent);
+
+        // Description from the intro box — use textContent for clean decoded text
+        const introEl = doc.querySelector("#intro");
+        const description = (introEl?.textContent ?? "")
+            .replace(/\s+/g, " ")
+            .trim();
+
+        // Parse the submission status table
+        let submissionStatus = "";
+        let gradingStatus = "";
+        let dueDate = "";
+        let timeRemaining = "";
+        let lastModified = "";
+
+        const statusTable = doc.querySelector(
+            ".submissionstatustable table.generaltable"
+        );
+        if (statusTable) {
+            const rows = statusTable.querySelectorAll("tbody tr");
+            for (const row of rows) {
+                const cells = row.querySelectorAll("td");
+                if (cells.length < 2) continue;
+                const label = normalizeText(cells[0]?.textContent);
+                const value = normalizeText(cells[1]?.textContent);
+
+                switch (label.toLowerCase()) {
+                    case "submission status":
+                        submissionStatus = value;
+                        break;
+                    case "grading status":
+                        gradingStatus = value;
+                        break;
+                    case "due date":
+                        dueDate = value;
+                        break;
+                    case "time remaining":
+                        timeRemaining = value;
+                        break;
+                    case "last modified":
+                        lastModified = value;
+                        break;
+                }
+            }
+        }
+
+        const detail: AssignmentDetail = {
+            id: cmid,
+            name,
+            description,
+            submissionStatus,
+            gradingStatus,
+            dueDate,
+            timeRemaining,
+            lastModified,
+        };
+
+        log.info(`Assignment detail: ${name}`);
+        log.debug("Assignment detail:", detail);
+        return detail;
     }
 
     async getQuizzes(courseId: string): Promise<QuizItem[]> {

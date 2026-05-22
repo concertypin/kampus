@@ -5,6 +5,7 @@ export {
     type AttendanceItem,
     type MessageItem,
     type AssignmentItem,
+    type AssignmentDetail,
     type QuizItem,
     type QuizDetail,
     type ActivityItem,

@@ -398,4 +398,181 @@ describe("Crawler", () => {
             ).resolves.toBeDefined();
         });
     });
+
+    describe("getAssignmentDetail", () => {
+        function buildAssignmentHtml(opts?: {
+            name?: string;
+            description?: string;
+            statusRows?: Array<{ label: string; value: string }>;
+        }): string {
+            const name = opts?.name ?? "11주차 활동보고서";
+            const description =
+                opts?.description ?? "이것은 테스트 과제입니다.";
+            const statusRows = opts?.statusRows ?? [
+                {
+                    label: "Submission status",
+                    value: "No attempt",
+                },
+                {
+                    label: "Grading status",
+                    value: "Not graded",
+                },
+                { label: "Due date", value: "2026-05-20 00:00" },
+                {
+                    label: "Time remaining",
+                    value: "Assignment is overdue by: 2 days 17 hours",
+                },
+                { label: "Last modified", value: "-" },
+            ];
+
+            return `
+                <html><body>
+                    <div role="main">
+                        <h2>${name}</h2>
+                    </div>
+                    <div id="intro">
+                        <div class="no-overflow">${description}</div>
+                    </div>
+                    <div class="submissionstatustable">
+                        <h3>Submission status</h3>
+                        <div class="box boxaligncenter submissionsummarytable">
+                            <table class="generaltable">
+                                <tbody>
+                                    ${statusRows
+                                        .map(
+                                            (r) => `
+                                        <tr>
+                                            <td class="cell c0">${r.label}</td>
+                                            <td class="cell c1 lastcol">${r.value}</td>
+                                        </tr>
+                                    `
+                                        )
+                                        .join("")}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </body></html>
+            `;
+        }
+
+        it("should parse assignment detail correctly", async () => {
+            mockFetch.mockResolvedValueOnce(
+                new Response(buildAssignmentHtml(), { status: 200 })
+            );
+
+            const assignment = await crawler.getAssignmentDetail("674989");
+
+            expect(assignment.id).toBe("674989");
+            expect(assignment.name).toBe("11주차 활동보고서");
+            expect(assignment.description).toBe("이것은 테스트 과제입니다.");
+            expect(assignment.submissionStatus).toBe("No attempt");
+            expect(assignment.gradingStatus).toBe("Not graded");
+            expect(assignment.dueDate).toBe("2026-05-20 00:00");
+            expect(assignment.timeRemaining).toBe(
+                "Assignment is overdue by: 2 days 17 hours"
+            );
+            expect(assignment.lastModified).toBe("-");
+        });
+
+        it("should handle submitted assignment", async () => {
+            mockFetch.mockResolvedValueOnce(
+                new Response(
+                    buildAssignmentHtml({
+                        statusRows: [
+                            {
+                                label: "Submission status",
+                                value: "Submitted for grading",
+                            },
+                            { label: "Grading status", value: "Graded" },
+                            {
+                                label: "Due date",
+                                value: "2026-03-30 23:50",
+                            },
+                            {
+                                label: "Time remaining",
+                                value: "1 day 3 hours",
+                            },
+                            {
+                                label: "Last modified",
+                                value: "2026-03-30 22:15",
+                            },
+                        ],
+                    }),
+                    { status: 200 }
+                )
+            );
+
+            const assignment = await crawler.getAssignmentDetail("658841");
+
+            expect(assignment.submissionStatus).toBe("Submitted for grading");
+            expect(assignment.gradingStatus).toBe("Graded");
+            expect(assignment.lastModified).toBe("2026-03-30 22:15");
+        });
+
+        it("should handle missing description", async () => {
+            mockFetch.mockResolvedValueOnce(
+                new Response(buildAssignmentHtml({ description: "" }), {
+                    status: 200,
+                })
+            );
+
+            const assignment = await crawler.getAssignmentDetail("674989");
+            expect(assignment.description).toBe("");
+        });
+
+        it("should handle missing status table", async () => {
+            const html = `
+                <html><body>
+                    <div role="main">
+                        <h2>Empty Assignment</h2>
+                    </div>
+                    <div id="intro"></div>
+                </body></html>
+            `;
+            mockFetch.mockResolvedValueOnce(
+                new Response(html, { status: 200 })
+            );
+
+            const assignment = await crawler.getAssignmentDetail("674989");
+            expect(assignment.submissionStatus).toBe("");
+            expect(assignment.gradingStatus).toBe("");
+            expect(assignment.dueDate).toBe("");
+        });
+
+        it("should use fallback h2 selector when [role='main'] h2 is missing", async () => {
+            const html = `
+                <html><body>
+                    <h2>Fallback Assignment</h2>
+                    <div id="intro">desc</div>
+                    <div class="submissionstatustable">
+                        <table class="generaltable"><tbody></tbody></table>
+                    </div>
+                </body></html>
+            `;
+            mockFetch.mockResolvedValueOnce(
+                new Response(html, { status: 200 })
+            );
+
+            const assignment = await crawler.getAssignmentDetail("674989");
+            expect(assignment.name).toBe("Fallback Assignment");
+        });
+
+        it("should handle description with HTML entities", async () => {
+            mockFetch.mockResolvedValueOnce(
+                new Response(
+                    buildAssignmentHtml({
+                        description:
+                            "O&#160;X 과제입니다. &lt;파일 제출&gt; 필수",
+                    }),
+                    { status: 200 }
+                )
+            );
+
+            const assignment = await crawler.getAssignmentDetail("674989");
+            expect(assignment.description).toContain("O");
+            expect(assignment.description).not.toContain("&#160;");
+            expect(assignment.description).not.toContain("&lt;");
+        });
+    });
 });
