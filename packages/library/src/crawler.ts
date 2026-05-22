@@ -609,34 +609,86 @@ export class Crawler {
     async getQuizzes(courseId: string): Promise<QuizItem[]> {
         const log = getLogger().withTag("quizzes");
         log.info(`Fetching quizzes for course ${courseId}...`);
-        const response = await this.fetch(`/mod/quiz/index.php?id=${courseId}`);
-        const html = await response.text();
-        const doc = this.parseHtml(html);
+
+        // 1. Fetch the quiz index page — only lists currently active/available
+        //    quizzes with full details (week, close date, grade).
+        const indexResponse = await this.fetch(
+            `/mod/quiz/index.php?id=${courseId}`
+        );
+        const indexHtml = await indexResponse.text();
+        const indexDoc = this.parseHtml(indexHtml);
 
         const quizzes: QuizItem[] = [];
-        const rows = doc.querySelectorAll("table.generaltable tbody tr");
-        for (const row of rows) {
+        const seenIds = new Set<string>();
+        const seenNames = new Set<string>();
+
+        const indexRows = indexDoc.querySelectorAll(
+            "table.generaltable tbody tr"
+        );
+        for (const row of indexRows) {
             const tds = row.querySelectorAll("td");
             if (tds.length < 3) continue;
 
             const week = normalizeText(tds[0]?.textContent);
-
             const nameLink = tds[1]?.querySelector("a");
             if (!nameLink) continue;
             const name = normalizeText(nameLink.textContent);
             const href = nameLink.getAttribute("href") || "";
             const idMatch = href.match(/id=(\d+)/);
             const id = idMatch && idMatch[1] ? idMatch[1] : "";
+            if (!id) continue;
 
             const closesAt = normalizeText(tds[2]?.textContent);
             const grade = normalizeText(tds[3]?.textContent);
 
+            seenIds.add(id);
+            seenNames.add(name);
+            quizzes.push({ id, week, name, closesAt, grade });
+        }
+
+        // 2. Also scrape the course page for quizzes that are past/closed.
+        //    Moodle hides these from the quiz index but still lists them on
+        //    the course page as dimmed activities (no link, just module ID).
+        const courseResponse = await this.fetch(
+            `/course/view.php?id=${courseId}`
+        );
+        const courseHtml = await courseResponse.text();
+
+        // Find every modtype_quiz block.  The matched text spans from
+        // "module-XXXX" through the instancename, so we search *inside*
+        // the block for the availability date (NOT in the prefix).
+        const quizBlockRegex =
+            /module-(\d+)[\s\S]*?modtype_quiz[\s\S]*?instancename[^>]*>([^<]+)</g;
+        let blockMatch: RegExpExecArray | null;
+        while ((blockMatch = quizBlockRegex.exec(courseHtml)) !== null) {
+            const moduleId = blockMatch[1] ?? "";
+            const name = normalizeText(blockMatch[2]);
+            if (!moduleId || seenNames.has(name)) continue;
+
+            // Search inside the matched block for the availability date.
+            const blockText = courseHtml.substring(
+                blockMatch.index,
+                blockMatch.index + blockMatch[0].length
+            );
+            const closeMatch = blockText.match(
+                /Available until[^<]*<strong>([^<]+)<\/strong>/
+            );
+            const closesAt = closeMatch ? normalizeText(closeMatch[1]) : "";
+
+            // Search backwards from the module ID for the section heading.
+            const prefixStart = Math.max(0, blockMatch.index - 800);
+            const prefix = courseHtml.substring(prefixStart, blockMatch.index);
+            const sectionMatch = prefix.match(/(\d+회차)/);
+            const week = sectionMatch?.[1] ?? "";
+
+            seenIds.add(moduleId);
+            seenNames.add(name);
             quizzes.push({
-                id,
+                id: moduleId,
                 week,
                 name,
                 closesAt,
-                grade,
+                grade: "",
             });
         }
 
