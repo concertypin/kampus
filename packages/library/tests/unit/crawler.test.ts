@@ -574,5 +574,29 @@ describe("Crawler", () => {
             expect(assignment.description).not.toContain("&#160;");
             expect(assignment.description).not.toContain("&lt;");
         });
+
+        it("should handle partial status rows (only some fields)", async () => {
+            mockFetch.mockResolvedValueOnce(
+                new Response(
+                    buildAssignmentHtml({
+                        statusRows: [
+                            {
+                                label: "Submission status",
+                                value: "Submitted for grading",
+                            },
+                            { label: "Due date", value: "2026-05-20 00:00" },
+                        ],
+                    }),
+                    { status: 200 }
+                )
+            );
+
+            const assignment = await crawler.getAssignmentDetail("674989");
+            expect(assignment.submissionStatus).toBe("Submitted for grading");
+            expect(assignment.dueDate).toBe("2026-05-20 00:00");
+            // Fields not in the table should remain empty
+            expect(assignment.gradingStatus).toBe("");
+            expect(assignment.timeRemaining).toBe("");
+        });
     });
 });

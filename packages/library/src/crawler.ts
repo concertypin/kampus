@@ -646,10 +646,9 @@ export class Crawler {
             normalizeText(doc.querySelector("h2")?.textContent);
 
         // Description from the intro box — use textContent for clean decoded text
-        const introEl = doc.querySelector("#intro");
-        const description = (introEl?.textContent ?? "")
-            .replace(/\s+/g, " ")
-            .trim();
+        const description = normalizeText(
+            doc.querySelector("#intro")?.textContent
+        );
 
         // Parse the submission status table
         let submissionStatus = "";
@@ -814,10 +813,9 @@ export class Crawler {
             normalizeText(doc.querySelector("h2")?.textContent);
 
         // Description from the intro box — use textContent for clean decoded text
-        const introEl = doc.querySelector("#intro .no-overflow");
-        const description = (introEl?.textContent ?? "")
-            .replace(/\s+/g, " ")
-            .trim();
+        const description = normalizeText(
+            doc.querySelector("#intro .no-overflow")?.textContent
+        );
 
         // Parse the quiz info box (.quizinfo well)
         const infoBox = doc.querySelector(".quizinfo");

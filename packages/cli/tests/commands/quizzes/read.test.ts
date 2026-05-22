@@ -204,6 +204,37 @@ describe("quizzes read command", () => {
         stdoutSpy.mockRestore();
     });
 
+    it("should not print description section when empty", async () => {
+        getQuizDetailMock.mockResolvedValue({
+            ...sampleQuiz,
+            description: "",
+        });
+
+        const program = new Command();
+        program.addCommand(quizzesCommand);
+        program.exitOverride();
+
+        const consoleLogSpy = vi
+            .spyOn(console, "log")
+            .mockImplementation(() => {});
+        const stdoutSpy = vi
+            .spyOn(process.stdout, "write")
+            .mockImplementation(() => true);
+
+        await program.parseAsync(["quizzes", "read", "677443"], {
+            from: "user",
+        });
+
+        // Should not contain the word "설명" when description is empty
+        const allCalls = consoleLogSpy.mock.calls
+            .map((c) => c.join(" "))
+            .join(" ");
+        expect(allCalls).not.toContain("설명:");
+
+        consoleLogSpy.mockRestore();
+        stdoutSpy.mockRestore();
+    });
+
     it("should handle errors", async () => {
         getQuizDetailMock.mockRejectedValue(new Error("Network error"));
 

@@ -233,4 +233,35 @@ describe("assignments read command", () => {
         consoleLogSpy.mockRestore();
         stdoutSpy.mockRestore();
     });
+
+    it("should not print description section when empty", async () => {
+        getAssignmentDetailMock.mockResolvedValue({
+            ...sampleAssignment,
+            description: "",
+        });
+
+        const program = new Command();
+        program.addCommand(assignmentsCommand);
+        program.exitOverride();
+
+        const consoleLogSpy = vi
+            .spyOn(console, "log")
+            .mockImplementation(() => {});
+        const stdoutSpy = vi
+            .spyOn(process.stdout, "write")
+            .mockImplementation(() => true);
+
+        await program.parseAsync(["assignments", "read", "674989"], {
+            from: "user",
+        });
+
+        // Should not contain the word "설명" when description is empty
+        const allCalls = consoleLogSpy.mock.calls
+            .map((c) => c.join(" "))
+            .join(" ");
+        expect(allCalls).not.toContain("설명:");
+
+        consoleLogSpy.mockRestore();
+        stdoutSpy.mockRestore();
+    });
 });
