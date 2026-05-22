@@ -55,6 +55,13 @@ export interface AssignmentDetail {
     dueDate: string;
     timeRemaining: string;
     lastModified: string;
+    /** Submitted files (student submissions) */
+    files: AssignmentFile[];
+}
+
+export interface AssignmentFile {
+    name: string;
+    url: string;
 }
 
 export interface QuizItem {
@@ -650,6 +657,22 @@ export class Crawler {
             doc.querySelector("#intro")?.textContent
         );
 
+        // Extract teacher-provided file links from the intro area
+        const files: AssignmentFile[] = [];
+        const introEl = doc.querySelector("#intro");
+        if (introEl) {
+            const introLinks = introEl.querySelectorAll(
+                "a[href*='pluginfile.php']"
+            );
+            for (const link of introLinks) {
+                const href = link.getAttribute("href") || "";
+                const fileName = normalizeText(link.textContent);
+                if (fileName) {
+                    files.push({ name: fileName, url: href });
+                }
+            }
+        }
+
         // Parse the submission status table
         let submissionStatus = "";
         let gradingStatus = "";
@@ -684,6 +707,25 @@ export class Crawler {
                     case "last modified":
                         lastModified = value;
                         break;
+                    case "file submissions": {
+                        // Extract file links from the second cell
+                        const fileLinks = cells[1]?.querySelectorAll("a");
+                        if (fileLinks) {
+                            for (const link of fileLinks) {
+                                const href = link.getAttribute("href") || "";
+                                const fileName = normalizeText(
+                                    link.textContent
+                                );
+                                if (fileName) {
+                                    files.push({
+                                        name: fileName,
+                                        url: href,
+                                    });
+                                }
+                            }
+                        }
+                        break;
+                    }
                 }
             }
         }
@@ -697,6 +739,7 @@ export class Crawler {
             dueDate,
             timeRemaining,
             lastModified,
+            files,
         };
 
         log.info(`Assignment detail: ${name}`);

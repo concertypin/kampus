@@ -6,6 +6,7 @@ export {
     type MessageItem,
     type AssignmentItem,
     type AssignmentDetail,
+    type AssignmentFile,
     type QuizItem,
     type QuizDetail,
     type ActivityItem,

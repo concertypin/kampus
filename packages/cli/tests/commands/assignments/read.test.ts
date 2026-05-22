@@ -57,6 +57,7 @@ describe("assignments read command", () => {
         dueDate: "2026-05-20 00:00",
         timeRemaining: "Assignment is overdue by: 2 days 17 hours",
         lastModified: "-",
+        files: [],
     };
 
     it("should call getAssignmentDetail with assignmentId and display result", async () => {
@@ -260,6 +261,46 @@ describe("assignments read command", () => {
             .map((c) => c.join(" "))
             .join(" ");
         expect(allCalls).not.toContain("설명:");
+
+        consoleLogSpy.mockRestore();
+        stdoutSpy.mockRestore();
+    });
+
+    it("should display attached files", async () => {
+        getAssignmentDetailMock.mockResolvedValue({
+            ...sampleAssignment,
+            files: [
+                {
+                    name: "report.zip",
+                    url: "https://ecampus.example.com/pluginfile.php?file=/report.zip",
+                },
+            ],
+        });
+
+        const program = new Command();
+        program.addCommand(assignmentsCommand);
+        program.exitOverride();
+
+        const consoleLogSpy = vi
+            .spyOn(console, "log")
+            .mockImplementation(() => {});
+        const stdoutSpy = vi
+            .spyOn(process.stdout, "write")
+            .mockImplementation(() => true);
+
+        await program.parseAsync(["assignments", "read", "658841"], {
+            from: "user",
+        });
+
+        expect(consoleLogSpy).toHaveBeenCalledWith(
+            expect.stringContaining("첨부파일")
+        );
+        expect(consoleLogSpy).toHaveBeenCalledWith(
+            expect.stringContaining("report.zip")
+        );
+        expect(consoleLogSpy).toHaveBeenCalledWith(
+            expect.stringContaining("pluginfile.php")
+        );
 
         consoleLogSpy.mockRestore();
         stdoutSpy.mockRestore();

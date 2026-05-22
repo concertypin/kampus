@@ -404,6 +404,7 @@ describe("Crawler", () => {
             name?: string;
             description?: string;
             statusRows?: Array<{ label: string; value: string }>;
+            fileRows?: Array<{ name: string; url: string }>;
         }): string {
             const name = opts?.name ?? "11주차 활동보고서";
             const description =
@@ -424,6 +425,21 @@ describe("Crawler", () => {
                 },
                 { label: "Last modified", value: "-" },
             ];
+            const fileRows = opts?.fileRows ?? [];
+            const fileRowHtml = fileRows.length
+                ? `
+                                        <tr>
+                                            <td class="cell c0">File submissions</td>
+                                            <td class="cell c1 lastcol">
+                                                ${fileRows
+                                                    .map(
+                                                        (f) =>
+                                                            `<a href="${f.url}">${f.name}</a>`
+                                                    )
+                                                    .join(" ")}
+                                            </td>
+                                        </tr>`
+                : "";
 
             return `
                 <html><body>
@@ -448,6 +464,7 @@ describe("Crawler", () => {
                                     `
                                         )
                                         .join("")}
+                                    ${fileRowHtml}
                                 </tbody>
                             </table>
                         </div>
@@ -473,6 +490,7 @@ describe("Crawler", () => {
                 "Assignment is overdue by: 2 days 17 hours"
             );
             expect(assignment.lastModified).toBe("-");
+            expect(assignment.files).toEqual([]);
         });
 
         it("should handle submitted assignment", async () => {
@@ -573,6 +591,27 @@ describe("Crawler", () => {
             expect(assignment.description).toContain("O");
             expect(assignment.description).not.toContain("&#160;");
             expect(assignment.description).not.toContain("&lt;");
+        });
+
+        it("should extract file submissions", async () => {
+            mockFetch.mockResolvedValueOnce(
+                new Response(
+                    buildAssignmentHtml({
+                        fileRows: [
+                            {
+                                name: "202500041.zip",
+                                url: "https://ecampus.example.com/pluginfile.php?file=/submission.zip",
+                            },
+                        ],
+                    }),
+                    { status: 200 }
+                )
+            );
+
+            const assignment = await crawler.getAssignmentDetail("658841");
+            expect(assignment.files).toHaveLength(1);
+            expect(assignment.files[0]?.name).toBe("202500041.zip");
+            expect(assignment.files[0]?.url).toContain("pluginfile.php");
         });
 
         it("should handle partial status rows (only some fields)", async () => {

@@ -34,6 +34,16 @@ ${pc.bold("예시:")}
                 console.log(pc.dim(assignment.description));
             }
 
+            if (assignment.files && assignment.files.length > 0) {
+                console.log();
+                console.log(pc.bold("첨부파일:"));
+                for (const file of assignment.files) {
+                    console.log(
+                        `  ${pc.green(file.name)} ${pc.dim("→")} ${pc.underline(pc.dim(file.url))}`
+                    );
+                }
+            }
+
             console.log();
             console.log(pc.dim("─".repeat(50)));
             console.log(
