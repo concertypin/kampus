@@ -22,7 +22,7 @@ export async function login(
     });
     const moodleSessionCookie = response.headers
         .getSetCookie()
-        .find((cookie: string) => cookie.startsWith("MoodleSession="));
+        .findLast((cookie: string) => cookie.startsWith("MoodleSession="));
     if (moodleSessionCookie) {
         return moodleSessionCookie;
     }

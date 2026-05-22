@@ -30,7 +30,10 @@ ${pc.bold("예시:")}
 
         try {
             await crawler.clearSession();
-            console.log(`${pc.green("✅ 세션이 삭제되었습니다.")}`);
+            await crawler.clearCredentials();
+            console.log(
+                `${pc.green("✅ 세션과 저장된 인증 정보가 삭제되었습니다.")}`
+            );
         } catch (err: unknown) {
             const message = err instanceof Error ? err.message : String(err);
             console.error(`${pc.red(`❌ 세션 삭제 실패: ${message}`)}`);

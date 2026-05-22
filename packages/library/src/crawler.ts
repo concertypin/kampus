@@ -80,6 +80,12 @@ export class Crawler {
     private storage: SessionStorage;
     private baseUrl: string;
     private timeout: number;
+    /** Prevents concurrent auto-login attempts */
+    private _autoLoginPromise: Promise<boolean> | null = null;
+    /** Guards against re-entrant auto-login (prevents deadlock when
+     * checkSession() during auto-login triggers another fetch that
+     * detects session expiry). */
+    private _autoLoginInProgress = false;
 
     constructor(options: CrawlerOptions = {}) {
         this.storage = options.storage || new MemoryStorage();
@@ -89,6 +95,8 @@ export class Crawler {
             setLogLevel(options.logLevel);
         }
     }
+
+    // ─── Session management ────────────────────────────────────────
 
     async getSession(): Promise<string | undefined> {
         return this.storage.get("session");
@@ -100,6 +108,94 @@ export class Crawler {
 
     async clearSession(): Promise<void> {
         await this.storage.delete("session");
+    }
+
+    // ─── Credential management ─────────────────────────────────────
+    // NOTE: Credentials are stored as plain-text JSON in the session
+    // file. The file resides in the user's private home directory with
+    // OS-level access controls (0700-equivalent on Unix, user-only on
+    // Windows). This matches the security model of tools like git-credential-store.
+
+    /**
+     * Persist login credentials so the session can be renewed
+     * automatically when it expires.
+     */
+    async saveCredentials(username: string, password: string): Promise<void> {
+        await this.storage.set(
+            "credentials",
+            JSON.stringify({ username, password })
+        );
+    }
+
+    /**
+     * Retrieve stored credentials, or undefined if none were saved.
+     */
+    async getCredentials(): Promise<
+        { username: string; password: string } | undefined
+    > {
+        const raw = await this.storage.get("credentials");
+        if (!raw) return undefined;
+        try {
+            return JSON.parse(raw) as {
+                username: string;
+                password: string;
+            };
+        } catch {
+            return undefined;
+        }
+    }
+
+    /** Remove stored credentials (e.g. on logout). */
+    async clearCredentials(): Promise<void> {
+        await this.storage.delete("credentials");
+    }
+
+    /** Returns true if credentials have been stored. */
+    async hasCredentials(): Promise<boolean> {
+        return (await this.getCredentials()) !== undefined;
+    }
+
+    /**
+     * Attempt to re-authenticate using stored credentials.
+     * Returns `true` on success, `false` if no credentials exist or
+     * the login failed.
+     *
+     * Concurrent callers share a single in-flight login attempt to
+     * avoid thundering-herd re-authentication.
+     */
+    async tryAutoLogin(): Promise<boolean> {
+        if (this._autoLoginPromise) {
+            return this._autoLoginPromise;
+        }
+        this._autoLoginPromise = this._doAutoLogin();
+        try {
+            return await this._autoLoginPromise;
+        } finally {
+            this._autoLoginPromise = null;
+        }
+    }
+
+    private async _doAutoLogin(): Promise<boolean> {
+        const creds = await this.getCredentials();
+        if (!creds) return false;
+
+        const log = getLogger().withTag("auth");
+        log.info(
+            "Session expired — attempting auto-login with stored credentials…"
+        );
+        this._autoLoginInProgress = true;
+        try {
+            await this.login(creds.username, creds.password);
+            log.info("Auto-login succeeded");
+            return true;
+        } catch (error) {
+            log.error("Auto-login failed:", error);
+            // Clear credentials on auth failure so we don't keep retrying
+            await this.clearCredentials();
+            return false;
+        } finally {
+            this._autoLoginInProgress = false;
+        }
     }
 
     parseHtml(html: string): Document {
@@ -160,6 +256,51 @@ export class Crawler {
             const location = response.headers.get("Location");
             if (location) {
                 log.trace(`  → Redirect to: ${location}`);
+
+                // Detect session expiry: Moodle redirects to the login page
+                // when the session cookie is no longer valid.
+                if (
+                    location.includes("/login/index.php") ||
+                    location.includes("/login/")
+                ) {
+                    // If auto-login is already in progress, we are being
+                    // called re-entrantly from checkSession() inside
+                    // _doAutoLogin().  Follow the redirect normally to
+                    // avoid a deadlock — checkSession() will see the login
+                    // page and report the session as invalid.
+                    if (this._autoLoginInProgress) {
+                        log.debug(
+                            "Auto-login already in progress; following redirect normally"
+                        );
+                        let redirectUrl = location;
+                        if (location.startsWith(this.baseUrl)) {
+                            redirectUrl = location.substring(
+                                this.baseUrl.length
+                            );
+                        } else if (
+                            location.startsWith("http://") ||
+                            location.startsWith("https://")
+                        ) {
+                            const parsed = new URL(location);
+                            redirectUrl = parsed.pathname + parsed.search;
+                        }
+                        return this.fetch(redirectUrl, options);
+                    }
+
+                    log.debug(
+                        "Redirected to login page — session may be expired"
+                    );
+                    const refreshed = await this.tryAutoLogin();
+                    if (refreshed) {
+                        // Retry the original request with the new session
+                        return this.fetch(url, options);
+                    }
+                    throw new Error(
+                        "Session expired and no stored credentials available for auto-login. " +
+                            "Please run `kampus auth login`."
+                    );
+                }
+
                 let redirectUrl = location;
                 if (location.startsWith(this.baseUrl)) {
                     redirectUrl = location.substring(this.baseUrl.length);
@@ -192,6 +333,9 @@ export class Crawler {
                 await this.clearSession();
                 throw new Error("Login failed: invalid credentials");
             }
+
+            // Persist credentials so the session can be auto-refreshed later
+            await this.saveCredentials(username, password);
 
             log.info("Login successful");
         } catch (error) {
