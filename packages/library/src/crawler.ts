@@ -55,7 +55,7 @@ export interface AssignmentDetail {
     dueDate: string;
     timeRemaining: string;
     lastModified: string;
-    /** Submitted files (student submissions) */
+    /** Attached files — teacher-provided intro files and student submission files */
     files: AssignmentFile[];
 }
 
@@ -659,6 +659,7 @@ export class Crawler {
 
         // Extract teacher-provided file links from the intro area
         const files: AssignmentFile[] = [];
+        const seenUrls = new Set<string>();
         const introEl = doc.querySelector("#intro");
         if (introEl) {
             const introLinks = introEl.querySelectorAll(
@@ -667,7 +668,8 @@ export class Crawler {
             for (const link of introLinks) {
                 const href = link.getAttribute("href") || "";
                 const fileName = normalizeText(link.textContent);
-                if (fileName) {
+                if (fileName && !seenUrls.has(href)) {
+                    seenUrls.add(href);
                     files.push({ name: fileName, url: href });
                 }
             }
@@ -716,7 +718,8 @@ export class Crawler {
                                 const fileName = normalizeText(
                                     link.textContent
                                 );
-                                if (fileName) {
+                                if (fileName && !seenUrls.has(href)) {
+                                    seenUrls.add(href);
                                     files.push({
                                         name: fileName,
                                         url: href,

@@ -1,7 +1,7 @@
 import { Command } from "commander";
 import { createWriteStream } from "node:fs";
-import { mkdir, stat } from "node:fs/promises";
-import { join } from "node:path";
+import { mkdir, rm, stat } from "node:fs/promises";
+import { basename, join } from "node:path";
 import pc from "picocolors";
 import { createCrawler } from "../../crawler.ts";
 import { getLogLevel } from "../../log-level.ts";
@@ -24,6 +24,17 @@ async function downloadFile(
     destPath: string,
     sessionCookie: string
 ): Promise<void> {
+    // Validate URL scheme
+    let parsedUrl: URL;
+    try {
+        parsedUrl = new URL(url);
+    } catch {
+        throw new Error(`Invalid URL: ${url}`);
+    }
+    if (parsedUrl.protocol !== "https:" && parsedUrl.protocol !== "http:") {
+        throw new Error(`Unsupported protocol: ${parsedUrl.protocol}`);
+    }
+
     const response = await fetch(url, {
         headers: {
             Cookie: `MoodleSession=${sessionCookie}`,
@@ -42,26 +53,45 @@ async function downloadFile(
         throw new Error("Response body is empty");
     }
 
-    // Node.js fetch returns a ReadableStream, pipe it to the file
+    // Use a proper streaming pipeline with backpressure handling
     const fileStream = createWriteStream(destPath);
-    const reader = body.getReader();
 
     try {
-        while (true) {
-            const result = await reader.read();
-            if (result.done) break;
-            fileStream.write(Buffer.from(result.value));
-        }
-    } finally {
-        fileStream.end();
-        reader.releaseLock();
-    }
+        const reader = body.getReader();
+        let isDrainPending = false;
 
-    // Wait for the file stream to finish
-    await new Promise<void>((resolve, reject) => {
-        fileStream.on("finish", resolve);
-        fileStream.on("error", reject);
-    });
+        try {
+            while (true) {
+                const result = await reader.read();
+                if (result.done) break;
+
+                const canContinue = fileStream.write(Buffer.from(result.value));
+                if (!canContinue && !isDrainPending) {
+                    // Wait for drain before writing more
+                    isDrainPending = true;
+                    await new Promise<void>((resolve) => {
+                        fileStream.once("drain", () => {
+                            isDrainPending = false;
+                            resolve();
+                        });
+                    });
+                }
+            }
+        } finally {
+            reader.releaseLock();
+            fileStream.end();
+        }
+
+        // Wait for the file stream to finish
+        await new Promise<void>((resolve, reject) => {
+            fileStream.on("finish", resolve);
+            fileStream.on("error", reject);
+        });
+    } catch (err) {
+        // Clean up partial file on failure
+        await rm(destPath, { force: true }).catch(() => {});
+        throw err;
+    }
 }
 
 export const downloadCommand = new Command("download")
@@ -136,7 +166,9 @@ ${pc.bold("예시:")}
         let failCount = 0;
 
         for (const file of assignment.files) {
-            const destPath = join(outputDir, file.name);
+            // Sanitize filename to prevent path traversal
+            const safeName = basename(file.name);
+            const destPath = join(outputDir, safeName);
             process.stdout.write(pc.dim(`  다운로드 중: ${file.name}...`));
             try {
                 await downloadFile(file.url, destPath, sessionCookie);

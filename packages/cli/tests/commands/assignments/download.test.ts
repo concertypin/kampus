@@ -22,19 +22,29 @@ vi.mock("@/log-level", () => ({
 // Mock node:fs and node:fs/promises
 vi.mock("node:fs", () => ({
     createWriteStream: vi.fn<() => object>(() => ({
-        write: vi.fn<(chunk: Buffer) => void>(),
+        write: vi.fn<() => boolean>(() => true),
         end: vi.fn<() => void>(),
-        on: vi.fn<(event: string, cb: () => void) => object>(
-            (event: string, cb: () => void) => {
-                if (event === "finish") cb();
-                return { on: vi.fn<() => object>() };
+        on: vi.fn<(event: string, cb: (...args: unknown[]) => void) => object>(
+            (event: string, cb: (...args: unknown[]) => void) => {
+                if (event === "finish") queueMicrotask(() => cb());
+                return {
+                    on: vi.fn<() => object>(),
+                    once: vi.fn<() => object>(),
+                };
             }
         ),
+        once: vi.fn<
+            (event: string, cb: (...args: unknown[]) => void) => object
+        >((event: string, cb: () => void) => {
+            if (event === "drain") queueMicrotask(cb);
+            return { on: vi.fn<() => object>(), once: vi.fn<() => object>() };
+        }),
     })),
 }));
 
 vi.mock("node:fs/promises", () => ({
     mkdir: vi.fn<() => Promise<void>>(),
+    rm: vi.fn<() => Promise<void>>(),
     stat: vi.fn<() => Promise<{ size: number }>>(() =>
         Promise.resolve({ size: 12468 })
     ),
@@ -182,5 +192,91 @@ describe("assignments download command", () => {
 
         consoleErrorSpy.mockRestore();
         stdoutSpy.mockRestore();
+    });
+
+    it("should show error when session cookie cannot be extracted", async () => {
+        getSessionMock.mockResolvedValue("InvalidFormat");
+
+        const program = new Command();
+        program.addCommand(assignmentsCommand);
+        program.exitOverride();
+
+        const consoleErrorSpy = vi
+            .spyOn(console, "error")
+            .mockImplementation(() => {});
+        const stdoutSpy = vi
+            .spyOn(process.stdout, "write")
+            .mockImplementation(() => true);
+
+        try {
+            await program.parseAsync(["assignments", "download", "658841"], {
+                from: "user",
+            });
+        } catch {
+            // Expected
+        }
+
+        expect(consoleErrorSpy).toHaveBeenCalledWith(
+            expect.stringContaining("세션 쿠키")
+        );
+
+        consoleErrorSpy.mockRestore();
+        stdoutSpy.mockRestore();
+    });
+
+    it("should download file successfully (happy path)", async () => {
+        getSessionMock.mockResolvedValue("MoodleSession=abc123; path=/");
+        getAssignmentDetailMock.mockResolvedValue(sampleAssignment);
+
+        // Mock global fetch for the download
+        const mockResponse = {
+            ok: true,
+            status: 200,
+            statusText: "OK",
+            body: {
+                getReader: vi.fn<() => object>(() => ({
+                    read: vi
+                        .fn<
+                            () => Promise<{ done: boolean; value: Uint8Array }>
+                        >()
+                        .mockResolvedValueOnce({
+                            done: false,
+                            value: new Uint8Array([1, 2, 3]),
+                        })
+                        .mockResolvedValueOnce({
+                            done: true,
+                            value: new Uint8Array(0),
+                        }),
+                    releaseLock: vi.fn<() => void>(),
+                })),
+            },
+        };
+        vi.stubGlobal(
+            "fetch",
+            vi.fn(() => Promise.resolve(mockResponse))
+        );
+
+        const program = new Command();
+        program.addCommand(assignmentsCommand);
+        program.exitOverride();
+
+        const consoleLogSpy = vi
+            .spyOn(console, "log")
+            .mockImplementation(() => {});
+        const stdoutSpy = vi
+            .spyOn(process.stdout, "write")
+            .mockImplementation(() => true);
+
+        await program.parseAsync(["assignments", "download", "658841"], {
+            from: "user",
+        });
+
+        expect(consoleLogSpy).toHaveBeenCalledWith(
+            expect.stringContaining("1개 성공")
+        );
+
+        consoleLogSpy.mockRestore();
+        stdoutSpy.mockRestore();
+        vi.unstubAllGlobals();
     });
 });
