@@ -1,5 +1,5 @@
 import { Command } from "commander";
-import pc from "picocolors";
+import { pc } from "../lib/format.ts";
 import { listCommand } from "./list.ts";
 import { readCommand } from "./read.ts";
 

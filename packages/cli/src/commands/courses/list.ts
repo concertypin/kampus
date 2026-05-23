@@ -1,7 +1,14 @@
 import { Command } from "commander";
-import pc from "picocolors";
 import { createCrawler } from "../../crawler.ts";
 import { getLogLevel } from "../../log-level.ts";
+import {
+    cr,
+    pad,
+    pc,
+    separator,
+    spinnerStart,
+    stripEmoji,
+} from "../lib/format.ts";
 
 export const listCommand = new Command("list")
     .description("수강 중인 과목 목록을 조회합니다")
@@ -21,13 +28,15 @@ ${pc.bold("예시:")}
                 ? opts.type
                 : undefined;
 
-        process.stdout.write(pc.dim("과목 목록 불러오는 중..."));
+        spinnerStart("과목 목록 불러오는 중...");
         try {
             const courses = await crawler.getCourses(type);
             console.log(
-                `\r${pc.bold(
-                    pc.cyan(`📚 수강 과목 목록 (${courses.length}개)`)
-                )}          `
+                `${cr}${pc.bold(
+                    pc.cyan(
+                        stripEmoji(`📚 수강 과목 목록 (${courses.length}개)`)
+                    )
+                )}${pad}`
             );
 
             if (courses.length === 0) {
@@ -37,15 +46,15 @@ ${pc.bold("예시:")}
 
             for (const course of courses) {
                 const typeLabel = course.type === "regular" ? "일반" : "비교과";
-                console.log(pc.dim("─".repeat(40)));
+                console.log(separator(40));
                 console.log(`${pc.bold("과목명")}: ${course.name}`);
                 console.log(`${pc.bold("ID")}: ${course.id}`);
                 console.log(`${pc.bold("유형")}: ${typeLabel}`);
             }
-            console.log(pc.dim("─".repeat(40)));
+            console.log(separator(40));
         } catch (err: unknown) {
             const message = err instanceof Error ? err.message : String(err);
-            console.error(`\r${pc.red(`❌ 오류: ${message}`)}`);
+            console.error(`${cr}${pc.red(stripEmoji(`❌ 오류: ${message}`))}`);
             process.exitCode = 1;
         }
     });

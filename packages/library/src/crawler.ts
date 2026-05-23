@@ -836,6 +836,16 @@ export class Crawler {
             });
         }
 
+        // Sort by week number (1회차, 2회차, ...). Quizzes without a week
+        // number are placed at the end.
+        quizzes.sort((a, b) => {
+            const weekA = a.week.match(/(\d+)회차/)?.[1];
+            const weekB = b.week.match(/(\d+)회차/)?.[1];
+            const numA = weekA ? parseInt(weekA, 10) : Number.MAX_SAFE_INTEGER;
+            const numB = weekB ? parseInt(weekB, 10) : Number.MAX_SAFE_INTEGER;
+            return numA - numB;
+        });
+
         log.info(`Found ${quizzes.length} quizzes`);
         log.debug("Quizzes:", quizzes);
         return quizzes;

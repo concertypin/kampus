@@ -1,7 +1,8 @@
 import { Command } from "commander";
-import pc from "picocolors";
 import { createCrawler } from "../../crawler.ts";
 import { getLogLevel } from "../../log-level.ts";
+import { cr, pc, separator, stripEmoji } from "../lib/format.ts";
+import { spinner } from "../lib/cli-utils.ts";
 
 export const readCommand = new Command("read")
     .description("퀴즈 상세 정보를 조회합니다")
@@ -15,15 +16,15 @@ ${pc.bold("예시:")}
     )
     .action(async (quizId: string) => {
         const crawler = createCrawler(getLogLevel());
-        process.stdout.write(pc.dim("퀴즈 상세 정보 불러오는 중..."));
+        using spin = spinner("퀴즈 상세 정보 불러오는 중...");
         try {
             const quiz = await crawler.getQuizDetail(quizId);
 
-            // Clear the loading message
-            process.stdout.write(`\r${" ".repeat(40)}\r`);
+            // Clear the loading spinner before printing results
+            spin.stop();
 
-            console.log(pc.bold(pc.cyan(`🧩 퀴즈 상세 정보`)));
-            console.log(pc.dim("─".repeat(50)));
+            console.log(pc.bold(pc.cyan(stripEmoji(`🧩 퀴즈 상세 정보`))));
+            console.log(separator(50));
 
             console.log(`${pc.bold("퀴즈명")}: ${pc.green(quiz.name)}`);
             console.log(`${pc.bold("ID")}: ${pc.dim(quiz.id)}`);
@@ -35,7 +36,7 @@ ${pc.bold("예시:")}
             }
 
             console.log();
-            console.log(pc.dim("─".repeat(50)));
+            console.log(separator(50));
             console.log(
                 `${pc.bold("응시 가능 횟수")}: ${pc.yellow(quiz.attemptsAllowed || "-")}`
             );
@@ -74,10 +75,10 @@ ${pc.bold("예시:")}
                 }
             })();
             console.log(`${pc.bold("응시 상태")}: ${statusColor(statusLabel)}`);
-            console.log(pc.dim("─".repeat(50)));
+            console.log(separator(50));
         } catch (err: unknown) {
             const message = err instanceof Error ? err.message : String(err);
-            console.error(`\r${pc.red(`❌ 오류: ${message}`)}`);
+            console.error(`${cr}${pc.red(stripEmoji(`❌ 오류: ${message}`))}`);
             process.exitCode = 1;
         }
     });

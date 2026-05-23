@@ -233,6 +233,7 @@ describe("assignments download command", () => {
             ok: true,
             status: 200,
             statusText: "OK",
+            url: "https://ecampus.example.com/pluginfile.php?file=/report.zip",
             body: {
                 getReader: vi.fn<() => object>(() => ({
                     read: vi

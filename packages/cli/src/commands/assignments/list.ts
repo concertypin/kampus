@@ -1,7 +1,14 @@
 import { Command } from "commander";
-import pc from "picocolors";
 import { createCrawler } from "../../crawler.ts";
 import { getLogLevel } from "../../log-level.ts";
+import {
+    cr,
+    pad,
+    pc,
+    separator,
+    spinnerStart,
+    stripEmoji,
+} from "../lib/format.ts";
 
 export const listCommand = new Command("list")
     .description("특정 과목의 과제 목록을 조회합니다")
@@ -15,15 +22,17 @@ ${pc.bold("예시:")}
     )
     .action(async (courseId: string) => {
         const crawler = createCrawler(getLogLevel());
-        process.stdout.write(pc.dim("과제 목록 불러오는 중..."));
+        spinnerStart("과제 목록 불러오는 중...");
         try {
             const assignments = await crawler.getAssignments(courseId);
             console.log(
-                `\r${pc.bold(
+                `${cr}${pc.bold(
                     pc.cyan(
-                        `📝 과제 목록 - 과목 ${courseId} (${assignments.length}건)`
+                        stripEmoji(
+                            `📝 과제 목록 - 과목 ${courseId} (${assignments.length}건)`
+                        )
                     )
-                )}          `
+                )}${pad}`
             );
 
             if (assignments.length === 0) {
@@ -38,7 +47,7 @@ ${pc.bold("예시:")}
                 const statusStr = submitted
                     ? pc.green(a.submissionStatus)
                     : pc.red(a.submissionStatus);
-                console.log(pc.dim("─".repeat(40)));
+                console.log(separator(40));
                 console.log(`${pc.bold("주차")}: ${a.week}`);
                 console.log(`${pc.bold("과제명")}: ${a.name}`);
                 console.log(`${pc.bold("ID")}: ${pc.dim(a.id)}`);
@@ -46,10 +55,10 @@ ${pc.bold("예시:")}
                 console.log(`${pc.bold("제출 상태")}: ${statusStr}`);
                 console.log(`${pc.bold("학점")}: ${pc.yellow(a.grade)}`);
             }
-            console.log(pc.dim("─".repeat(40)));
+            console.log(separator(40));
         } catch (err: unknown) {
             const message = err instanceof Error ? err.message : String(err);
-            console.error(`\r${pc.red(`❌ 오류: ${message}`)}`);
+            console.error(`${cr}${pc.red(stripEmoji(`❌ 오류: ${message}`))}`);
             process.exitCode = 1;
         }
     });

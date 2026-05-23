@@ -33,30 +33,40 @@
 npx @concertypin/kampus --help
 
 # 로그인 (세션 저장)
-npx @concertypin/kampus login <학번> <비밀번호>
+npx @concertypin/kampus auth login <학번>
+
+# 세션 확인 / 로그아웃
+npx @concertypin/kampus auth check
+npx @concertypin/kampus auth logout
 
 # 수강 과목 목록 조회
-npx @concertypin/kampus read courses
+npx @concertypin/kampus courses list
+npx @concertypin/kampus courses list --type regular   # 일반 과목만 필터
 
 # 특정 과목의 출석 현황 조회
-npx @concertypin/kampus read attendance <courseId>
+npx @concertypin/kampus attendance list <courseId>
 
-# 특정 과목의 과제 목록 조회
-npx @concertypin/kampus read assignments <courseId>
+# 특정 과목의 과제 목록/상세/다운로드
+npx @concertypin/kampus assignments list <courseId>
+npx @concertypin/kampus assignments read <assignmentId>
+npx @concertypin/kampus assignments download <assignmentId>
 
-# 특정 과목의 퀴즈 목록 조회
-npx @concertypin/kampus read quizzes <courseId>
+# 특정 과목의 퀴즈 목록/상세 조회
+npx @concertypin/kampus quizzes list <courseId>
+npx @concertypin/kampus quizzes read <quizId>
 
 # 교수님 메시지 조회 (페이지네이션 지원)
-npx @concertypin/kampus read messages --page 1
+npx @concertypin/kampus messages list
+npx @concertypin/kampus messages list --page 2
 ```
 
 전역 설치 후 `kampus` 명령어로 바로 사용할 수도 있습니다.
 
 ```bash
 pnpm add --global @concertypin/kampus
-kampus login <학번> <비밀번호>
-kampus read courses
+kampus auth login <학번>
+kampus courses list
+kampus messages list
 ```
 
 ### 라이브러리로 사용하기
@@ -102,27 +112,35 @@ for (const course of courses) {
 
 크롤러의 메인 클래스입니다. 생성자 옵션:
 
-| 옵션      | 타입             | 기본값                          | 설명               |
-| --------- | ---------------- | ------------------------------- | ------------------ |
-| `storage` | `SessionStorage` | `MemoryStorage`                 | 세션 저장소        |
-| `baseUrl` | `string`         | `https://ecampus.kangnam.ac.kr` | 대상 URL           |
-| `timeout` | `number`         | `15000`                         | 요청 타임아웃 (ms) |
+| 옵션       | 타입             | 기본값                          | 설명                         |
+| ---------- | ---------------- | ------------------------------- | ---------------------------- |
+| `storage`  | `SessionStorage` | `MemoryStorage`                 | 세션 저장소                  |
+| `baseUrl`  | `string`         | `https://ecampus.kangnam.ac.kr` | 대상 URL                     |
+| `timeout`  | `number`         | `10000`                         | 요청 타임아웃 (ms)           |
+| `logLevel` | `LogLevel`       | -                               | 로깅 레벨 (trace/debug/info) |
 
 제공 메서드:
 
-| 메서드                          | 반환 타입                   | 설명                            |
-| ------------------------------- | --------------------------- | ------------------------------- |
-| `login(username, password)`     | `Promise<string>`           | e-campus 로그인, 세션 쿠키 반환 |
-| `checkSession()`                | `Promise<boolean>`          | 현재 세션 유효성 확인           |
-| `getCourses(type?)`             | `Promise<Course[]>`         | 수강 과목 목록 조회             |
-| `getAttendance(courseId)`       | `Promise<AttendanceItem[]>` | 출석 현황 조회                  |
-| `getMessages(page?)`            | `Promise<MessageItem[]>`    | 메시지 목록 조회                |
-| `getAssignments(courseId)`      | `Promise<AssignmentItem[]>` | 과제 목록 조회                  |
-| `getQuizzes(courseId)`          | `Promise<QuizItem[]>`       | 퀴즈 목록 조회                  |
-| `getWeeklyActivities(courseId)` | `Promise<WeeklyActivity[]>` | 주차별 학습 활동 조회           |
-| `getSession()`                  | `Promise<string \| null>`   | 저장된 세션 쿠키 조회           |
-| `setSession(cookie)`            | `Promise<void>`             | 세션 쿠키 저장                  |
-| `clearSession()`                | `Promise<void>`             | 세션 쿠키 삭제                  |
+| 메서드                                | 반환 타입                                    | 설명                                       |
+| ------------------------------------- | -------------------------------------------- | ------------------------------------------ |
+| `login(username, password)`           | `Promise<void>`                              | e-campus 로그인, 세션 저장 + 자격증명 저장 |
+| `checkSession()`                      | `Promise<boolean>`                           | 현재 세션 유효성 확인                      |
+| `getCourses(type?)`                   | `Promise<Course[]>`                          | 수강 과목 목록 조회                        |
+| `getAttendance(courseId)`             | `Promise<AttendanceItem[]>`                  | 출석 현황 조회                             |
+| `getMessages(page?)`                  | `Promise<MessageItem[]>`                     | 메시지 목록 조회                           |
+| `getAssignments(courseId)`            | `Promise<AssignmentItem[]>`                  | 과제 목록 조회                             |
+| `getAssignmentDetail(cmid)`           | `Promise<AssignmentDetail>`                  | 과제 상세 정보 조회                        |
+| `getQuizzes(courseId)`                | `Promise<QuizItem[]>`                        | 퀴즈 목록 조회                             |
+| `getQuizDetail(cmid)`                 | `Promise<QuizDetail>`                        | 퀴즈 상세 정보 조회                        |
+| `getWeeklyActivities(courseId)`       | `Promise<WeeklyActivity[]>`                  | 주차별 학습 활동 조회                      |
+| `getSession()`                        | `Promise<string \| undefined>`               | 저장된 세션 쿠키 조회                      |
+| `setSession(cookie)`                  | `Promise<void>`                              | 세션 쿠키 저장                             |
+| `clearSession()`                      | `Promise<void>`                              | 세션 쿠키 삭제                             |
+| `saveCredentials(username, password)` | `Promise<void>`                              | 로그인 자격증명 저장                       |
+| `getCredentials()`                    | `Promise<{username, password} \| undefined>` | 저장된 자격증명 조회                       |
+| `clearCredentials()`                  | `Promise<void>`                              | 저장된 자격증명 삭제                       |
+| `hasCredentials()`                    | `Promise<boolean>`                           | 자격증명 저장 여부 확인                    |
+| `tryAutoLogin()`                      | `Promise<boolean>`                           | 저장된 자격증명으로 자동 재로그인 시도     |
 
 ### 타입
 
@@ -152,12 +170,40 @@ interface AssignmentItem {
     grade: string; // 성적
 }
 
+interface AssignmentDetail {
+    id: string;
+    name: string;
+    description: string;
+    submissionStatus: string; // 제출 상태
+    gradingStatus: string; // 채점 상태
+    dueDate: string; // 마감일시
+    timeRemaining: string; // 남은 시간
+    lastModified: string; // 최종 수정일
+    files: AssignmentFile[]; // 첨부파일 목록
+}
+
+interface AssignmentFile {
+    name: string;
+    url: string;
+}
+
 interface QuizItem {
     id: string;
     week: string;
     name: string;
     closesAt: string; // 마감일시
     grade: string; // 성적
+}
+
+interface QuizDetail {
+    id: string;
+    name: string;
+    description: string;
+    attemptsAllowed: string; // 응시 가능 횟수
+    openedAt: string; // 오픈 일시
+    closedAt: string; // 마감 일시
+    timeLimit: string; // 시간 제한
+    attemptStatus: "not_started" | "in_progress" | "finished" | "unknown";
 }
 
 interface MessageItem {
@@ -187,12 +233,32 @@ interface WeeklyActivity {
 
 ```typescript
 interface SessionStorage {
-    get(): Promise<string | null>;
-    set(cookie: string): Promise<void>;
-    delete(): Promise<void>;
+    get(key: string): Promise<string | null>;
+    set(key: string, value: string): Promise<void>;
+    delete(key: string): Promise<void>;
     clear(): Promise<void>;
 }
 ```
+
+### 로깅
+
+`LogLevel` 타입을 지원하며 생성자 또는 `setLogLevel()`로 설정할 수 있습니다.
+
+```typescript
+type LogLevel = "trace" | "debug" | "info";
+```
+
+CLI 사용 시 `--verbose`(info), `--debug`(debug), `--trace`(trace) 플래그로 로깅 레벨을 지정할 수 있습니다.
+
+| 레벨    | CLI 플래그  | 설명                              |
+| ------- | ----------- | --------------------------------- |
+| `trace` | `--trace`   | 모든 HTTP 요청/응답 헤더까지 출력 |
+| `debug` | `--debug`   | 디버그 정보 출력                  |
+| `info`  | `--verbose` | 일반 정보 출력                    |
+
+### 자동 세션 갱신
+
+크롤러는 세션이 만료되었을 때 저장된 자격증명(`saveCredentials()`으로 저장된 정보)을 사용해 자동으로 재로그인을 시도합니다. 이 기능은 `tryAutoLogin()`을 통해 이뤄지며, 재로그인 실패 시 저장된 자격증명은 삭제됩니다.
 
 ---
 
@@ -262,35 +328,13 @@ git push origin v0.1.0
 
 ```
 packages/
-├── library/                    # @concertypin/ecampus-crawler
-│   ├── src/
-│   │   ├── index.ts            # Public API
-│   │   ├── crawler.ts          # Crawler class (주요 로직)
-│   │   ├── auth.ts             # 로그인 함수
-│   │   ├── client.ts           # HTTP 클라이언트 (fetchWithBase)
-│   │   ├── const.ts            # 상수
-│   │   └── storage/
-│   │       ├── storage.ts      # SessionStorage 인터페이스
-│   │       ├── memory.ts       # MemoryStorage
-│   │       └── file.ts         # FileStorage
-│   └── tests/                  # Vitest 테스트
-│       └── unit/
-│           ├── crawler.test.ts
-│           ├── storage/
-│           └── explore.test.ts (skip)
+├── library/                    # @concertypin/ecampus-crawler (크롤링 코어)
+│   ├── src/                    # 크롤러, 인증, HTTP 클라이언트, 세션 스토리지, 로거
+│   └── tests/                  # Vitest 단위 테스트
 │
-├── cli/                        # @concertypin/kampus
-│   └── src/
-│       ├── index.ts            # CLI 진입점 (commander)
-│       ├── crawler.ts          # 크롤러 팩토리 (FileStorage)
-│       └── commands/
-│           ├── login.ts        # login 명령어
-│           └── read/           # read 서브커맨드
-│               ├── courses.ts
-│               ├── attendance.ts
-│               ├── assignments.ts
-│               ├── quizzes.ts
-│               └── messages.ts
+└── cli/                        # @concertypin/kampus (터미널 CLI)
+    ├── src/                    # Commander 기반 CLI, 커맨드 그룹 (auth/courses/attendance/assignments/quizzes/messages)
+    └── tests/                  # CLI 테스트
 ```
 
 ### 주요 설계 결정

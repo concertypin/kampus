@@ -1,5 +1,5 @@
 import { Command } from "commander";
-import pc from "picocolors";
+import { pc } from "../lib/format.ts";
 import { listCommand } from "./list.ts";
 
 export const coursesCommand = new Command("courses")

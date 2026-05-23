@@ -44,6 +44,7 @@ export class FileStorage implements SessionStorage {
             JSON.stringify(data, null, 2),
             "utf-8"
         );
+        await fs.chmod(this.filePath, 0o600);
     }
 
     async get(key: string): Promise<string | undefined> {

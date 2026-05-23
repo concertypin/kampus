@@ -1,7 +1,14 @@
 import { Command } from "commander";
-import pc from "picocolors";
 import { createCrawler } from "../../crawler.ts";
 import { getLogLevel } from "../../log-level.ts";
+import {
+    cr,
+    pc,
+    separator,
+    spinnerStart,
+    spinnerStop,
+    stripEmoji,
+} from "../lib/format.ts";
 
 export const readCommand = new Command("read")
     .description("과제 상세 정보를 조회합니다")
@@ -15,15 +22,15 @@ ${pc.bold("예시:")}
     )
     .action(async (assignmentId: string) => {
         const crawler = createCrawler(getLogLevel());
-        process.stdout.write(pc.dim("과제 상세 정보 불러오는 중..."));
+        spinnerStart("과제 상세 정보 불러오는 중...");
         try {
             const assignment = await crawler.getAssignmentDetail(assignmentId);
 
             // Clear the loading message
-            process.stdout.write(`\r${" ".repeat(40)}\r`);
+            spinnerStop();
 
-            console.log(pc.bold(pc.cyan(`📝 과제 상세 정보`)));
-            console.log(pc.dim("─".repeat(50)));
+            console.log(pc.bold(pc.cyan(stripEmoji(`📝 과제 상세 정보`))));
+            console.log(separator(50));
 
             console.log(`${pc.bold("과제명")}: ${pc.green(assignment.name)}`);
             console.log(`${pc.bold("ID")}: ${pc.dim(assignment.id)}`);
@@ -39,13 +46,13 @@ ${pc.bold("예시:")}
                 console.log(pc.bold("첨부파일:"));
                 for (const file of assignment.files) {
                     console.log(
-                        `  ${pc.green(file.name)} ${pc.dim("→")} ${pc.underline(pc.dim(file.url))}`
+                        `  ${pc.green(file.name)} ${pc.dim(stripEmoji("→"))} ${pc.underline(pc.dim(file.url))}`
                     );
                 }
             }
 
             console.log();
-            console.log(pc.dim("─".repeat(50)));
+            console.log(separator(50));
             console.log(
                 `${pc.bold("제출 상태")}: ${pc.yellow(assignment.submissionStatus || "-")}`
             );
@@ -61,10 +68,10 @@ ${pc.bold("예시:")}
             console.log(
                 `${pc.bold("최종 수정")}: ${pc.yellow(assignment.lastModified || "-")}`
             );
-            console.log(pc.dim("─".repeat(50)));
+            console.log(separator(50));
         } catch (err: unknown) {
             const message = err instanceof Error ? err.message : String(err);
-            console.error(`\r${pc.red(`❌ 오류: ${message}`)}`);
+            console.error(`${cr}${pc.red(stripEmoji(`❌ 오류: ${message}`))}`);
             process.exitCode = 1;
         }
     });

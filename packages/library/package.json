@@ -1,7 +1,7 @@
 {
     "name": "@concertypin/ecampus-crawler",
     "private": true,
-    "version": "0.0.1",
+    "version": "0.1.0",
     "type": "module",
     "license": "MPL-2.0",
     "author": {
@@ -17,7 +17,8 @@
     "module": "./dist/index.js",
     "types": "./dist/index.d.ts",
     "files": [
-        "dist"
+        "dist",
+        "README.md"
     ],
     "exports": {
         ".": {

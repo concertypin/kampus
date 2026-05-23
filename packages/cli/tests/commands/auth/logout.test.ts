@@ -16,9 +16,11 @@ vi.mock("@/log-level", () => ({
 }));
 
 const clearSessionMock = vi.fn<() => Promise<void>>();
+const clearCredentialsMock = vi.fn<() => Promise<void>>();
 
 const mockCrawler = fragile<Crawler>({
     clearSession: clearSessionMock,
+    clearCredentials: clearCredentialsMock,
 });
 
 describe("auth logout command", () => {

@@ -1,8 +1,8 @@
 import { createInterface } from "node:readline";
 import { Command } from "commander";
-import pc from "picocolors";
 import { createCrawler } from "../../crawler.ts";
 import { getLogLevel } from "../../log-level.ts";
+import { cr, pad, pc, spinnerStart, stripEmoji } from "../lib/format.ts";
 import { readPasswordInteractive } from "../lib/password-input.ts";
 
 async function readInputInteractive(prompt: string): Promise<string> {
@@ -56,7 +56,7 @@ ${pc.bold("예시:")}
                 .catch(() => false);
             if (existingValid) {
                 console.error(
-                    `${pc.red("❌ 이미 유효한 세션이 존재합니다.")}\n  ${pc.dim(
+                    `${pc.red(stripEmoji("❌ 이미 유효한 세션이 존재합니다."))}\n  ${pc.dim(
                         "재로그인하려면 --force 플래그를 사용하세요:"
                     )} ${pc.green("kampus auth login --force")}`
                 );
@@ -90,27 +90,31 @@ ${pc.bold("예시:")}
                 password = lines[0] ?? "";
             }
             if (!userId) {
-                console.error(pc.red("❌ 학번/아이디가 필요합니다."));
+                console.error(
+                    pc.red(stripEmoji("❌ 학번/아이디가 필요합니다."))
+                );
                 process.exitCode = 1;
                 return;
             }
         }
 
         if (!password) {
-            console.error(pc.red("❌ 비밀번호가 필요합니다."));
+            console.error(pc.red(stripEmoji("❌ 비밀번호가 필요합니다.")));
             process.exitCode = 1;
             return;
         }
 
-        process.stdout.write(pc.dim("로그인 중..."));
+        spinnerStart("로그인 중...");
         try {
             await crawler.login(userId, password);
             console.log(
-                `\r${pc.green("✅ 로그인 성공! 세션이 저장되었습니다.")}          `
+                `${cr}${pc.green(stripEmoji("✅ 로그인 성공! 세션이 저장되었습니다."))}${pad}`
             );
         } catch (err: unknown) {
             const message = err instanceof Error ? err.message : String(err);
-            console.error(`\r${pc.red(`❌ 로그인 실패: ${message}`)}`);
+            console.error(
+                `${cr}${pc.red(stripEmoji(`❌ 로그인 실패: ${message}`))}`
+            );
             process.exitCode = 1;
         }
     });

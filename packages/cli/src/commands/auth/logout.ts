@@ -1,8 +1,8 @@
 import { createInterface } from "node:readline";
 import { Command } from "commander";
-import pc from "picocolors";
 import { createCrawler } from "../../crawler.ts";
 import { getLogLevel } from "../../log-level.ts";
+import { pc, stripEmoji } from "../lib/format.ts";
 
 export const logoutCommand = new Command("logout")
     .description("저장된 세션을 삭제합니다")
@@ -32,11 +32,13 @@ ${pc.bold("예시:")}
             await crawler.clearSession();
             await crawler.clearCredentials();
             console.log(
-                `${pc.green("✅ 세션과 저장된 인증 정보가 삭제되었습니다.")}`
+                `${pc.green(stripEmoji("✅ 세션과 저장된 인증 정보가 삭제되었습니다."))}`
             );
         } catch (err: unknown) {
             const message = err instanceof Error ? err.message : String(err);
-            console.error(`${pc.red(`❌ 세션 삭제 실패: ${message}`)}`);
+            console.error(
+                `${pc.red(stripEmoji(`❌ 세션 삭제 실패: ${message}`))}`
+            );
             process.exitCode = 1;
         }
     });

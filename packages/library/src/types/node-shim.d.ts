@@ -16,6 +16,7 @@ declare module "node:fs/promises" {
         options?: { recursive?: boolean }
     ): Promise<void>;
     export function unlink(path: string): Promise<void>;
+    export function chmod(path: string, mode: number): Promise<void>;
 }
 
 declare module "node:path" {

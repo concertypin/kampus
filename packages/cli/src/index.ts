@@ -1,5 +1,5 @@
 import { Command } from "commander";
-import pc from "picocolors";
+import { pc } from "./commands/lib/format.ts";
 import { setProgramOptsFn } from "./log-level.ts";
 import { authCommand } from "./commands/auth/index.ts";
 import { coursesCommand } from "./commands/courses/index.ts";
@@ -29,14 +29,17 @@ program
         "after",
         `
 ${pc.bold("사용 예시:")}
-  ${pc.green("kampus auth login [학번]")}               로그인 후 세션 저장
-  ${pc.green("kampus auth check")}                      세션 유효성 확인
-  ${pc.green("kampus auth logout")}                     세션 삭제
-  ${pc.green("kampus courses list")}                    수강 과목 목록 조회
-  ${pc.green("kampus attendance list <courseId>")}      특정 과목 출석 조회
-  ${pc.green("kampus assignments list <courseId>")}     특정 과목 과제 목록 조회
-  ${pc.green("kampus quizzes list <courseId>")}         특정 과목 퀴즈 목록 조회
-  ${pc.green("kampus messages list")}                   교수님 메시지 조회
+  ${pc.green("kampus auth login [학번]")}                 로그인 후 세션 저장
+  ${pc.green("kampus auth check")}                        세션 유효성 확인
+  ${pc.green("kampus auth logout")}                       세션 삭제
+  ${pc.green("kampus courses list [--type regular]")}     수강 과목 목록 조회
+  ${pc.green("kampus attendance list <courseId>")}        특정 과목 출석 조회
+  ${pc.green("kampus assignments list <courseId>")}       특정 과목 과제 목록 조회
+  ${pc.green("kampus assignments read <assignmentId>")}   과제 상세 정보 조회
+  ${pc.green("kampus assignments download <assignmentId>")} 과제 첨부파일 다운로드
+  ${pc.green("kampus quizzes list <courseId>")}           특정 과목 퀴즈 목록 조회
+  ${pc.green("kampus quizzes read <quizId>")}             퀴즈 상세 정보 조회
+  ${pc.green("kampus messages list [--page N]")}          교수님 메시지 조회
 
 ${pc.bold("로깅 옵션:")}
   ${pc.green("--verbose")}    info 레벨 (일반 정보)

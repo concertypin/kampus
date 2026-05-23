@@ -1,5 +1,5 @@
 import { Command } from "commander";
-import pc from "picocolors";
+import { pc } from "../lib/format.ts";
 import { loginCommand } from "./login.ts";
 import { checkCommand } from "./check.ts";
 import { logoutCommand } from "./logout.ts";

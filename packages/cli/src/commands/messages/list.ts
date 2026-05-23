@@ -1,7 +1,14 @@
 import { Command } from "commander";
-import pc from "picocolors";
 import { createCrawler } from "../../crawler.ts";
 import { getLogLevel } from "../../log-level.ts";
+import {
+    cr,
+    pad,
+    pc,
+    separator,
+    spinnerStart,
+    stripEmoji,
+} from "../lib/format.ts";
 
 export const listCommand = new Command("list")
     .description("교수님께서 보낸 메시지 목록을 조회합니다")
@@ -17,15 +24,17 @@ ${pc.bold("예시:")}
     .action(async (opts: { page: string }) => {
         const crawler = createCrawler(getLogLevel());
         const page = parseInt(opts.page, 10) || 1;
-        process.stdout.write(pc.dim("메시지 불러오는 중..."));
+        spinnerStart("메시지 불러오는 중...");
         try {
             const messages = await crawler.getMessages(page);
             console.log(
-                `\r${pc.bold(
+                `${cr}${pc.bold(
                     pc.cyan(
-                        `✉️  메시지 목록 (페이지 ${page}, ${messages.length}건)`
+                        stripEmoji(
+                            `✉️  메시지 목록 (페이지 ${page}, ${messages.length}건)`
+                        )
                     )
-                )}          `
+                )}${pad}`
             );
 
             if (messages.length === 0) {
@@ -35,7 +44,7 @@ ${pc.bold("예시:")}
 
             for (const msg of messages) {
                 const newBadge = msg.isNew ? pc.yellow(" [NEW]") : "";
-                console.log(pc.dim("─".repeat(40)));
+                console.log(separator(40));
                 console.log(
                     `${pc.bold("보낸이")}: ${msg.senderName}${newBadge}`
                 );
@@ -43,10 +52,10 @@ ${pc.bold("예시:")}
                 console.log(`${pc.bold("시간")}: ${msg.time}`);
                 console.log(`${pc.bold("내용")}: ${msg.content}`);
             }
-            console.log(pc.dim("─".repeat(40)));
+            console.log(separator(40));
         } catch (err: unknown) {
             const message = err instanceof Error ? err.message : String(err);
-            console.error(`\r${pc.red(`❌ 오류: ${message}`)}`);
+            console.error(`${cr}${pc.red(stripEmoji(`❌ 오류: ${message}`))}`);
             process.exitCode = 1;
         }
     });

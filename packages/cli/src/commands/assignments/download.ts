@@ -2,9 +2,10 @@ import { Command } from "commander";
 import { createWriteStream } from "node:fs";
 import { mkdir, rm, stat } from "node:fs/promises";
 import { basename, join } from "node:path";
-import pc from "picocolors";
 import { createCrawler } from "../../crawler.ts";
 import { getLogLevel } from "../../log-level.ts";
+import { cr, pc, separator, stripEmoji } from "../lib/format.ts";
+import { spinner } from "../lib/cli-utils.ts";
 
 /**
  * Extract the MoodleSession cookie value from the stored session string.
@@ -13,6 +14,44 @@ import { getLogLevel } from "../../log-level.ts";
 function extractMoodleSession(session: string): string | undefined {
     const match = session.match(/MoodleSession=([^;]+)/);
     return match ? match[1] : undefined;
+}
+
+/** IPv4 blocks reserved for private/internal networks (RFC 1918 + loopback). */
+const PRIVATE_IPV4_RANGES = [
+    /^127\./, // loopback (127.0.0.0/8)
+    /^10\./, // 10.0.0.0/8
+    /^172\.(1[6-9]|2\d|3[01])\./, // 172.16.0.0/12
+    /^192\.168\./, // 192.168.0.0/16
+    /^169\.254\./, // link-local
+    /^0\./, // "this" network
+];
+
+/**
+ * Check whether a hostname resolves to a private/internal IP address.
+ * Uses `node:dns` for hostname-to-IP resolution.
+ */
+async function isPrivateHost(hostname: string): Promise<boolean> {
+    // IPv4 literal
+    for (const pattern of PRIVATE_IPV4_RANGES) {
+        if (pattern.test(hostname)) return true;
+    }
+    // IPv6 loopback / link-local
+    if (hostname === "::1" || hostname === "[::1]") return true;
+    if (hostname.startsWith("fe80:")) return true;
+
+    // Resolve hostname to IP using DNS
+    try {
+        const { resolve4 } = await import("node:dns/promises");
+        const addresses = await resolve4(hostname);
+        for (const addr of addresses) {
+            for (const pattern of PRIVATE_IPV4_RANGES) {
+                if (pattern.test(addr)) return true;
+            }
+        }
+    } catch {
+        // DNS resolution failure — allow (will fail later with a clearer error)
+    }
+    return false;
 }
 
 /**
@@ -46,6 +85,14 @@ async function downloadFile(
 
     if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    // SSRF protection: block redirects to private/internal IPs
+    const finalUrl = new URL(response.url || url);
+    if (await isPrivateHost(finalUrl.hostname)) {
+        throw new Error(
+            `Blocked redirect to internal host: ${finalUrl.hostname}`
+        );
     }
 
     const body = response.body;
@@ -117,7 +164,7 @@ ${pc.bold("예시:")}
         // 1. Check session
         const session = await crawler.getSession();
         if (!session) {
-            console.error(pc.red("❌ 로그인이 필요합니다."));
+            console.error(pc.red(stripEmoji("❌ 로그인이 필요합니다.")));
             console.error(pc.dim("먼저 로그인하세요: kampus auth login"));
             process.exitCode = 1;
             return;
@@ -125,41 +172,62 @@ ${pc.bold("예시:")}
 
         const sessionCookie = extractMoodleSession(session);
         if (!sessionCookie) {
-            console.error(pc.red("❌ 세션 쿠키를 찾을 수 없습니다."));
+            console.error(
+                pc.red(stripEmoji("❌ 세션 쿠키를 찾을 수 없습니다."))
+            );
             process.exitCode = 1;
             return;
         }
 
         // 2. Fetch assignment detail
-        process.stdout.write(pc.dim("과제 정보 불러오는 중..."));
+        using spin = spinner("과제 정보 불러오는 중...");
         let assignment;
         try {
             assignment = await crawler.getAssignmentDetail(assignmentId);
-            process.stdout.write(`\r${" ".repeat(40)}\r`);
+            spin.stop();
         } catch (err: unknown) {
             const message = err instanceof Error ? err.message : String(err);
-            console.error(`\r${pc.red(`❌ 오류: ${message}`)}`);
+            console.error(`${cr}${pc.red(stripEmoji(`❌ 오류: ${message}`))}`);
             process.exitCode = 1;
             return;
         }
 
         if (!assignment.files || assignment.files.length === 0) {
-            console.log(pc.yellow("⚠️ 다운로드할 첨부파일이 없습니다."));
+            console.log(
+                pc.yellow(stripEmoji("⚠️ 다운로드할 첨부파일이 없습니다."))
+            );
             return;
         }
 
         // 3. Ensure output directory exists
-        await mkdir(outputDir, { recursive: true });
+        try {
+            await mkdir(outputDir, { recursive: true });
+        } catch (err: unknown) {
+            const message = err instanceof Error ? err.message : String(err);
+            console.error(
+                pc.red(
+                    stripEmoji(
+                        `❌ 다운로드 폴더를 생성할 수 없습니다: ${message}`
+                    )
+                )
+            );
+            process.exitCode = 1;
+            return;
+        }
 
         console.log(
             pc.bold(
-                pc.cyan(`📥 첨부파일 다운로드 (${assignment.files.length}개)`)
+                pc.cyan(
+                    stripEmoji(
+                        `📥 첨부파일 다운로드 (${assignment.files.length}개)`
+                    )
+                )
             )
         );
-        console.log(pc.dim("─".repeat(50)));
+        console.log(separator(50));
         console.log(`${pc.bold("과제명")}: ${pc.green(assignment.name)}`);
         console.log(`${pc.bold("저장 위치")}: ${pc.dim(outputDir)}`);
-        console.log(pc.dim("─".repeat(50)));
+        console.log(separator(50));
 
         // 4. Download each file
         let successCount = 0;
@@ -184,21 +252,21 @@ ${pc.bold("예시:")}
                 }
 
                 process.stdout.write(
-                    `\r${pc.green("  ✓")} ${file.name}${pc.dim(sizeStr)}\n`
+                    `${cr}${pc.green(stripEmoji("  ✓"))} ${file.name}${pc.dim(sizeStr)}\n`
                 );
                 successCount++;
             } catch (err: unknown) {
                 const message =
                     err instanceof Error ? err.message : String(err);
                 process.stdout.write(
-                    `\r${pc.red("  ✗")} ${file.name} ${pc.dim(`- ${message}`)}\n`
+                    `${cr}${pc.red(stripEmoji("  ✗"))} ${file.name} ${pc.dim(`- ${message}`)}\n`
                 );
                 failCount++;
             }
         }
 
         // 5. Summary
-        console.log(pc.dim("─".repeat(50)));
+        console.log(separator(50));
         const summaryParts: string[] = [];
         if (successCount > 0) {
             summaryParts.push(pc.green(`${successCount}개 성공`));
