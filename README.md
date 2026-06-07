@@ -55,6 +55,10 @@ npx @concertypin/kampus assignments download <assignmentId>
 npx @concertypin/kampus quizzes list <courseId>
 npx @concertypin/kampus quizzes read <quizId>
 
+# 특정 과목의 강의자료 목록/다운로드
+npx @concertypin/kampus resources list <courseId>
+npx @concertypin/kampus resources download <resourceId>
+
 # 교수님 메시지 조회 (페이지네이션 지원)
 npx @concertypin/kampus messages list
 npx @concertypin/kampus messages list --page 2
@@ -132,6 +136,8 @@ for (const course of courses) {
 | `getAssignmentDetail(cmid)`           | `Promise<AssignmentDetail>`                  | 과제 상세 정보 조회                        |
 | `getQuizzes(courseId)`                | `Promise<QuizItem[]>`                        | 퀴즈 목록 조회                             |
 | `getQuizDetail(cmid)`                 | `Promise<QuizDetail>`                        | 퀴즈 상세 정보 조회                        |
+| `getResources(courseId)`              | `Promise<ResourceItem[]>`                    | 강의자료 목록 조회                         |
+| `getResourceDetail(cmid)`             | `Promise<ResourceDetail>`                    | 강의자료 상세 정보 조회                    |
 | `getWeeklyActivities(courseId)`       | `Promise<WeeklyActivity[]>`                  | 주차별 학습 활동 조회                      |
 | `getSession()`                        | `Promise<string \| undefined>`               | 저장된 세션 쿠키 조회                      |
 | `setSession(cookie)`                  | `Promise<void>`                              | 세션 쿠키 저장                             |
@@ -204,6 +210,25 @@ interface QuizDetail {
     closedAt: string; // 마감 일시
     timeLimit: string; // 시간 제한
     attemptStatus: "not_started" | "in_progress" | "finished" | "unknown";
+}
+
+interface ResourceItem {
+    id: string;
+    weekTitle: string; // 주차명
+    name: string; // 자료명
+    url: string;
+}
+
+interface ResourceDetail {
+    id: string;
+    name: string;
+    description: string;
+    files: ResourceFile[]; // 첨부파일 목록
+}
+
+interface ResourceFile {
+    name: string;
+    url: string;
 }
 
 interface MessageItem {

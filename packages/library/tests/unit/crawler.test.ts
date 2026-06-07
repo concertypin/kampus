@@ -638,4 +638,245 @@ describe("Crawler", () => {
             expect(assignment.timeRemaining).toBe("");
         });
     });
+
+    describe("getResources", () => {
+        function buildCourseHtml(
+            sections: Array<{
+                weekTitle: string;
+                activities: Array<{
+                    id: string;
+                    type: "assign" | "quiz" | "ubfile" | "vod";
+                    name: string;
+                }>;
+            }>
+        ): string {
+            const sectionsHtml = sections
+                .map(
+                    (sec) => `
+                <li class="section main" id="${sec.weekTitle.toLowerCase().replace(/\s+/g, "-")}">
+                    <div class="sectionname">${sec.weekTitle}</div>
+                    <ul class="section">
+                    ${sec.activities
+                        .map(
+                            (a) => `
+                        <li class="activity modtype_${a.type}" id="module-${a.id}">
+                            <a href="https://ecampus.kangnam.ac.kr/mod/${a.type === "ubfile" ? "ubfile" : a.type}/view.php?id=${a.id}">
+                                <span class="instancename">${a.name}</span>
+                            </a>
+                        </li>
+                    `
+                        )
+                        .join("")}
+                    </ul>
+                </li>
+            `
+                )
+                .join("");
+
+            return `<html><body><ul class="weeks ubsweeks">${sectionsHtml}</ul></body></html>`;
+        }
+
+        it("should return only ubfile type resources", async () => {
+            mockFetch.mockResolvedValueOnce(
+                new Response(
+                    buildCourseHtml([
+                        {
+                            weekTitle: "1주차",
+                            activities: [
+                                {
+                                    id: "100",
+                                    type: "ubfile",
+                                    name: "1주차 강의노트.pdf",
+                                },
+                                {
+                                    id: "101",
+                                    type: "assign",
+                                    name: "1주차 과제",
+                                },
+                            ],
+                        },
+                        {
+                            weekTitle: "2주차",
+                            activities: [
+                                {
+                                    id: "200",
+                                    type: "ubfile",
+                                    name: "2주차 자료.zip",
+                                },
+                                {
+                                    id: "201",
+                                    type: "quiz",
+                                    name: "2주차 퀴즈",
+                                },
+                            ],
+                        },
+                    ]),
+                    { status: 200 }
+                )
+            );
+
+            const resources = await crawler.getResources("49341");
+
+            expect(resources).toHaveLength(2);
+            expect(resources[0]?.name).toBe("1주차 강의노트.pdf");
+            expect(resources[0]?.weekTitle).toBe("1주차");
+            expect(resources[0]?.id).toBe("100");
+            expect(resources[1]?.name).toBe("2주차 자료.zip");
+            expect(resources[1]?.weekTitle).toBe("2주차");
+        });
+
+        it("should return empty array when no ubfile resources exist", async () => {
+            mockFetch.mockResolvedValueOnce(
+                new Response(
+                    buildCourseHtml([
+                        {
+                            weekTitle: "1주차",
+                            activities: [
+                                { id: "100", type: "assign", name: "과제 1" },
+                                { id: "101", type: "quiz", name: "퀴즈 1" },
+                            ],
+                        },
+                    ]),
+                    { status: 200 }
+                )
+            );
+
+            const resources = await crawler.getResources("49341");
+            expect(resources).toHaveLength(0);
+        });
+    });
+
+    describe("getResourceDetail", () => {
+        function buildResourceHtml(opts?: {
+            name?: string;
+            description?: string;
+            fileLinks?: Array<{ name: string; url: string }>;
+        }): string {
+            const name = opts?.name ?? "1주차_강의노트.pdf";
+            const description = opts?.description ?? "1주차 강의 자료입니다.";
+            const fileLinks = opts?.fileLinks ?? [
+                {
+                    name: "lecture_week1.pdf",
+                    url: "https://ecampus.kangnam.ac.kr/pluginfile.php/123/mod_ubfile/content/1/lecture_week1.pdf",
+                },
+            ];
+
+            return `
+                <html><body>
+                    <div role="main">
+                        <h2>${name}</h2>
+                    </div>
+                    <div id="intro">
+                        <div class="no-overflow">${description}</div>
+                        ${fileLinks
+                            .map((f) => `<a href="${f.url}">${f.name}</a>`)
+                            .join("")}
+                    </div>
+                </body></html>
+            `;
+        }
+
+        it("should parse resource detail with file links", async () => {
+            const html = `
+                <html><body>
+                    <div role="main">
+                        <h2>1주차_강의노트.pdf</h2>
+                    </div>
+                    <div id="intro">
+                        <div class="no-overflow">1주차 강의 자료입니다.</div>
+                        <a href="https://ecampus.kangnam.ac.kr/pluginfile.php/123/mod_ubfile/content/1/lecture_week1.pdf">lecture_week1.pdf</a>
+                    </div>
+                </body></html>
+            `;
+            mockFetch.mockResolvedValueOnce(
+                new Response(html, { status: 200 })
+            );
+
+            const resource = await crawler.getResourceDetail("658841");
+
+            expect(resource.id).toBe("658841");
+            expect(resource.name).toBe("1주차_강의노트.pdf");
+            expect(resource.description).toContain("1주차 강의 자료입니다.");
+            expect(resource.files).toHaveLength(1);
+            expect(resource.files[0]?.name).toBe("lecture_week1.pdf");
+            expect(resource.files[0]?.url).toContain("pluginfile.php");
+        });
+
+        it("should parse resource detail with multiple file links", async () => {
+            mockFetch.mockResolvedValueOnce(
+                new Response(
+                    buildResourceHtml({
+                        name: "복수 파일 자료",
+                        description: "여러 파일이 있는 자료입니다.",
+                        fileLinks: [
+                            {
+                                name: "lecture.pdf",
+                                url: "https://ecampus.kangnam.ac.kr/pluginfile.php/1/mod_ubfile/content/1/lecture.pdf",
+                            },
+                            {
+                                name: "slides.pptx",
+                                url: "https://ecampus.kangnam.ac.kr/pluginfile.php/2/mod_ubfile/content/1/slides.pptx",
+                            },
+                        ],
+                    }),
+                    { status: 200 }
+                )
+            );
+
+            const resource = await crawler.getResourceDetail("658842");
+
+            expect(resource.files).toHaveLength(2);
+            expect(resource.files[0]?.name).toBe("lecture.pdf");
+            expect(resource.files[1]?.name).toBe("slides.pptx");
+        });
+
+        it("should handle resource detail with no file links", async () => {
+            mockFetch.mockResolvedValueOnce(
+                new Response(buildResourceHtml({ fileLinks: [] }), {
+                    status: 200,
+                })
+            );
+
+            const resource = await crawler.getResourceDetail("658843");
+
+            expect(resource.name).toBe("1주차_강의노트.pdf");
+            expect(resource.files).toHaveLength(0);
+        });
+
+        it("should handle HTML entities in description", async () => {
+            mockFetch.mockResolvedValueOnce(
+                new Response(
+                    buildResourceHtml({
+                        description: "O&#160;X 퀴즈입니다. &lt;참고&gt;",
+                    }),
+                    { status: 200 }
+                )
+            );
+
+            const resource = await crawler.getResourceDetail("658844");
+
+            expect(resource.description).toContain("O");
+            expect(resource.description).not.toContain("&#160;");
+            expect(resource.description).not.toContain("&lt;");
+        });
+
+        it("should handle missing intro section", async () => {
+            const html = `
+                <html><body>
+                    <div role="main">
+                        <h2>자료명만 있는 경우</h2>
+                    </div>
+                </body></html>
+            `;
+            mockFetch.mockResolvedValueOnce(
+                new Response(html, { status: 200 })
+            );
+
+            const resource = await crawler.getResourceDetail("658845");
+
+            expect(resource.name).toBe("자료명만 있는 경우");
+            expect(resource.description).toBe("");
+            expect(resource.files).toHaveLength(0);
+        });
+    });
 });

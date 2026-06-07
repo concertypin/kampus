@@ -1,20 +1,18 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
 import { Command } from "commander";
-import { downloadCommand } from "@/commands/assignments/download";
-import { assignmentsCommand } from "@/commands/assignments/index";
+import { downloadCommand } from "@/commands/resources/download";
+import { resourcesCommand } from "@/commands/resources/index";
 import type {
-    AssignmentDetail,
+    ResourceDetail,
     Crawler,
     LogLevel,
 } from "@concertypin/ecampus-crawler";
 import { fragile } from "../../utils";
 
-// Mock the crawler module
 vi.mock("@/crawler", () => ({
     createCrawler: vi.fn<() => Crawler>(() => mockCrawler),
 }));
 
-// Mock the getLogLevel function
 vi.mock("@/log-level", () => ({
     getLogLevel: vi.fn<() => LogLevel | undefined>(() => undefined),
 }));
@@ -34,7 +32,6 @@ vi.mock("node:stream", () => ({
     },
 }));
 
-// Mock node:fs and node:fs/promises
 vi.mock("node:fs", () => ({
     createWriteStream: vi.fn<() => object>(() => ({
         write: vi.fn<() => boolean>(() => true),
@@ -65,51 +62,48 @@ vi.mock("node:fs/promises", () => ({
     ),
 }));
 
-const getAssignmentDetailMock =
-    vi.fn<(cmid: string) => Promise<AssignmentDetail>>();
+const getResourceDetailMock =
+    vi.fn<(cmid: string) => Promise<ResourceDetail>>();
 const getSessionMock = vi.fn<() => Promise<string | undefined>>();
 
 const mockCrawler = fragile<Crawler>({
-    getAssignmentDetail: getAssignmentDetailMock,
+    getResourceDetail: getResourceDetailMock,
     getSession: getSessionMock,
 });
 
-const sampleAssignment: AssignmentDetail = {
-    id: "658841",
-    name: "과제 #1",
-    description: "테스트 과제",
-    submissionStatus: "Submitted for grading",
-    gradingStatus: "Graded",
-    dueDate: "2026-03-30 23:50",
-    timeRemaining: "-",
-    lastModified: "2026-03-30 23:52",
+const sampleResource: ResourceDetail = {
+    id: "123456",
+    name: "1주차 강의자료",
+    description: "강의 슬라이드 및 참고자료",
     files: [
         {
-            name: "report.zip",
-            url: "https://ecampus.kangnam.ac.kr/pluginfile.php?file=/report.zip",
+            name: "lecture1.pdf",
+            url: "https://ecampus.kangnam.ac.kr/pluginfile.php?file=/lecture1.pdf",
         },
     ],
 };
 
-describe("assignments download command", () => {
+describe("resources download command", () => {
     beforeEach(() => {
         vi.clearAllMocks();
+        process.exitCode = 0;
     });
 
     afterEach(() => {
         vi.restoreAllMocks();
+        process.exitCode = 0;
     });
 
     it("should have correct name and description", () => {
         expect(downloadCommand.name()).toBe("download");
-        expect(downloadCommand.description()).toContain("다운로드");
+        expect(downloadCommand.description()).toContain("강의자료");
     });
 
-    it("should require assignmentId argument", () => {
+    it("should require resourceId argument", () => {
         const args = downloadCommand.registeredArguments;
         expect(args.length).toBe(1);
         expect(args[0]?.required).toBe(true);
-        expect(args[0]?.name()).toBe("assignmentId");
+        expect(args[0]?.name()).toBe("resourceId");
     });
 
     it("should have --output option", () => {
@@ -120,11 +114,11 @@ describe("assignments download command", () => {
         expect(outputOpt?.short).toBe("-o");
     });
 
-    it("should show error when not logged in", async () => {
+    it("should exit when no session", async () => {
         getSessionMock.mockResolvedValue(undefined);
 
         const program = new Command();
-        program.addCommand(assignmentsCommand);
+        program.addCommand(resourcesCommand);
         program.exitOverride();
 
         const consoleErrorSpy = vi
@@ -134,31 +128,79 @@ describe("assignments download command", () => {
             .spyOn(process.stdout, "write")
             .mockImplementation(() => true);
 
-        try {
-            await program.parseAsync(["assignments", "download", "658841"], {
-                from: "user",
-            });
-        } catch {
-            // Expected
-        }
+        await program.parseAsync(["resources", "download", "123456"], {
+            from: "user",
+        });
 
-        expect(consoleErrorSpy).toHaveBeenCalledWith(
-            expect.stringContaining("로그인")
-        );
+        expect(getResourceDetailMock).not.toHaveBeenCalled();
+        expect(process.exitCode).toBe(1);
 
         consoleErrorSpy.mockRestore();
         stdoutSpy.mockRestore();
     });
 
-    it("should show warning when no files to download", async () => {
-        getSessionMock.mockResolvedValue("MoodleSession=abc123; path=/");
-        getAssignmentDetailMock.mockResolvedValue({
-            ...sampleAssignment,
+    it("should exit when session has no MoodleSession cookie", async () => {
+        getSessionMock.mockResolvedValue("SomeOtherCookie=value; path=/");
+
+        const program = new Command();
+        program.addCommand(resourcesCommand);
+        program.exitOverride();
+
+        const consoleErrorSpy = vi
+            .spyOn(console, "error")
+            .mockImplementation(() => {});
+        const stdoutSpy = vi
+            .spyOn(process.stdout, "write")
+            .mockImplementation(() => true);
+
+        await program.parseAsync(["resources", "download", "123456"], {
+            from: "user",
+        });
+
+        expect(getResourceDetailMock).not.toHaveBeenCalled();
+        expect(process.exitCode).toBe(1);
+
+        consoleErrorSpy.mockRestore();
+        stdoutSpy.mockRestore();
+    });
+
+    it("should handle fetch error", async () => {
+        getSessionMock.mockResolvedValue("MoodleSession=test");
+        getResourceDetailMock.mockRejectedValue(new Error("Fetch failed"));
+
+        const program = new Command();
+        program.addCommand(resourcesCommand);
+        program.exitOverride();
+
+        const consoleErrorSpy = vi
+            .spyOn(console, "error")
+            .mockImplementation(() => {});
+        const stdoutSpy = vi
+            .spyOn(process.stdout, "write")
+            .mockImplementation(() => true);
+
+        await program.parseAsync(["resources", "download", "123456"], {
+            from: "user",
+        });
+
+        expect(consoleErrorSpy).toHaveBeenCalledWith(
+            expect.stringContaining("Fetch failed")
+        );
+        expect(process.exitCode).toBe(1);
+
+        consoleErrorSpy.mockRestore();
+        stdoutSpy.mockRestore();
+    });
+
+    it("should handle no files", async () => {
+        getSessionMock.mockResolvedValue("MoodleSession=test");
+        getResourceDetailMock.mockResolvedValue({
+            ...sampleResource,
             files: [],
         });
 
         const program = new Command();
-        program.addCommand(assignmentsCommand);
+        program.addCommand(resourcesCommand);
         program.exitOverride();
 
         const consoleLogSpy = vi
@@ -168,7 +210,7 @@ describe("assignments download command", () => {
             .spyOn(process.stdout, "write")
             .mockImplementation(() => true);
 
-        await program.parseAsync(["assignments", "download", "658841"], {
+        await program.parseAsync(["resources", "download", "123456"], {
             from: "user",
         });
 
@@ -180,75 +222,16 @@ describe("assignments download command", () => {
         stdoutSpy.mockRestore();
     });
 
-    it("should handle assignment fetch errors", async () => {
-        getSessionMock.mockResolvedValue("MoodleSession=abc123; path=/");
-        getAssignmentDetailMock.mockRejectedValue(new Error("Network error"));
-
-        const program = new Command();
-        program.addCommand(assignmentsCommand);
-        program.exitOverride();
-
-        const consoleErrorSpy = vi
-            .spyOn(console, "error")
-            .mockImplementation(() => {});
-        const stdoutSpy = vi
-            .spyOn(process.stdout, "write")
-            .mockImplementation(() => true);
-
-        try {
-            await program.parseAsync(["assignments", "download", "658841"], {
-                from: "user",
-            });
-        } catch {
-            // Expected
-        }
-
-        expect(consoleErrorSpy).toHaveBeenCalled();
-
-        consoleErrorSpy.mockRestore();
-        stdoutSpy.mockRestore();
-    });
-
-    it("should show error when session cookie cannot be extracted", async () => {
-        getSessionMock.mockResolvedValue("InvalidFormat");
-
-        const program = new Command();
-        program.addCommand(assignmentsCommand);
-        program.exitOverride();
-
-        const consoleErrorSpy = vi
-            .spyOn(console, "error")
-            .mockImplementation(() => {});
-        const stdoutSpy = vi
-            .spyOn(process.stdout, "write")
-            .mockImplementation(() => true);
-
-        try {
-            await program.parseAsync(["assignments", "download", "658841"], {
-                from: "user",
-            });
-        } catch {
-            // Expected
-        }
-
-        expect(consoleErrorSpy).toHaveBeenCalledWith(
-            expect.stringContaining("세션 쿠키")
-        );
-
-        consoleErrorSpy.mockRestore();
-        stdoutSpy.mockRestore();
-    });
-
     it("should download file successfully (happy path)", async () => {
         getSessionMock.mockResolvedValue("MoodleSession=abc123; path=/");
-        getAssignmentDetailMock.mockResolvedValue(sampleAssignment);
+        getResourceDetailMock.mockResolvedValue(sampleResource);
 
         // Mock global fetch for the download - response URL must match allowed domain
         const mockResponse = {
             ok: true,
             status: 200,
             statusText: "OK",
-            url: "https://ecampus.kangnam.ac.kr/pluginfile.php?file=/report.zip",
+            url: "https://ecampus.kangnam.ac.kr/pluginfile.php?file=/lecture1.pdf",
             body: {}, // Body is mocked via Readable.fromWeb
         };
         vi.stubGlobal(
@@ -257,7 +240,7 @@ describe("assignments download command", () => {
         );
 
         const program = new Command();
-        program.addCommand(assignmentsCommand);
+        program.addCommand(resourcesCommand);
         program.exitOverride();
 
         const consoleLogSpy = vi
@@ -267,7 +250,7 @@ describe("assignments download command", () => {
             .spyOn(process.stdout, "write")
             .mockImplementation(() => true);
 
-        await program.parseAsync(["assignments", "download", "658841"], {
+        await program.parseAsync(["resources", "download", "123456"], {
             from: "user",
         });
 

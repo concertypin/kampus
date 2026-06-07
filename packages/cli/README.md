@@ -54,6 +54,13 @@ npx @concertypin/kampus quizzes list <courseId>
 npx @concertypin/kampus quizzes read <quizId>
 ```
 
+### 강의자료
+
+```bash
+npx @concertypin/kampus resources list <courseId>
+npx @concertypin/kampus resources download <resourceId>
+```
+
 ### 교수님 메시지
 
 ```bash

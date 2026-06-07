@@ -7,6 +7,7 @@ import { attendanceCommand } from "./commands/attendance/index.ts";
 import { assignmentsCommand } from "./commands/assignments/index.ts";
 import { quizzesCommand } from "./commands/quizzes/index.ts";
 import { messagesCommand } from "./commands/messages/index.ts";
+import { resourcesCommand } from "./commands/resources/index.ts";
 
 const program = new Command();
 
@@ -40,6 +41,8 @@ ${pc.bold("사용 예시:")}
   ${pc.green("kampus quizzes list <courseId>")}           특정 과목 퀴즈 목록 조회
   ${pc.green("kampus quizzes read <quizId>")}             퀴즈 상세 정보 조회
   ${pc.green("kampus messages list [--page N]")}          교수님 메시지 조회
+  ${pc.green("kampus resources list <courseId>")}         특정 과목 강의자료 목록 조회
+  ${pc.green("kampus resources download <resourceId>")}   강의자료 첨부파일 다운로드
 
 ${pc.bold("로깅 옵션:")}
   ${pc.green("--verbose")}    info 레벨 (일반 정보)
@@ -54,6 +57,7 @@ program.addCommand(attendanceCommand);
 program.addCommand(assignmentsCommand);
 program.addCommand(quizzesCommand);
 program.addCommand(messagesCommand);
+program.addCommand(resourcesCommand);
 
 program.parseAsync(process.argv).catch((err: unknown) => {
     const message = err instanceof Error ? err.message : String(err);

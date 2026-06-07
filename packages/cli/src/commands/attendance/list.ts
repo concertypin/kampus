@@ -36,7 +36,9 @@ ${pc.bold("예시:")}
             );
 
             if (items.length === 0) {
-                console.log(pc.yellow("조회된 항목이 없습니다."));
+                console.log(
+                    `${cr}${pc.yellow("조회된 항목이 없습니다.")}${pad}`
+                );
                 return;
             }
 
@@ -52,7 +54,9 @@ ${pc.bold("예시:")}
             console.log(separator(40));
         } catch (err: unknown) {
             const message = err instanceof Error ? err.message : String(err);
-            console.error(`${cr}${pc.red(stripEmoji(`❌ 오류: ${message}`))}`);
+            console.error(
+                `${cr}${pc.red(stripEmoji(`❌ 오류: ${message}`))}${pad}`
+            );
             process.exitCode = 1;
         }
     });

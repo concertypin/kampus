@@ -11,6 +11,9 @@ export {
     type QuizDetail,
     type ActivityItem,
     type WeeklyActivity,
+    type ResourceItem,
+    type ResourceDetail,
+    type ResourceFile,
 } from "./crawler";
 
 export { type SessionStorage } from "./storage/storage";

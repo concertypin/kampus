@@ -8,8 +8,8 @@ import { spinner } from "../lib/cli-utils.ts";
 import { downloadFile, extractMoodleSession } from "../lib/download-utils.ts";
 
 export const downloadCommand = new Command("download")
-    .description("과제 첨부파일을 다운로드합니다")
-    .argument("<assignmentId>", "과제 ID (assignments list 명령어로 확인)")
+    .description("강의자료 첨부파일을 다운로드합니다")
+    .argument("<resourceId>", "강의자료 ID (resources list 명령어로 확인)")
     .option(
         "-o, --output <dir>",
         "다운로드 폴더 (기본값: ./downloads)",
@@ -19,11 +19,11 @@ export const downloadCommand = new Command("download")
         "after",
         `
 ${pc.bold("예시:")}
-  ${pc.green("kampus assignments download 658841")}
-  ${pc.green("kampus assignments download 658841 -o ./my-files")}
+  ${pc.green("kampus resources download 658841")}
+  ${pc.green("kampus resources download 658841 -o ./my-files")}
 `
     )
-    .action(async (assignmentId: string, options: { output: string }) => {
+    .action(async (resourceId: string, options: { output: string }) => {
         const crawler = createCrawler(getLogLevel());
         const outputDir = options.output;
 
@@ -45,11 +45,11 @@ ${pc.bold("예시:")}
             return;
         }
 
-        // 2. Fetch assignment detail
-        using spin = spinner("과제 정보 불러오는 중...");
-        let assignment;
+        // 2. Fetch resource detail
+        using spin = spinner("강의자료 정보 불러오는 중...");
+        let resource;
         try {
-            assignment = await crawler.getAssignmentDetail(assignmentId);
+            resource = await crawler.getResourceDetail(resourceId);
             spin.stop();
         } catch (err: unknown) {
             const message = err instanceof Error ? err.message : String(err);
@@ -58,7 +58,7 @@ ${pc.bold("예시:")}
             return;
         }
 
-        if (!assignment.files || assignment.files.length === 0) {
+        if (!resource.files || resource.files.length === 0) {
             console.log(
                 pc.yellow(stripEmoji("⚠️ 다운로드할 첨부파일이 없습니다."))
             );
@@ -85,13 +85,13 @@ ${pc.bold("예시:")}
             pc.bold(
                 pc.cyan(
                     stripEmoji(
-                        `📥 첨부파일 다운로드 (${assignment.files.length}개)`
+                        `📥 강의자료 다운로드 (${resource.files.length}개)`
                     )
                 )
             )
         );
         console.log(separator(50));
-        console.log(`${pc.bold("과제명")}: ${pc.green(assignment.name)}`);
+        console.log(`${pc.bold("자료명")}: ${pc.green(resource.name)}`);
         console.log(`${pc.bold("저장 위치")}: ${pc.dim(outputDir)}`);
         console.log(separator(50));
 
@@ -99,7 +99,7 @@ ${pc.bold("예시:")}
         let successCount = 0;
         let failCount = 0;
 
-        for (const file of assignment.files) {
+        for (const file of resource.files) {
             // Sanitize filename to prevent path traversal
             const safeName = basename(file.name);
             const destPath = join(outputDir, safeName);

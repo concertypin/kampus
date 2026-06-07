@@ -96,6 +96,29 @@ export interface WeeklyActivity {
     activities: ActivityItem[];
 }
 
+/** A single lecture resource (ubfile) item from the weekly activities list */
+export interface ResourceItem {
+    id: string;
+    weekTitle: string;
+    name: string;
+    url: string;
+}
+
+/** Detailed information about a single lecture resource */
+export interface ResourceDetail {
+    id: string;
+    name: string;
+    description: string;
+    /** Downloadable files linked in the resource page */
+    files: ResourceFile[];
+}
+
+/** A downloadable file from a resource page */
+export interface ResourceFile {
+    name: string;
+    url: string;
+}
+
 /**
  * Collapses whitespace (including newlines) in text content to a single space,
  * then trims leading/trailing whitespace. Handles the common case of HTML
@@ -1037,5 +1060,88 @@ export class Crawler {
         );
         log.debug("Weekly activities:", weeklyActivities);
         return weeklyActivities;
+    }
+
+    /**
+     * Get all lecture resources (ubfile type) for a course, grouped by week.
+     * @param courseId - The course ID
+     */
+    async getResources(courseId: string): Promise<ResourceItem[]> {
+        const log = getLogger().withTag("resources");
+        log.info(`Fetching resources for course ${courseId}...`);
+        const activities = await this.getWeeklyActivities(courseId);
+
+        const resources: ResourceItem[] = [];
+        for (const week of activities) {
+            for (const act of week.activities) {
+                if (act.type === "ubfile") {
+                    resources.push({
+                        id: act.id,
+                        weekTitle: week.weekTitle,
+                        name: act.name,
+                        url: act.url,
+                    });
+                }
+            }
+        }
+
+        log.info(`Found ${resources.length} resources`);
+        return resources;
+    }
+
+    /**
+     * Get detailed information about a single lecture resource,
+     * including downloadable file links.
+     * @param cmid - The course module ID of the resource
+     */
+    async getResourceDetail(cmid: string): Promise<ResourceDetail> {
+        const log = getLogger().withTag("resource-detail");
+        log.info(`Fetching resource detail for cmid=${cmid}...`);
+
+        const response = await this.fetch(`/mod/ubfile/view.php?id=${cmid}`);
+        const html = await response.text();
+        const doc = this.parseHtml(html);
+
+        // Resource name from the <h2> inside the main content area
+        const name =
+            normalizeText(doc.querySelector('[role="main"] h2')?.textContent) ||
+            normalizeText(doc.querySelector("h2")?.textContent);
+
+        // Description from the intro box — use textContent for clean decoded text
+        const description = normalizeText(
+            doc.querySelector("#intro")?.textContent
+        );
+
+        // Extract file links from the intro/content area
+        const files: ResourceFile[] = [];
+        const seenUrls = new Set<string>();
+
+        // ubfile pages typically have file links in #intro or the main content area
+        const contentArea =
+            doc.querySelector("#intro") || doc.querySelector('[role="main"]');
+        if (contentArea) {
+            const fileLinks = contentArea.querySelectorAll(
+                "a[href*='pluginfile.php']"
+            );
+            for (const link of fileLinks) {
+                const href = link.getAttribute("href") || "";
+                const fileName = normalizeText(link.textContent);
+                if (fileName && !seenUrls.has(href)) {
+                    seenUrls.add(href);
+                    files.push({ name: fileName, url: href });
+                }
+            }
+        }
+
+        const detail: ResourceDetail = {
+            id: cmid,
+            name,
+            description,
+            files,
+        };
+
+        log.info(`Resource detail: ${name} (${files.length} files)`);
+        log.debug("Resource detail:", detail);
+        return detail;
     }
 }

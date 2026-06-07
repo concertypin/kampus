@@ -5,6 +5,29 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.2] - 2025-06-07
+
+### Added
+
+#### CLI (`@concertypin/kampus`)
+
+- **Resources List**: `resources list <courseId>` command to list lecture materials
+- **Resources Download**: `resources download <resourceId>` command to download resource attachments
+- **Assignment Submit** (experimental): `assignments submit <courseId>` command using Playwright to submit assignment file attachments via browser automation
+- **Shared Download Utilities**: Shared `downloadFile()` with robust SSRF protection, redirect handling, and path traversal prevention
+
+#### Library (`@concertypin/ecampus-crawler`)
+
+- **`getResources()`**: Fetch list of lecture materials for a course
+- **`getResourceDetail()`**: Fetch detailed resource info including file attachments
+
+### Security
+
+- Enhanced SSRF protection: validate redirect targets before following redirects
+- Path traversal protection: validate destination paths are within allowed directory
+- Domain allowlist: restrict downloads to trusted e-campus domains
+- Complete IPv6 private range detection (fc00::/7, IPv4-mapped addresses)
+
 ## [0.1.1] - 2025-05-23
 
 ### Fixed
