@@ -61,6 +61,13 @@ npx @concertypin/kampus resources list <courseId>
 npx @concertypin/kampus resources download <resourceId>
 ```
 
+### 강의계획서
+
+```bash
+npx @concertypin/kampus syllabus download <courseId>
+npx @concertypin/kampus syllabus <courseId>   # 단축어
+```
+
 ### 교수님 메시지
 
 ```bash

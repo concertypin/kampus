@@ -59,6 +59,10 @@ npx @concertypin/kampus quizzes read <quizId>
 npx @concertypin/kampus resources list <courseId>
 npx @concertypin/kampus resources download <resourceId>
 
+# 특정 과목의 강의계획서 PDF 다운로드
+npx @concertypin/kampus syllabus download <courseId>
+npx @concertypin/kampus syllabus <courseId>   # 단축어 지원
+
 # 교수님 메시지 조회 (페이지네이션 지원)
 npx @concertypin/kampus messages list
 npx @concertypin/kampus messages list --page 2
@@ -138,6 +142,8 @@ for (const course of courses) {
 | `getQuizDetail(cmid)`                 | `Promise<QuizDetail>`                        | 퀴즈 상세 정보 조회                        |
 | `getResources(courseId)`              | `Promise<ResourceItem[]>`                    | 강의자료 목록 조회                         |
 | `getResourceDetail(cmid)`             | `Promise<ResourceDetail>`                    | 강의자료 상세 정보 조회                    |
+| `getSyllabusParams(courseId)`         | `Promise<SyllabusParams>`                    | 강의계획서 파라미터 정보 추출              |
+| `downloadSyllabusPdf(courseId, out)`  | `Promise<string>`                            | 강의계획서 공식 PDF 다운로드               |
 | `getWeeklyActivities(courseId)`       | `Promise<WeeklyActivity[]>`                  | 주차별 학습 활동 조회                      |
 | `getSession()`                        | `Promise<string \| undefined>`               | 저장된 세션 쿠키 조회                      |
 | `setSession(cookie)`                  | `Promise<void>`                              | 세션 쿠키 저장                             |
@@ -229,6 +235,16 @@ interface ResourceDetail {
 interface ResourceFile {
     name: string;
     url: string;
+}
+
+interface SyllabusParams {
+    courseId: string;
+    year: string;
+    smst: string;
+    subjNumb: string;
+    lctrClas: string;
+    emplNumb: string;
+    viewerUrl: string;
 }
 
 interface MessageItem {
@@ -358,7 +374,7 @@ packages/
 │   └── tests/                  # Vitest 단위 테스트
 │
 └── cli/                        # @concertypin/kampus (터미널 CLI)
-    ├── src/                    # Commander 기반 CLI, 커맨드 그룹 (auth/courses/attendance/assignments/quizzes/messages)
+    ├── src/                    # Commander 기반 CLI, 커맨드 그룹 (auth/courses/attendance/assignments/quizzes/messages/resources/syllabus)
     └── tests/                  # CLI 테스트
 ```
 

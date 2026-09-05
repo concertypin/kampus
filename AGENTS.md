@@ -18,7 +18,7 @@ assignment/
     │   ├── tests/                 # Vitest 단위 테스트
     │   └── vite.config.ts         # ESM + D.TS 번들 설정
     └── cli/                       # @concertypin/kampus (터미널 CLI)
-        ├── src/                   # Commander 기반 CLI, 커맨드 그룹 (auth/courses/attendance/assignments/quizzes/messages/resources)
+        ├── src/                   # Commander 기반 CLI, 커맨드 그룹 (auth/courses/attendance/assignments/quizzes/messages/resources/syllabus)
         ├── tests/                 # CLI 테스트
         └── vite.config.ts         # Node SSR 번들 설정 (shebang 포함)
 ```

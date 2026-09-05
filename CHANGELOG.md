@@ -5,6 +5,29 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.0] - 2026-09-05
+
+### Added
+
+#### CLI (`@concertypin/kampus`)
+
+- **Syllabus Download**: `syllabus download <courseId>` (`syllabus <courseId>`) command to download official course syllabus PDF directly from Crownix ReportingServer
+
+#### Library (`@concertypin/ecampus-crawler`)
+
+- **`downloadSyllabusPdf()`**: Request and download official course syllabus PDF
+- **`getSyllabusParams()`**: Extract syllabus parameters (`year`, `smst`, `subjNumb`, `lctrClas`, `emplNumb`) from course main page
+
+### Fixed
+
+#### Library (`@concertypin/ecampus-crawler`)
+
+- Preserve stored credentials in session storage on transient auto-login failures (#4)
+
+### Changed
+
+- Update dependencies and toolchains (Node >= 24, pnpm 10, Vite 8, Vitest 5) (#3)
+
 ## [0.1.2] - 2025-06-07
 
 ### Added
@@ -81,5 +104,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - `quizzes list`
     - `messages list`
 
+[0.2.0]: https://github.com/concertypin/kampus/compare/v0.1.2...v0.2.0
+[0.1.2]: https://github.com/concertypin/kampus/compare/v0.1.1...v0.1.2
+[0.1.1]: https://github.com/concertypin/kampus/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/concertypin/kampus/compare/v0.0.1...v0.1.0
 [0.0.1]: https://github.com/concertypin/kampus/releases/tag/v0.0.1
