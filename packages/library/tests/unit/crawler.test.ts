@@ -879,4 +879,210 @@ describe("Crawler", () => {
             expect(resource.files).toHaveLength(0);
         });
     });
+
+    describe("syllabus", () => {
+        const sampleCourseHtml = `
+            <html><body>
+                <ul>
+                    <li class="expand">
+                        <ul>
+                            <li><a href="#" class="submenu-syllabus" onclick="window.open('https://app.kangnam.ac.kr/knumis/sbr/syllabus2026.jsp?schl_year=2026&schl_smst=2&subj_numb=NE21705&lctr_clas=00&empl_numb=103609&rz=xyz','copyright','width=850'); return false;">Syllabus</a></li>
+                        </ul>
+                    </li>
+                </ul>
+            </body></html>
+        `;
+
+        describe("getSyllabusParams", () => {
+            it("should parse syllabus parameters correctly from course page", async () => {
+                mockFetch.mockResolvedValueOnce(
+                    new Response(sampleCourseHtml, { status: 200 })
+                );
+
+                const params = await crawler.getSyllabusParams("53472");
+
+                expect(params).toEqual({
+                    year: "2026",
+                    smst: "2",
+                    subjNumb: "NE21705",
+                    lctrClas: "00",
+                    emplNumb: "103609",
+                });
+            });
+
+            it("should throw error when syllabus link is missing", async () => {
+                mockFetch.mockResolvedValueOnce(
+                    new Response("<html><body>No syllabus</body></html>", {
+                        status: 200,
+                    })
+                );
+
+                await expect(
+                    crawler.getSyllabusParams("50949")
+                ).rejects.toThrow("강의계획서 링크를 찾을 수 없습니다");
+            });
+
+            it("should throw error when parameters are incomplete", async () => {
+                const brokenHtml = `
+                    <html><body>
+                        <a class="submenu-syllabus" onclick="window.open('https://app.kangnam.ac.kr/knumis/sbr/syllabus2026.jsp?schl_year=2026')">Syllabus</a>
+                    </body></html>
+                `;
+                mockFetch.mockResolvedValueOnce(
+                    new Response(brokenHtml, { status: 200 })
+                );
+
+                await expect(
+                    crawler.getSyllabusParams("53472")
+                ).rejects.toThrow("강의계획서 파라미터가 불완전합니다");
+            });
+        });
+
+        describe("getSyllabus", () => {
+            it("should fetch and parse syllabus info from ReportingServer", async () => {
+                // 1. mock course view fetch
+                mockFetch.mockResolvedValueOnce(
+                    new Response(sampleCourseHtml, { status: 200 })
+                );
+
+                // 2. mock ReportingServer service POST
+                const mmlXml = `<?xml version="1.0" encoding="utf-8"?>
+                <MML version="2.8">
+                    <BODY>
+                        <PG no="1">
+                            <TL>강의계획서</TL>
+                            <TL>년 도</TL>
+                            <TL>2026</TL>
+                            <TL>학 기</TL>
+                            <TL>2학기</TL>
+                            <TL>교과목명</TL>
+                            <TL>한 글</TL>
+                            <TL>미디어문학의이해</TL>
+                            <TL>영 문</TL>
+                            <TL>Understanding of Media Literature</TL>
+                            <TL>담당교수</TL>
+                            <TL>박효춘</TL>
+                            <TL>학수번호-분반</TL>
+                            <TL>NE21705-00</TL>
+                            <TL>강의요일교시</TL>
+                            <TL>(주)수1ab2ab3ab</TL>
+                            <TL>학점(시간수)</TL>
+                            <TL>3(3)</TL>
+                            <TL>강 의 실</TL>
+                            <TL>샬801</TL>
+                            <TL>개설 학부(과)/전공</TL>
+                            <TL>교양</TL>
+                            <TL>이수구분(학년)</TL>
+                            <TL>균형교양(전체학년)</TL>
+                            <TL>성적평가기준</TL>
+                            <TL>상대평가 유형1</TL>
+                            <TL>교과목 개요</TL>
+                            <TL>영화와 문학의 이해</TL>
+                            <TL>수업목표</TL>
+                            <TL>평가방법</TL>
+                            <TL>중간고사</TL>
+                            <TL>기말고사</TL>
+                            <TL>출석</TL>
+                            <TL>과제</TL>
+                            <TL>퀴즈</TL>
+                            <TL>토론</TL>
+                            <TL>기타</TL>
+                            <TL>30</TL>
+                            <TL>30</TL>
+                            <TL>10</TL>
+                            <TL>10</TL>
+                            <TL>20</TL>
+                            <TL>0</TL>
+                            <TL>0</TL>
+                            <TL>교 재</TL>
+                            <TL>주교재</TL>
+                            <TL>(저자,출판사)</TL>
+                            <TL>영화 자료</TL>
+                            <TL>부교재</TL>
+                            <TL>(저자,출판사)</TL>
+                            <TL>원작 소설</TL>
+                        </PG>
+                        <PG no="3">
+                            <RA sx="229" sy="789" ex="592" ey="1395"><TL>1</TL></RA>
+                            <RA sx="592" sy="789" ex="3012" ey="1395"><TL>강좌소개</TL></RA>
+                            <RA sx="3012" sy="789" ex="4485" ey="1395"><TL>강의</TL></RA>
+                            <RA sx="4485" sy="789" ex="5689" ey="1395"><TL>영상자료</TL></RA>
+                            <RA sx="5689" sy="789" ex="6953" ey="1395"><TL>과제안내</TL></RA>
+                            <RA sx="6953" sy="789" ex="7548" ey="1395"><TL>대면</TL></RA>
+                        </PG>
+                    </BODY>
+                </MML>`;
+
+                // global fetch mock for ReportingServer
+                const originalGlobalFetch = globalThis.fetch;
+                const globalFetchMock = vi.fn<typeof fetch>();
+                globalFetchMock.mockResolvedValueOnce(
+                    new Response(mmlXml, { status: 200 })
+                );
+                globalThis.fetch = globalFetchMock;
+
+                try {
+                    const syllabus = await crawler.getSyllabus("53472");
+
+                    expect(syllabus.courseId).toBe("53472");
+                    expect(syllabus.courseName).toBe("미디어문학의이해");
+                    expect(syllabus.courseNameEn).toBe(
+                        "Understanding of Media Literature"
+                    );
+                    expect(syllabus.professor).toBe("박효춘");
+                    expect(syllabus.courseCode).toBe("NE21705-00");
+                    expect(syllabus.credits).toBe("3(3)");
+                    expect(syllabus.classroom).toBe("샬801");
+                    expect(syllabus.evaluation.midterm).toBe(30);
+                    expect(syllabus.evaluation.quiz).toBe(20);
+                    expect(syllabus.textbooks.main).toBe("영화 자료");
+                    expect(syllabus.textbooks.sub).toBe("원작 소설");
+                    expect(syllabus.weeklyPlans).toHaveLength(1);
+                    expect(syllabus.weeklyPlans[0]).toEqual({
+                        week: 1,
+                        topic: "강좌소개",
+                        method: "강의",
+                        materials: "영상자료",
+                        assignment: "과제안내",
+                        type: "대면",
+                    });
+                } finally {
+                    globalThis.fetch = originalGlobalFetch;
+                }
+            });
+        });
+
+        describe("downloadSyllabusPdf", () => {
+            it("should request PDF generation and save to destination", async () => {
+                mockFetch.mockResolvedValueOnce(
+                    new Response(sampleCourseHtml, { status: 200 })
+                );
+
+                const originalGlobalFetch = globalThis.fetch;
+                const globalFetchMock = vi.fn<typeof fetch>();
+                // 1. ReportingServer service POST (PDF creation)
+                globalFetchMock.mockResolvedValueOnce(
+                    new Response("1|2026/09/05/test1234.pdf", { status: 200 })
+                );
+                // 2. ReportingServer download GET (PDF binary)
+                const dummyPdf = new Uint8Array([0x25, 0x50, 0x44, 0x46]); // %PDF
+                globalFetchMock.mockResolvedValueOnce(
+                    new Response(dummyPdf, { status: 200 })
+                );
+                globalThis.fetch = globalFetchMock;
+
+                try {
+                    const dest =
+                        "c:/Users/PC/Projects/VSCode/kampus/.tmp/test_download.pdf";
+                    const saved = await crawler.downloadSyllabusPdf(
+                        "53472",
+                        dest
+                    );
+                    expect(saved).toContain("test_download.pdf");
+                } finally {
+                    globalThis.fetch = originalGlobalFetch;
+                }
+            });
+        });
+    });
 });

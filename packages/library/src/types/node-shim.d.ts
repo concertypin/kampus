@@ -8,8 +8,8 @@ declare module "node:fs/promises" {
     export function readFile(path: string, encoding: string): Promise<string>;
     export function writeFile(
         path: string,
-        data: string,
-        encoding: string
+        data: string | Uint8Array,
+        encoding?: string
     ): Promise<void>;
     export function mkdir(
         path: string,
@@ -21,4 +21,5 @@ declare module "node:fs/promises" {
 
 declare module "node:path" {
     export function dirname(path: string): string;
+    export function resolve(...paths: string[]): string;
 }
