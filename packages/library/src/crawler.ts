@@ -120,6 +120,15 @@ export interface ResourceFile {
     url: string;
 }
 
+/** Syllabus URL parameters extracted from course syllabus link */
+export interface SyllabusParams {
+    year: string;
+    smst: string;
+    subjNumb: string;
+    lctrClas: string;
+    emplNumb: string;
+}
+
 /**
  * Collapses whitespace (including newlines) in text content to a single space,
  * then trims leading/trailing whitespace. Handles the common case of HTML
@@ -1150,5 +1159,143 @@ export class Crawler {
         log.info(`Resource detail: ${name} (${files.length} files)`);
         log.debug("Resource detail:", detail);
         return detail;
+    }
+
+    /**
+     * Extracts syllabus parameters (year, semester, subjNumb, lctrClas, emplNumb)
+     * from the course page.
+     * @param courseId - The course ID
+     */
+    async getSyllabusParams(courseId: string): Promise<SyllabusParams> {
+        const log = getLogger().withTag("syllabus-params");
+        log.info(`Fetching syllabus parameters for course ${courseId}...`);
+
+        const response = await this.fetch(`/course/view.php?id=${courseId}`);
+        const html = await response.text();
+        const doc = this.parseHtml(html);
+
+        // Find submenu-syllabus link or any link with onclick pointing to syllabus jsp
+        const syllabusLink =
+            doc.querySelector("a.submenu-syllabus") ||
+            doc.querySelector("a[onclick*='syllabus']");
+
+        if (!syllabusLink) {
+            throw new Error(
+                `강의계획서 링크를 찾을 수 없습니다. (과목 ID: ${courseId})\n비교과 과목이거나 아직 강의계획서가 등록되지 않았을 수 있습니다.`
+            );
+        }
+
+        const onclick = syllabusLink.getAttribute("onclick") || "";
+        const match = onclick.match(/syllabus\d*\.jsp\?([^'"]+)/);
+        if (!match || !match[1]) {
+            throw new Error(
+                `강의계획서 링크 형식을 분석할 수 없습니다: ${onclick}`
+            );
+        }
+
+        const queryParams = new URLSearchParams(match[1]);
+        const year = queryParams.get("schl_year") || "";
+        const smst = queryParams.get("schl_smst") || "";
+        const subjNumb = queryParams.get("subj_numb") || "";
+        const lctrClas = queryParams.get("lctr_clas") || "";
+        const emplNumb = queryParams.get("empl_numb") || "";
+
+        if (!year || !smst || !subjNumb || !lctrClas || !emplNumb) {
+            throw new Error(
+                `강의계획서 파라미터가 불완전합니다 (year=${year}, smst=${smst}, subj=${subjNumb}, class=${lctrClas}, empl=${emplNumb})`
+            );
+        }
+
+        const params: SyllabusParams = {
+            year,
+            smst,
+            subjNumb,
+            lctrClas,
+            emplNumb,
+        };
+
+        log.debug("Syllabus parameters:", params);
+        return params;
+    }
+
+    /**
+     * Requests the ReportingServer to generate and download the official syllabus PDF.
+     * @param courseId - The course ID
+     * @param outputPath - Destination file path
+     * @returns The resolved output file path
+     */
+    async downloadSyllabusPdf(
+        courseId: string,
+        outputPath: string
+    ): Promise<string> {
+        const log = getLogger().withTag("syllabus-pdf");
+        log.info(`Exporting syllabus PDF for course ${courseId}...`);
+
+        const params = await this.getSyllabusParams(courseId);
+
+        const payload = new URLSearchParams({
+            opcode: "500",
+            mrd_path:
+                "https://app.kangnam.ac.kr/knumis/main/../sbr/sbr3073.mrd",
+            mrd_param: `/rfn [https://rpt.kangnam.ac.kr/DataServer/rdagent.jsp] /rsn [knuCoreDS_RD] /rp [${params.year}] [${params.smst}] [${params.subjNumb}][${params.lctrClas}][${params.emplNumb}][N][] [] [][][][] /rstaticrender /rformcurformat [₩ #,###] /rformnumformat [#,###.###] /rbrowserlocale [ko]`,
+            export_type: "pdf",
+            protocol: "sync",
+            "crownix-client": "html5viewer",
+        });
+
+        const res = await fetch(
+            "https://rpt.kangnam.ac.kr/ReportingServer/service",
+            {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/x-www-form-urlencoded",
+                    "User-Agent":
+                        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+                },
+                body: payload.toString(),
+            }
+        );
+
+        if (!res.ok) {
+            throw new Error(
+                `PDF 생성 요청 실패 (${res.status} ${res.statusText})`
+            );
+        }
+
+        const text = await res.text();
+        const parts = text.trim().split("|");
+        const filename = parts.length > 1 ? parts[1] : parts[0];
+        if (!filename || !filename.endsWith(".pdf")) {
+            throw new Error(
+                `리포팅 서버에서 유효한 PDF 파일명을 반환하지 않았습니다: ${text}`
+            );
+        }
+
+        const rdid =
+            filename
+                .split("/")
+                .pop()
+                ?.replace(/\.pdf$/, "") || "";
+        const downloadUrl = `https://rpt.kangnam.ac.kr/ReportingServer/download?crownix-client=html5viewer&filename=${encodeURIComponent(filename)}&rdid=${rdid}&delete=true&attatchment=true`;
+
+        log.info(`Downloading PDF from ${downloadUrl}...`);
+        const pdfRes = await fetch(downloadUrl);
+        if (!pdfRes.ok) {
+            throw new Error(
+                `PDF 다운로드 실패 (${pdfRes.status} ${pdfRes.statusText})`
+            );
+        }
+
+        const { mkdir, writeFile } = await import("node:fs/promises");
+        const { dirname, resolve } = await import("node:path");
+
+        const resolvedPath = resolve(outputPath);
+        await mkdir(dirname(resolvedPath), { recursive: true });
+
+        const arrayBuf = await pdfRes.arrayBuffer();
+        await writeFile(resolvedPath, new Uint8Array(arrayBuf));
+
+        log.info(`Syllabus PDF saved to ${resolvedPath}`);
+        return resolvedPath;
     }
 }

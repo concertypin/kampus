@@ -14,6 +14,7 @@ export {
     type ResourceItem,
     type ResourceDetail,
     type ResourceFile,
+    type SyllabusParams,
 } from "./crawler";
 
 export { type SessionStorage } from "./storage/storage";

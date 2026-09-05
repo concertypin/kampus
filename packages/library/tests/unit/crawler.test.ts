@@ -879,4 +879,96 @@ describe("Crawler", () => {
             expect(resource.files).toHaveLength(0);
         });
     });
+
+    describe("syllabus", () => {
+        const sampleCourseHtml = `
+            <html><body>
+                <ul>
+                    <li class="expand">
+                        <ul>
+                            <li><a href="#" class="submenu-syllabus" onclick="window.open('https://app.kangnam.ac.kr/knumis/sbr/syllabus2026.jsp?schl_year=2026&schl_smst=2&subj_numb=NE21705&lctr_clas=00&empl_numb=103609&rz=xyz','copyright','width=850'); return false;">Syllabus</a></li>
+                        </ul>
+                    </li>
+                </ul>
+            </body></html>
+        `;
+
+        describe("getSyllabusParams", () => {
+            it("should parse syllabus parameters correctly from course page", async () => {
+                mockFetch.mockResolvedValueOnce(
+                    new Response(sampleCourseHtml, { status: 200 })
+                );
+
+                const params = await crawler.getSyllabusParams("53472");
+
+                expect(params).toEqual({
+                    year: "2026",
+                    smst: "2",
+                    subjNumb: "NE21705",
+                    lctrClas: "00",
+                    emplNumb: "103609",
+                });
+            });
+
+            it("should throw error when syllabus link is missing", async () => {
+                mockFetch.mockResolvedValueOnce(
+                    new Response("<html><body>No syllabus</body></html>", {
+                        status: 200,
+                    })
+                );
+
+                await expect(
+                    crawler.getSyllabusParams("50949")
+                ).rejects.toThrow("강의계획서 링크를 찾을 수 없습니다");
+            });
+
+            it("should throw error when parameters are incomplete", async () => {
+                const brokenHtml = `
+                    <html><body>
+                        <a class="submenu-syllabus" onclick="window.open('https://app.kangnam.ac.kr/knumis/sbr/syllabus2026.jsp?schl_year=2026')">Syllabus</a>
+                    </body></html>
+                `;
+                mockFetch.mockResolvedValueOnce(
+                    new Response(brokenHtml, { status: 200 })
+                );
+
+                await expect(
+                    crawler.getSyllabusParams("53472")
+                ).rejects.toThrow("강의계획서 파라미터가 불완전합니다");
+            });
+        });
+
+        describe("downloadSyllabusPdf", () => {
+            it("should request PDF generation and save to destination", async () => {
+                mockFetch.mockResolvedValueOnce(
+                    new Response(sampleCourseHtml, { status: 200 })
+                );
+
+                const originalGlobalFetch = globalThis.fetch;
+                const globalFetchMock = vi.fn<typeof fetch>();
+                // 1. ReportingServer service POST (PDF creation)
+                globalFetchMock.mockResolvedValueOnce(
+                    new Response("1|2026/09/05/test1234.pdf", { status: 200 })
+                );
+                // 2. ReportingServer download GET (PDF binary)
+                const dummyPdf = new Uint8Array([0x25, 0x50, 0x44, 0x46]); // %PDF
+                globalFetchMock.mockResolvedValueOnce(
+                    new Response(dummyPdf, { status: 200 })
+                );
+                globalThis.fetch = globalFetchMock;
+
+                try {
+                    const dest =
+                        "c:/Users/PC/Projects/VSCode/kampus/.tmp/test_download.pdf";
+                    const saved = await crawler.downloadSyllabusPdf(
+                        "53472",
+                        dest
+                    );
+                    expect(saved).toContain("test_download.pdf");
+                } finally {
+                    globalThis.fetch = originalGlobalFetch;
+                }
+            });
+        });
+    });
 });
