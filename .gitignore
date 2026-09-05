@@ -27,6 +27,7 @@ lib-cov
 coverage
 __screenshots__
 *.lcov
+.vitest/
 
 # nyc test coverage
 .nyc_output

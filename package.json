@@ -29,18 +29,19 @@
         "node": ">=24"
     },
     "devDependencies": {
-        "@types/node": "^25.9.1",
-        "@vitest/coverage-v8": "^4.1.6",
+        "@types/node": "^26.4.1",
+        "@typescript/typescript6": "^6.0.2",
+        "@vitest/coverage-v8": "^5.0.0",
         "cross-env": "^10.1.0",
-        "globals": "^17.6.0",
-        "oxlint": "^1.66.0",
-        "oxlint-tsgolint": "^0.23.0",
-        "prettier": "^3.8.3",
-        "simple-git-hooks": "^2.13.1",
-        "typescript": "~6.0.3",
-        "vite": "^8.0.13",
-        "vite-plugin-dts": "^5.0.1",
-        "vitest": "^4.1.6"
+        "globals": "^17.12.0",
+        "oxlint": "^1.81.0",
+        "oxlint-tsgolint": "^7.0.2001",
+        "prettier": "^3.9.6",
+        "simple-git-hooks": "^2.14.0",
+        "typescript": "~7.0.2",
+        "vite": "^8.2.2",
+        "vite-plugin-dts": "^5.1.0",
+        "vitest": "^5.0.0"
     },
     "packageManager": "pnpm@10.17.1+sha512.17c560fca4867ae9473a3899ad84a88334914f379be46d455cbf92e5cf4b39d34985d452d2583baf19967fa76cb5c17bc9e245529d0b98745721aa7200ecaf7a"
 }
