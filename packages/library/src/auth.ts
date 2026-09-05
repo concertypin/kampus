@@ -1,4 +1,5 @@
 import { fetchWithBase } from "@/client";
+import { AuthError } from "@/errors";
 
 /** Moodle login endpoint path (base URL resolved in client.ts) */
 const loginEndpoint = "/login/index.php";
@@ -25,6 +26,12 @@ export async function login(
         .findLast((cookie: string) => cookie.startsWith("MoodleSession="));
     if (moodleSessionCookie) {
         return moodleSessionCookie;
+    }
+
+    if (response.status === 200) {
+        throw new AuthError(
+            `MoodleSession cookie not found in response ${response.status}.`
+        );
     }
 
     throw new Error(

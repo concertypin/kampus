@@ -27,3 +27,4 @@ export {
     getLogger,
     createTaggedLogger,
 } from "./logger";
+export { AuthError } from "./errors";

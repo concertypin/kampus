@@ -203,6 +203,33 @@ describe("tryAutoLogin", () => {
         const result = await crawler.tryAutoLogin();
         expect(result).toBe(false);
     });
+
+    it("should retain stored credentials when auto-login fails due to a network error", async () => {
+        await crawler.saveCredentials("validUser", "validPass");
+
+        mockFetch.mockRejectedValueOnce(new TypeError("fetch failed"));
+
+        const result = await crawler.tryAutoLogin();
+        expect(result).toBe(false);
+
+        const creds = await crawler.getCredentials();
+        expect(creds).toEqual({ username: "validUser", password: "validPass" });
+    });
+
+    it("should retain stored credentials when auto-login fails due to a server error", async () => {
+        await crawler.saveCredentials("validUser", "validPass");
+
+        const serverErrorResponse = new Response("Internal Server Error", {
+            status: 500,
+        });
+        mockFetch.mockResolvedValueOnce(serverErrorResponse);
+
+        const result = await crawler.tryAutoLogin();
+        expect(result).toBe(false);
+
+        const creds = await crawler.getCredentials();
+        expect(creds).toEqual({ username: "validUser", password: "validPass" });
+    });
 });
 
 describe("fetch auto-refresh on session expiry", () => {
