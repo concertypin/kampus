@@ -3,6 +3,7 @@ import { fetchWithBase, BASE_URL } from "./client";
 import type { SessionStorage } from "./storage/storage";
 import { MemoryStorage } from "./storage/memory";
 import { login as authLogin } from "./auth";
+import { AuthError } from "./errors";
 import { getLogger, setLogLevel, type LogLevel } from "./logger";
 
 export interface CrawlerOptions {
@@ -242,8 +243,14 @@ export class Crawler {
             return true;
         } catch (error) {
             log.error("Auto-login failed:", error);
-            // Clear credentials on auth failure so we don't keep retrying
-            await this.clearCredentials();
+            if (error instanceof AuthError) {
+                // Clear credentials only on auth failure so we don't keep retrying invalid credentials
+                await this.clearCredentials();
+            } else {
+                log.warn(
+                    "Preserving stored credentials as auto-login failure was not an authentication rejection"
+                );
+            }
             return false;
         } finally {
             this._autoLoginInProgress = false;
@@ -383,7 +390,7 @@ export class Crawler {
             const isValid = await this.checkSession();
             if (!isValid) {
                 await this.clearSession();
-                throw new Error("Login failed: invalid credentials");
+                throw new AuthError("Login failed: invalid credentials");
             }
 
             // Persist credentials so the session can be auto-refreshed later
