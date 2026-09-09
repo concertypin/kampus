@@ -174,7 +174,7 @@ describe("tryAutoLogin", () => {
         expect(creds).toEqual({ username: "validUser", password: "validPass" });
     });
 
-    it("should fail and clear credentials when stored credentials are invalid", async () => {
+    it("should fail and retain credentials when stored credentials are invalid", async () => {
         await crawler.saveCredentials("expiredUser", "oldPass");
 
         // Mock login response with cookie but failed session check
@@ -194,9 +194,12 @@ describe("tryAutoLogin", () => {
         const result = await crawler.tryAutoLogin();
         expect(result).toBe(false);
 
-        // Credentials should be cleared to prevent repeated failures
+        // Session should be cleared
+        expect(await crawler.getSession()).toBeUndefined();
+
+        // Credentials should be retained so ID/password persist
         const creds = await crawler.getCredentials();
-        expect(creds).toBeUndefined();
+        expect(creds).toEqual({ username: "expiredUser", password: "oldPass" });
     });
 
     it("should return false when no credentials are stored", async () => {
@@ -330,12 +333,15 @@ describe("fetch auto-refresh on session expiry", () => {
             .mockResolvedValueOnce(checkResponse);
 
         await expect(crawler.fetch("/my/courses")).rejects.toThrow(
-            "Session expired and no stored credentials available"
+            "Session expired and auto-login failed"
         );
 
-        // Credentials should be cleared after failed auto-login
+        // Session should be cleared
+        expect(await crawler.getSession()).toBeUndefined();
+
+        // Credentials should be retained after failed auto-login
         const creds = await crawler.getCredentials();
-        expect(creds).toBeUndefined();
+        expect(creds).toEqual({ username: "badUser", password: "badPass" });
     });
 
     it("should not trigger auto-refresh for non-login redirects", async () => {
@@ -400,12 +406,18 @@ describe("fetch auto-refresh on session expiry", () => {
             .mockResolvedValueOnce(loginPage);
 
         // Auto-refresh fails because checkSession finds login page
-        // → credentials cleared → outer fetch throws
+        // → session cleared, credentials retained → outer fetch throws
         await expect(crawler.fetch("/my/courses")).rejects.toThrow(
-            "Session expired and no stored credentials available"
+            "Session expired and auto-login failed"
         );
 
-        // Credentials should be cleared
-        expect(await crawler.getCredentials()).toBeUndefined();
+        // Session should be cleared
+        expect(await crawler.getSession()).toBeUndefined();
+
+        // Credentials should be retained
+        expect(await crawler.getCredentials()).toEqual({
+            username: "user",
+            password: "pass",
+        });
     });
 });

@@ -252,14 +252,11 @@ export class Crawler {
             return true;
         } catch (error) {
             log.error("Auto-login failed:", error);
-            if (error instanceof AuthError) {
-                // Clear credentials only on auth failure so we don't keep retrying invalid credentials
-                await this.clearCredentials();
-            } else {
-                log.warn(
-                    "Preserving stored credentials as auto-login failure was not an authentication rejection"
-                );
-            }
+            // Invalidate session only; preserve stored credentials so user doesn't lose credentials
+            await this.clearSession();
+            log.warn(
+                "Preserving stored credentials despite auto-login failure"
+            );
             return false;
         } finally {
             this._autoLoginInProgress = false;
@@ -363,9 +360,16 @@ export class Crawler {
                         // Retry the original request with the new session
                         return this.fetch(url, options);
                     }
+                    const hasCreds = await this.hasCredentials();
+                    if (!hasCreds) {
+                        throw new Error(
+                            "Session expired and no stored credentials available for auto-login. " +
+                                "Please run `kampus auth login`."
+                        );
+                    }
                     throw new Error(
-                        "Session expired and no stored credentials available for auto-login. " +
-                            "Please run `kampus auth login`."
+                        "Session expired and auto-login failed. " +
+                            "Please run `kampus auth login --force`."
                     );
                 }
 
