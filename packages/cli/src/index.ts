@@ -22,7 +22,7 @@ program
             "강남대학교 e-campus 과제/출석/메시지 조회 도구"
         )}`
     )
-    .version("0.0.0", "-v, --version", "버전 정보 출력")
+    .version(import.meta.env.VITE_VERSION, "-v, --version", "버전 정보 출력")
     .helpOption("-h, --help", "도움말 출력")
     .option("--verbose", "info 레벨 로깅 활성화")
     .option("--debug", "debug 레벨 로깅 활성화")

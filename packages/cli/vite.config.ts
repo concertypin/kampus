@@ -2,6 +2,8 @@
 
 import { type UserConfig, defineConfig } from "vite";
 import { fileURLToPath } from "node:url";
+
+import { version } from "./package.json" with { type: "json" };
 type Config = Required<UserConfig>;
 
 const resolve: Config["resolve"] = {
@@ -59,6 +61,9 @@ export default defineConfig({
         sourcemap: true,
         minify: false,
         ssr: true,
+    },
+    define: {
+        "import.meta.env.VITE_VERSION": JSON.stringify(version),
     },
     clearScreen: false,
     plugins: [shebangPlugin()],

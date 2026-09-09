@@ -5,6 +5,6 @@
         "types": ["node", "vite/client"],
         "allowImportingTsExtensions": true
     },
-    "include": ["./*.ts", "./*.js", "./*.mjs", "scripts/**/*.ts"],
+    "include": ["./*.ts", "./*.js", "./*.mjs", "scripts/**/*.ts", "*.json"],
     "extends": "../../tsconfig.base.json"
 }
