@@ -129,6 +129,28 @@ export interface SyllabusParams {
     emplNumb: string;
 }
 
+export interface VodItem {
+    id: string;
+    week: number;
+    weekTitle: string;
+    name: string;
+    duration: string;
+    period: string;
+    latePeriod?: string | undefined;
+    status: string;
+    watchedTime: string;
+    requiredTime: string;
+    url: string;
+}
+
+export interface VodDetail {
+    id: string;
+    name: string;
+    description: string;
+    period: string;
+    m3u8Url: string;
+}
+
 /**
  * Collapses whitespace (including newlines) in text content to a single space,
  * then trims leading/trailing whitespace. Handles the common case of HTML
@@ -1301,5 +1323,215 @@ export class Crawler {
 
         log.info(`Syllabus PDF saved to ${resolvedPath}`);
         return resolvedPath;
+    }
+
+    /**
+     * Get all VOD lecture items for a course, along with learning period and attendance status.
+     * Respects the exact attendance status (O/X/△) from Online Attendance without recalculation.
+     * @param courseId - The course ID
+     */
+    async getVods(courseId: string): Promise<VodItem[]> {
+        const log = getLogger().withTag("vods");
+        log.info(`Fetching VODs for course ${courseId}...`);
+
+        // Fetch attendance first to map with VOD items
+        const attItems = (
+            await this.getAttendance(courseId).catch((err) => {
+                log.warn("Failed to fetch attendance for VOD status:", err);
+                return [];
+            })
+        ).filter((it) => it.title);
+
+        const attByWeek = new Map<number, AttendanceItem[]>();
+        for (const item of attItems) {
+            if (!attByWeek.has(item.week)) {
+                attByWeek.set(item.week, []);
+            }
+            attByWeek.get(item.week)!.push(item);
+        }
+
+        const response = await this.fetch(`/course/view.php?id=${courseId}`);
+        const html = await response.text();
+        const doc = this.parseHtml(html);
+
+        const vods: VodItem[] = [];
+        const seenCmid = new Set<string>();
+        const seenSectionIds = new Set<string>();
+        const vodCountByWeek = new Map<number, number>();
+
+        const sections = doc.querySelectorAll(
+            "ul.weeks.ubsweeks li.section.main, li.section.main"
+        );
+
+        for (const section of sections) {
+            const secId = section.getAttribute("id") || "";
+            if (secId && seenSectionIds.has(secId)) continue;
+            if (secId) seenSectionIds.add(secId);
+
+            const sectionNameEl = section.querySelector(
+                ".sectionname, .section-title"
+            );
+            const weekTitle = normalizeText(sectionNameEl?.textContent);
+            const weekMatch = weekTitle.match(/(\d+)/);
+            const weekNum =
+                weekMatch && weekMatch[1] ? parseInt(weekMatch[1], 10) : 0;
+
+            const vodEls = section.querySelectorAll("li.activity.modtype_vod");
+            for (const actEl of vodEls) {
+                const modIdAttr = actEl.getAttribute("id") || "";
+                const idMatch = modIdAttr.match(/module-(\d+)/);
+                const cmid = idMatch && idMatch[1] ? idMatch[1] : "";
+                if (!cmid || seenCmid.has(cmid)) continue;
+                seenCmid.add(cmid);
+
+                const linkEl = actEl.querySelector("a");
+                const url = linkEl?.getAttribute("href") || "";
+
+                const instanceNameEl = actEl.querySelector(".instancename");
+                let name = "";
+                if (instanceNameEl) {
+                    const cloned = instanceNameEl.cloneNode(true) as Element;
+                    const hideEl = cloned.querySelector(".accesshide");
+                    if (hideEl) hideEl.remove();
+                    name = normalizeText(cloned.textContent);
+                }
+
+                const disp = actEl.querySelector(".displayoptions");
+                let period = "";
+                let latePeriod = "";
+                let duration = "";
+
+                if (disp) {
+                    const clonedDisp = disp.cloneNode(true) as Element;
+                    const lateEl = clonedDisp.querySelector(".text-late");
+                    if (lateEl) {
+                        latePeriod = normalizeText(lateEl.textContent)
+                            .replace(/^\(Late\s*:\s*/i, "")
+                            .replace(/\)$/, "")
+                            .trim();
+                        lateEl.remove();
+                    }
+                    const textUbstrap =
+                        clonedDisp.querySelector(".text-ubstrap");
+                    if (textUbstrap) {
+                        period = normalizeText(textUbstrap.textContent);
+                    }
+                    const textInfo = clonedDisp.querySelector(".text-info");
+                    if (textInfo) {
+                        duration = normalizeText(textInfo.textContent)
+                            .replace(/^,\s*/, "")
+                            .trim();
+                    }
+                }
+
+                // Match with attendance by week and index in week, fallback to title match
+                const weekIdx = vodCountByWeek.get(weekNum) || 0;
+                vodCountByWeek.set(weekNum, weekIdx + 1);
+
+                const weekAttList = attByWeek.get(weekNum) || [];
+                const att =
+                    weekAttList[weekIdx] ||
+                    weekAttList.find((a) => a.title === name);
+
+                // Respect original status as requested
+                const status = att?.status
+                    ? normalizeText(att.status)
+                    : att
+                      ? "X"
+                      : "-";
+                const watchedTime = att?.watchedTime
+                    ? normalizeText(att.watchedTime)
+                    : "-";
+                const requiredTime = att?.requiredTime
+                    ? normalizeText(att.requiredTime)
+                    : "";
+
+                vods.push({
+                    id: cmid,
+                    week: weekNum,
+                    weekTitle,
+                    name,
+                    duration,
+                    period,
+                    latePeriod: latePeriod || undefined,
+                    status: status || "-",
+                    watchedTime,
+                    requiredTime,
+                    url,
+                });
+            }
+        }
+
+        log.info(`Found ${vods.length} VOD items`);
+        log.debug("VOD items:", vods);
+        return vods;
+    }
+
+    /**
+     * Get detailed information and streaming m3u8 URL for a single VOD lecture.
+     * @param cmid - The course module ID of the VOD
+     */
+    async getVodDetail(cmid: string): Promise<VodDetail> {
+        const log = getLogger().withTag("vod-detail");
+        log.info(`Fetching VOD detail for cmid=${cmid}...`);
+
+        const viewResponse = await this.fetch(`/mod/vod/view.php?id=${cmid}`);
+        const viewHtml = await viewResponse.text();
+        const viewDoc = this.parseHtml(viewHtml);
+        const description =
+            normalizeText(viewDoc.querySelector("#intro")?.textContent) ||
+            normalizeText(
+                viewDoc.querySelector(".box.generalbox")?.textContent
+            );
+
+        const wellText = normalizeText(
+            viewDoc.querySelector(".well")?.textContent
+        );
+        const period = wellText.replace(/^학습\s*인정기간\s*:\s*/, "").trim();
+
+        // Fetch viewer page to extract m3u8 playlist URL and VOD title
+        const viewerResponse = await this.fetch(
+            `/mod/vod/viewer.php?id=${cmid}`
+        );
+        const viewerHtml = await viewerResponse.text();
+        const viewerDoc = this.parseHtml(viewerHtml);
+
+        const name =
+            normalizeText(viewerDoc.querySelector("title")?.textContent) ||
+            normalizeText(
+                viewDoc.querySelector('[role="main"] h2')?.textContent
+            ) ||
+            normalizeText(viewDoc.querySelector("h2")?.textContent);
+
+        if (viewerHtml.includes("There are no converted VOD")) {
+            throw new Error(
+                "변환된 VOD 영상이 존재하지 않습니다. (There are no converted VOD's)"
+            );
+        }
+
+        const m3u8Match =
+            viewerHtml.match(
+                /sources:\s*\[\{\s*file:\s*['"](https?:\/\/[^'"]+\.m3u8)['"]/
+            ) || viewerHtml.match(/https?:\/\/[^\s"',]+\.m3u8/);
+
+        const m3u8Url = m3u8Match ? (m3u8Match[1] ?? m3u8Match[0]) : "";
+
+        if (!m3u8Url) {
+            throw new Error(
+                `VOD 스트리밍 주소(m3u8)를 찾을 수 없습니다. (cmid=${cmid})`
+            );
+        }
+
+        const detail: VodDetail = {
+            id: cmid,
+            name,
+            description,
+            period,
+            m3u8Url,
+        };
+
+        log.info(`VOD detail: ${name} (${m3u8Url})`);
+        log.debug("VOD detail:", detail);
+        return detail;
     }
 }

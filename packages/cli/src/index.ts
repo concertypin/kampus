@@ -9,6 +9,7 @@ import { quizzesCommand } from "./commands/quizzes/index.ts";
 import { messagesCommand } from "./commands/messages/index.ts";
 import { resourcesCommand } from "./commands/resources/index.ts";
 import { syllabusCommand } from "./commands/syllabus/index.ts";
+import { vodCommand } from "./commands/vod/index.ts";
 
 const program = new Command();
 
@@ -36,6 +37,8 @@ ${pc.bold("사용 예시:")}
   ${pc.green("kampus auth logout")}                       세션 삭제
   ${pc.green("kampus courses list [--type regular]")}     수강 과목 목록 조회
   ${pc.green("kampus attendance list <courseId>")}        특정 과목 출석 조회
+  ${pc.green("kampus vod list <courseId>")}               특정 과목 VOD 강의 목록 및 출석/인정기간 조회
+  ${pc.green("kampus vod download <vodId> [-o <path>]")}  VOD 강의 영상 MKV 다운로드
   ${pc.green("kampus assignments list <courseId>")}       특정 과목 과제 목록 조회
   ${pc.green("kampus assignments read <assignmentId>")}   과제 상세 정보 조회
   ${pc.green("kampus assignments download <assignmentId>")} 과제 첨부파일 다운로드
@@ -56,6 +59,7 @@ ${pc.bold("로깅 옵션:")}
 program.addCommand(authCommand);
 program.addCommand(coursesCommand);
 program.addCommand(attendanceCommand);
+program.addCommand(vodCommand);
 program.addCommand(assignmentsCommand);
 program.addCommand(quizzesCommand);
 program.addCommand(messagesCommand);

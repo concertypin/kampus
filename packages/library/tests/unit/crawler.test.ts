@@ -971,4 +971,133 @@ describe("Crawler", () => {
             });
         });
     });
+
+    describe("vods", () => {
+        function buildCourseWithVodsHtml(): string {
+            return `
+                <html><body>
+                    <ul class="weeks ubsweeks">
+                        <li class="section main" id="section-1">
+                            <div class="sectionname">1주차</div>
+                            <ul class="section">
+                                <li class="activity modtype_vod" id="module-1001">
+                                    <div class="activityinstance">
+                                        <a href="https://ecampus.kangnam.ac.kr/mod/vod/view.php?id=1001">
+                                            <span class="instancename">1주차 1차시 영상<span class="accesshide"> VOD</span></span>
+                                        </a>
+                                        <span class="displayoptions">
+                                            <span class="text-ubstrap">2026-09-01 00:00:00 ~ 2026-09-08 23:59:59 <span class="text-late">(Late : 2026-09-15 23:59:59)</span></span>
+                                            <span class="text-info">, 25:30</span>
+                                        </span>
+                                    </div>
+                                </li>
+                            </ul>
+                        </li>
+                    </ul>
+                </body></html>
+            `;
+        }
+
+        function buildAttendanceHtml(): string {
+            return `
+                <html><body>
+                    <table class="table table-bordered user_progress_table">
+                        <tbody>
+                            <tr>
+                                <td>1</td>
+                                <td>1주차 1차시 영상</td>
+                                <td>25:00</td>
+                                <td>10:00 View: 1 time(s)</td>
+                                <td>O</td>
+                                <td>O</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </body></html>
+            `;
+        }
+
+        it("should parse VOD list and merge attendance status respecting raw OX", async () => {
+            // 1. Attendance fetch
+            mockFetch.mockResolvedValueOnce(
+                new Response(buildAttendanceHtml(), { status: 200 })
+            );
+            // 2. Course view fetch
+            mockFetch.mockResolvedValueOnce(
+                new Response(buildCourseWithVodsHtml(), { status: 200 })
+            );
+
+            const vods = await crawler.getVods("52328");
+            expect(vods).toHaveLength(1);
+            expect(vods[0]?.id).toBe("1001");
+            expect(vods[0]?.name).toBe("1주차 1차시 영상");
+            expect(vods[0]?.week).toBe(1);
+            expect(vods[0]?.duration).toBe("25:30");
+            expect(vods[0]?.period).toBe(
+                "2026-09-01 00:00:00 ~ 2026-09-08 23:59:59"
+            );
+            expect(vods[0]?.latePeriod).toBe("2026-09-15 23:59:59");
+            // Crucial: watchedTime (10:00) < requiredTime (25:00), but raw status is "O", must respect raw "O"!
+            expect(vods[0]?.status).toBe("O");
+            expect(vods[0]?.watchedTime).toContain("10:00");
+            expect(vods[0]?.requiredTime).toBe("25:00");
+        });
+
+        it("should parse VOD detail with m3u8 streaming url", async () => {
+            const viewHtml = `
+                <html><body>
+                    <h2>테스트 강의</h2>
+                    <div id="intro"><div class="no-overflow">강의 설명입니다.</div></div>
+                    <div class="well">학습 인정기간 : 2026-09-01 00:00:00 ~ 2026-09-08 23:59:59</div>
+                </body></html>
+            `;
+            const viewerHtml = `
+                <html><head>
+                    <script>
+                        jwplayer('vod_player').setup({
+                            playlist:[{
+                                sources: [{file: 'https://vod3.kangnam.ac.kr/streams/playlist.m3u8'}]
+                            }]
+                        });
+                    </script>
+                </head><body></body></html>
+            `;
+
+            mockFetch.mockResolvedValueOnce(
+                new Response(viewHtml, { status: 200 })
+            );
+            mockFetch.mockResolvedValueOnce(
+                new Response(viewerHtml, { status: 200 })
+            );
+
+            const detail = await crawler.getVodDetail("1001");
+            expect(detail.id).toBe("1001");
+            expect(detail.name).toBe("테스트 강의");
+            expect(detail.description).toBe("강의 설명입니다.");
+            expect(detail.period).toBe(
+                "2026-09-01 00:00:00 ~ 2026-09-08 23:59:59"
+            );
+            expect(detail.m3u8Url).toBe(
+                "https://vod3.kangnam.ac.kr/streams/playlist.m3u8"
+            );
+        });
+
+        it("should throw error if VOD conversion is not completed", async () => {
+            mockFetch.mockResolvedValueOnce(
+                new Response("<html><body><h2>미변환 강의</h2></body></html>", {
+                    status: 200,
+                })
+            );
+            mockFetch.mockResolvedValueOnce(
+                new Response(
+                    "<html><head><script>alert('There are no converted VOD\\'s.');</script></head></html>",
+                    { status: 200 }
+                )
+            );
+
+            await expect(crawler.getVodDetail("1002")).rejects.toThrow(
+                "변환된 VOD 영상이 존재하지 않습니다"
+            );
+        });
+    });
 });

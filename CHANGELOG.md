@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.0] - 2026-09-27
+
+### Added
+
+#### CLI (`@concertypin/kampus`)
+
+- **VOD List**: `vod list <courseId>` command to list VOD lectures with exact attendance status (O/X/△) and learning period
+- **VOD Download**: `vod download <vodId> [-o <path>]` command to download VOD lecture stream as MKV via ffmpeg with stream copying (`-c:v copy -c:a copy`)
+
+#### Library (`@concertypin/ecampus-crawler`)
+
+- **`getVods()`**: Fetch VOD lecture items merged with Online Attendance progress status
+- **`getVodDetail()`**: Fetch VOD detailed information and m3u8 streaming playlist URL
+
 ## [0.2.2] - 2026-09-09
 
 ### Fixed
