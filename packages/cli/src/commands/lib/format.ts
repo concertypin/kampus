@@ -1,4 +1,5 @@
 import { createColors } from "picocolors";
+import { isInvisibleChar } from "./filename.ts";
 
 /**
  * Whether the current stdout is a TTY (interactive terminal).
@@ -45,6 +46,39 @@ export function stripEmoji(text: string): string {
         .replace(/✉️\s*/g, "")
         .replace(/📥\s*/g, "")
         .replace(/→/g, "->");
+}
+
+/**
+ * Server-provided text (titles, author names, file names, notices) made safe
+ * to print on one line of a terminal: control and escape characters, which
+ * could move the cursor, recolour or retitle the terminal, and invisible or
+ * bidirectional-override characters, which could disguise what is shown, are
+ * removed. Tabs and line breaks become a space.
+ *
+ * For text output only. JSON output keeps the values as they are:
+ * `JSON.stringify` already escapes control characters.
+ */
+export function plainText(text: string | null | undefined): string {
+    let out = "";
+    for (const ch of text ?? "") {
+        if (/[\t\n\v\f\r]/.test(ch)) out += " ";
+        else if (!isInvisibleChar(ch)) out += ch;
+    }
+    return out;
+}
+
+/** {@link plainText} for a block of text: line breaks and tabs are kept. */
+export function plainBlock(text: string | null | undefined): string {
+    return (text ?? "")
+        .replace(/\r\n?/g, "\n")
+        .split("\n")
+        .map((line: string) =>
+            line
+                .split("\t")
+                .map((part: string) => plainText(part))
+                .join("\t")
+        )
+        .join("\n");
 }
 
 // ── Spinner helpers ──────────────────────────────────────────────

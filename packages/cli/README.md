@@ -54,12 +54,30 @@ npx @concertypin/kampus quizzes list <courseId>
 npx @concertypin/kampus quizzes read <quizId>
 ```
 
+링크 없이 표시되는(열 수 없는) 퀴즈는 `응시 상태`에 이유가 함께 나옵니다: `확인 불가 (이용 기간 종료)`, `확인 불가 (아직 열리지 않음)`, `확인 불가 (이용 조건 미충족)`. 사이트가 표시한 안내 문구는 `이용 제한`에 그대로 출력됩니다. 안내에 오픈일시와 마감일시가 함께 있으면 둘 다 읽고, 현재 시각이 그 기간 안이면 `이용 조건 미충족`으로 표시합니다.
+
+응시 상태는 사이트의 상태 문구(`Finished`, `In progress`, `Never submitted` 등)를 인식했을 때만 표시하며, 인식하지 못한 문구는 `알 수 없음`입니다. `quizzes read`는 응답이 그 퀴즈의 페이지가 아니면(다른 퀴즈, 오류 페이지 등) 오류로 끝납니다.
+
 ### 강의자료
 
 ```bash
 npx @concertypin/kampus resources list <courseId>
 npx @concertypin/kampus resources download <resourceId>
+npx @concertypin/kampus resources download <resourceId> --course <courseId>
+npx @concertypin/kampus resources download <resourceId> --type folder
 ```
+
+목록에는 e-campus 파일(`ubfile`)과 Moodle 표준 `resource`(파일), `folder`(폴더), `url`(링크), `page`(페이지)가 `유형`과 함께 나옵니다. 라벨(문구)은 자료가 아니므로 나오지 않습니다.
+
+- `download`는 기본적으로 `ubfile`로 간주합니다. 다른 유형은 `--type <유형>`으로 지정하거나, `--course <courseId>`를 주어 목록에서 유형을 자동으로 확인하게 하세요.
+- `url`, `page`는 파일이 없으므로 `download`가 안내 메시지만 출력하고 건너뜁니다. 목록의 `주소`를 브라우저에서 여세요.
+- 저장 파일명은 서버가 준 이름을 안전하게 바꾼 것입니다: 경로 구분자와 Windows에서 쓸 수 없는 문자(`:` 등)는 `_`로 바뀌고, 예약된 장치 이름(`CON`, `NUL.txt` 등)은 앞에 `_`가 붙으며, 한 번에 받는 파일끼리 이름이 같으면 `이름 (2).pdf`처럼 번호가 붙습니다. 제어 문자·보이지 않는 문자(폭 없는 문자, 좌우 방향 전환 문자)는 지워지고, 이름은 확장자를 유지한 채 UTF-8 240바이트 이내로 줄어듭니다. 화면에는 항상 저장 이름만 출력되며, 이름이 바뀐 파일에는 `(이름 정리됨)`이 붙습니다. `assignments download`도 같습니다.
+- 파일은 같은 폴더의 임시 파일(`.kampus-<무작위>.part`)에 받은 뒤 완료되면 제 이름으로 바꿉니다. 다시 받다가 실패해도 이전에 받은 파일은 그대로 남습니다.
+- e-campus가 파일 대신 웹 페이지(로그인·오류·안내 페이지)를 응답하면 저장하지 않고 실패로 처리합니다. HTML 응답은 최종 주소가 `pluginfile.php` 파일이거나 `Content-Disposition` 헤더가 있을 때만 파일로 봅니다 (HTML 첨부파일은 정상적으로 받습니다).
+- 내부망 주소(사설·루프백·링크 로컬 IPv4/IPv6, IPv4-mapped IPv6 포함)나 그런 주소로 해석되는 호스트로는 내려받지 않습니다.
+- `-o`로 지정한 폴더가 심볼릭 링크나 정션이어도 됩니다. 폴더 안의 링크를 따라 폴더 밖에 쓰는 것은 거부합니다.
+- 받을 수 있는 파일은 그 자료 자신의 것뿐입니다: 사이트가 다른 페이지나 다른 호스트로 보내면 받지 않고 오류로 알립니다. 파일 주소는 e-campus의 `pluginfile.php`이거나, 사이트가 파일을 직접 내려주는 경우 자료의 보기 주소 자체입니다.
+- 기간 제한이나 마감으로 링크 없이 표시되는 자료도 목록에 `상태: 이용 불가`로 나옵니다. `download`는 그런 자료를 내려받지 않고 이용 불가로 알려줍니다 (`--course` 없이도 사이트 응답으로 확인합니다).
 
 ### 강의계획서
 
@@ -67,6 +85,20 @@ npx @concertypin/kampus resources download <resourceId>
 npx @concertypin/kampus syllabus download <courseId>
 npx @concertypin/kampus syllabus <courseId>   # 단축어
 ```
+
+### 공지사항
+
+```bash
+npx @concertypin/kampus notices <courseId>            # notices list <courseId>의 단축어
+npx @concertypin/kampus notices list <courseId> --page 2
+npx @concertypin/kampus notices list <courseId> --all # 모든 페이지 조회
+npx @concertypin/kampus notices <courseId> --json     # JSON 출력 (자동화용)
+npx @concertypin/kampus notices read <courseId> <postId>
+```
+
+과목 페이지에서 공지사항 게시판(ubboard)을 찾아 게시글 ID·제목·작성자·작성일·조회수·고정 여부·URL을 출력합니다. 공지사항 게시판이 없는 과목은 오류 없이 빈 결과를 반환합니다 (`--json`에서는 `board: null`).
+
+텍스트 출력에서는 제목·작성자·본문·첨부파일 이름의 제어 문자(터미널 이스케이프 시퀀스 등)와 보이지 않는 문자를 지우고 출력합니다. `--json`은 값을 그대로 두며, 제어 문자는 JSON 이스케이프(`\u001b`)로 나옵니다. 첨부파일은 e-campus의 `pluginfile.php` 링크만 나옵니다.
 
 ### 교수님 메시지
 

@@ -1,5 +1,12 @@
 import { DOMParser } from "linkedom";
-import { fetchWithBase, BASE_URL } from "./client";
+import { fetchWithBase } from "./client";
+import {
+    isEcampusUrl,
+    isLoginUrl,
+    isPluginfileUrl,
+    isSiteUrl,
+    parseSiteUrl,
+} from "./url";
 import type { SessionStorage } from "./storage/storage";
 import { MemoryStorage } from "./storage/memory";
 import { login as authLogin } from "./auth";
@@ -8,6 +15,16 @@ import { getLogger, setLogLevel, type LogLevel } from "./logger";
 
 export interface CrawlerOptions {
     storage?: SessionStorage;
+    /**
+     * The site to talk to, as an origin. Defaults to the e-campus
+     * (`https://ecampus.kangnam.ac.kr`); set it to point the crawler at a
+     * mock server.
+     *
+     * Every request, the login and every URL the crawler returns use this
+     * origin, and it is the only origin the session cookie and the stored
+     * credentials are sent to. Must be https (http is accepted for
+     * `localhost` only) and carry no path; anything else throws.
+     */
     baseUrl?: string;
     timeout?: number;
     logLevel?: LogLevel;
@@ -65,12 +82,59 @@ export interface AssignmentFile {
     url: string;
 }
 
+/**
+ * Attempt state of a quiz for the logged-in user.
+ * - `not_started`: no attempt exists
+ * - `in_progress`: the latest attempt is open (or overdue) and not submitted
+ * - `finished`: the latest attempt was submitted
+ * - `abandoned`: the latest attempt was closed without being submitted
+ * - `unavailable`: the site does not serve the quiz page (see
+ *   {@link QuizAvailability} for why), so the attempt state cannot be read
+ * - `unknown`: the page could not be interpreted
+ */
+export type QuizAttemptStatus =
+    | "not_started"
+    | "in_progress"
+    | "finished"
+    | "abandoned"
+    | "unavailable"
+    | "unknown";
+
+/**
+ * Whether the quiz page can be opened, as the course page states it.
+ * - `available`: the quiz is linked and its page can be opened (the quiz
+ *   itself may still be over; see `closedAt`)
+ * - `closed`: its availability period has ended ("Available until <date>")
+ * - `not_yet_open`: its availability period has not started
+ *   ("Available from <date>")
+ * - `restricted`: unavailable for another reason, typically an unmet
+ *   condition ("Not available unless: ..."), or a notice that was not
+ *   recognised; also a quiz that is unavailable inside its own opening and
+ *   closing dates. `availabilityInfo` carries the site's own wording.
+ */
+export type QuizAvailability =
+    "available" | "closed" | "not_yet_open" | "restricted";
+
 export interface QuizItem {
     id: string;
     week: string;
     name: string;
+    /**
+     * Opening date, from the "Available from" notice of a quiz that cannot
+     * be opened. Empty for an available quiz and when the notice has none.
+     */
+    opensAt: string;
+    /**
+     * Closing date: from the quiz index for an available quiz, from the
+     * "Available until" notice for one that cannot be opened. A notice may
+     * carry both an opening and a closing date. Empty otherwise.
+     */
     closesAt: string;
     grade: string;
+    attemptStatus: QuizAttemptStatus;
+    availability: QuizAvailability;
+    /** See {@link ActivityItem.availabilityInfo} */
+    availabilityInfo: string;
 }
 
 export interface QuizDetail {
@@ -81,14 +145,34 @@ export interface QuizDetail {
     openedAt: string;
     closedAt: string;
     timeLimit: string;
-    attemptStatus: "not_started" | "in_progress" | "finished" | "unknown";
+    attemptStatus: QuizAttemptStatus;
+    availability: QuizAvailability;
+    /** See {@link ActivityItem.availabilityInfo} */
+    availabilityInfo: string;
 }
 
 export interface ActivityItem {
     id: string;
-    type: "assign" | "quiz" | "ubfile" | "vod" | "ubboard" | "other";
+    /**
+     * Moodle module type, read from the item's `modtype_<type>` class:
+     * `assign`, `quiz`, `ubfile`, `vod`, `ubboard`, `resource`, `folder`,
+     * `url`, `page`, ... or `other` when the class is missing.
+     */
+    type: string;
     name: string;
+    /** View-page URL. Empty when the activity is not available. */
     url: string;
+    /**
+     * `false` when the site lists the activity without a link (dimmed):
+     * restricted by date or condition, or closed. Such an item has no `url`
+     * and its view page cannot be opened.
+     */
+    available: boolean;
+    /**
+     * The site's own restriction notice (e.g. "Available until 07 September
+     * 2026, 23:55 PM"). Empty when there is none.
+     */
+    availabilityInfo: string;
 }
 
 export interface WeeklyActivity {
@@ -97,12 +181,45 @@ export interface WeeklyActivity {
     activities: ActivityItem[];
 }
 
-/** A single lecture resource (ubfile) item from the weekly activities list */
+/**
+ * Module types listed as lecture resources: the site's own `ubfile` plus the
+ * standard Moodle `resource` (single file), `folder`, `url` (external link)
+ * and `page` (text page).
+ */
+export const RESOURCE_TYPES = [
+    "ubfile",
+    "resource",
+    "folder",
+    "url",
+    "page",
+] as const;
+
+export type ResourceType = (typeof RESOURCE_TYPES)[number];
+
+export function isResourceType(type: string): type is ResourceType {
+    return (RESOURCE_TYPES as readonly string[]).includes(type);
+}
+
+/**
+ * Whether a resource of this type carries downloadable files. A `url` is an
+ * external link and a `page` is text shown on the site; neither has a file.
+ */
+export function resourceTypeHasFiles(type: ResourceType): boolean {
+    return type !== "url" && type !== "page";
+}
+
+/** A single lecture resource item from the weekly activities list */
 export interface ResourceItem {
     id: string;
+    type: ResourceType;
     weekTitle: string;
     name: string;
+    /** View-page URL. Empty when the resource is not available. */
     url: string;
+    /** See {@link ActivityItem.available} */
+    available: boolean;
+    /** See {@link ActivityItem.availabilityInfo} */
+    availabilityInfo: string;
 }
 
 /** Detailed information about a single lecture resource */
@@ -110,8 +227,19 @@ export interface ResourceDetail {
     id: string;
     name: string;
     description: string;
-    /** Downloadable files linked in the resource page */
+    /**
+     * Downloadable files of this resource. Only files of the resource's own
+     * view page (or the file its view URL redirects to) are listed.
+     */
     files: ResourceFile[];
+    /**
+     * `false` when the site sent the request back to the course page instead
+     * of serving the resource (restricted by date or condition, or closed).
+     * `files` is empty then.
+     */
+    available: boolean;
+    /** See {@link ActivityItem.availabilityInfo}. Empty when available. */
+    availabilityInfo: string;
 }
 
 /** A downloadable file from a resource page */
@@ -151,6 +279,77 @@ export interface VodDetail {
     m3u8Url: string;
 }
 
+/** A ubboard instance (course module) that holds notices. */
+export interface NoticeBoard {
+    /** Course module ID (cmid) of the board */
+    id: string;
+    name: string;
+    url: string;
+}
+
+export interface NoticeItem {
+    /** Post ID (`bwid`). Empty for hidden (secret) posts that expose no link. */
+    id: string;
+    /** Course module ID (cmid) of the board the post belongs to */
+    boardId: string;
+    /** Row number shown in the list. Empty for pinned posts. */
+    number: string;
+    title: string;
+    author: string;
+    /** Created date as shown in the list (YYYY-MM-DD) */
+    date: string;
+    /** View count, or null when the list does not expose a number */
+    views: number | null;
+    /** Pinned to the top of the board ("Notice" icon instead of a number) */
+    isPinned: boolean;
+    /** Marked with the board's "new" icon */
+    isNew: boolean;
+    hasAttachment: boolean;
+    /** Hidden (secret) post: title and link are not exposed */
+    isSecret: boolean;
+    /** Canonical post URL (empty when the post has no ID) */
+    url: string;
+}
+
+export interface NoticeList {
+    courseId: string;
+    /** null when the course has no notice board */
+    board: NoticeBoard | null;
+    notices: NoticeItem[];
+    /** Total number of posts reported by the board (pinned posts excluded) */
+    totalCount: number;
+    page: number;
+    totalPages: number;
+}
+
+export interface NoticeListOptions {
+    /** 1-based page number (default: 1). Ignored when `all` is set. */
+    page?: number | undefined;
+    /** Posts per page (board default: 15, max 999) */
+    pageSize?: number | undefined;
+    /** Fetch every page and merge the results */
+    all?: boolean | undefined;
+}
+
+export interface NoticeFile {
+    name: string;
+    url: string;
+}
+
+export interface NoticeDetail {
+    id: string;
+    boardId: string;
+    title: string;
+    author: string;
+    /** Written date-time as shown on the post (YYYY-MM-DD HH:mm) */
+    date: string;
+    views: number | null;
+    /** Post body as plain text, paragraphs separated by newlines */
+    content: string;
+    files: NoticeFile[];
+    url: string;
+}
+
 /**
  * Collapses whitespace (including newlines) in text content to a single space,
  * then trims leading/trailing whitespace. Handles the common case of HTML
@@ -160,8 +359,623 @@ function normalizeText(text: string | null | undefined): string {
     return (text ?? "").replace(/\s+/g, " ").trim();
 }
 
+/**
+ * The week sections of a course page, in week order, each one once.
+ *
+ * The page renders the current week twice: in a "current week" highlight box
+ * above the list and again at its own place in the full list
+ * (`div.total_sections`). Both copies carry the same `section-N` id, so the
+ * earlier (highlight) copy is dropped and the one in the full list is kept.
+ * Every course-page scraper that walks sections should go through this so no
+ * activity is listed twice.
+ */
+function getCourseSections(doc: Document): Element[] {
+    const sections = Array.from(doc.querySelectorAll("li.section.main"));
+    const lastIndexById = new Map<string, number>();
+    sections.forEach((section: Element, index: number) => {
+        const id = section.getAttribute("id");
+        if (id) lastIndexById.set(id, index);
+    });
+    return sections.filter((section: Element, index: number) => {
+        const id = section.getAttribute("id");
+        return !id || lastIndexById.get(id) === index;
+    });
+}
+
+/**
+ * URL of a course-page activity's own link, or "" when it has none.
+ *
+ * The link wraps the icon and name inside `.activityinstance`. A restricted
+ * or closed activity is rendered dimmed without it, and any other `<a>` in
+ * the item (e.g. in its description) is not a link to the activity.
+ */
+function getActivityUrl(actEl: Element): string {
+    const instanceEl = actEl.querySelector(".activityinstance");
+    const linkEl = (instanceEl ?? actEl).querySelector("a[href]");
+    return linkEl?.getAttribute("href") || "";
+}
+
+/**
+ * Read one `li.activity` element of a course page.
+ * Every scraper that needs an activity's name, link or restriction notice
+ * goes through this, so the notice is read in one place only.
+ */
+function parseActivityItem(actEl: Element): ActivityItem {
+    const id =
+        (actEl.getAttribute("id") || "").match(/module-(\d+)/)?.[1] ?? "";
+    const type =
+        (actEl.className || "").match(/\bmodtype_(\w+)/)?.[1] ?? "other";
+
+    // Empty for a restricted or closed activity
+    const url = getActivityUrl(actEl);
+    const availabilityInfo = normalizeText(
+        actEl.querySelector(".availabilityinfo")?.textContent
+    );
+
+    const instanceNameEl = actEl.querySelector(".instancename");
+    let name = "";
+    if (instanceNameEl) {
+        const cloned = instanceNameEl.cloneNode(true) as Element;
+        cloned.querySelector(".accesshide")?.remove();
+        name = normalizeText(cloned.textContent);
+    }
+
+    return { id, type, name, url, available: url !== "", availabilityInfo };
+}
+
+/**
+ * Which page a document is, as Moodle states it on `<body>`: the page id
+ * (`page-mod-quiz-view`, `page-course-view-weeks`, ...) and, on an activity
+ * page, the course module it belongs to (`cmid-<id>` class).
+ */
+function pageIdentity(doc: Document): { pageId: string; cmid: string } {
+    const body = doc.querySelector("body");
+    return {
+        pageId: body?.getAttribute("id") ?? "",
+        cmid:
+            (body?.getAttribute("class") ?? "").match(
+                /(?:^|\s)cmid-(\d+)(?:\s|$)/
+            )?.[1] ?? "",
+    };
+}
+
+/** Whether two course module IDs are the same number (`010` is `10`). */
+function sameModuleId(a: string, b: string): boolean {
+    return /^\d+$/.test(a) && /^\d+$/.test(b) && BigInt(a) === BigInt(b);
+}
+
+/**
+ * Whether a document is the page `pageId` of course module `cmid`.
+ *
+ * The rule, shared by every reader of an activity page: `<body>` must state
+ * both the page id and the module (`cmid-<id>`), and both must match. A
+ * different page id or module is another page; so is a page that states
+ * neither. Moodle writes both from `$PAGE` on every themed page and its own
+ * CSS and JavaScript select on them, so a page without them is not an
+ * activity page of the site (a bare redirect or error document, a login
+ * form), and taking files or an attempt state from it would attribute
+ * another page's content to this module.
+ */
+function isModulePage(doc: Document, pageId: string, cmid: string): boolean {
+    const page = pageIdentity(doc);
+    return page.pageId === pageId && sameModuleId(page.cmid, cmid);
+}
+
+/**
+ * Where a redirect page sends the browser: the target of its
+ * `<meta http-equiv="refresh">`, or of the "Continue" link of Moodle's
+ * redirect notice (`.continuebutton a`). Returns "" when no target is named.
+ *
+ * @param isRedirectResponse - The page is the body of a response with a
+ * redirect status. Moodle's bare redirect body has nothing but the
+ * "Continue" link, so there the page's only link is the target as well. On
+ * a page with several links, or one served with 200, a plain link is not
+ * known to be the target and is not taken.
+ */
+function redirectPageTarget(
+    doc: Document,
+    isRedirectResponse: boolean
+): string {
+    const refresh = doc
+        .querySelector("meta[http-equiv='refresh' i]")
+        ?.getAttribute("content");
+    const refreshUrl = refresh?.match(/url\s*=\s*['"]?([^'"]+)/i)?.[1]?.trim();
+    if (refreshUrl) return refreshUrl;
+
+    let links = doc.querySelectorAll(".continuebutton a[href]");
+    if (links.length === 0 && isRedirectResponse) {
+        links = doc.querySelectorAll("a[href]");
+    }
+    return links.length === 1
+        ? (links[0]?.getAttribute("href") ?? "").trim()
+        : "";
+}
+
+const MONTH_NAMES = [
+    "jan",
+    "feb",
+    "mar",
+    "apr",
+    "may",
+    "jun",
+    "jul",
+    "aug",
+    "sep",
+    "oct",
+    "nov",
+    "dec",
+] as const;
+
+/** One word of a date: a number, a month or weekday name, AM/PM, 년/월/일... */
+const DATE_WORD =
+    "\\d+" +
+    "|(?<![a-z])(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|june?|july?|aug(?:ust)?|sep(?:t(?:ember)?)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?" +
+    "|mon(?:day)?|tue(?:s(?:day)?)?|wed(?:nesday)?|thu(?:r(?:s(?:day)?)?)?|fri(?:day)?|sat(?:urday)?|sun(?:day)?|am|pm)(?![a-z])" +
+    "|오전|오후|[월화수목금토일]요일|년|월|일|시|분";
+
+/** A run of date words with only spaces and date punctuation in between. */
+const DATE_RUN = `(?:${DATE_WORD})(?:[\\s,.:/()\\-]*(?:${DATE_WORD}))*`;
+
+/** Marks around a date inside a notice that is being read. */
+const DATE_OPEN = "\u0001";
+const DATE_CLOSE = "\u0002";
+const MARKED_DATE = `${DATE_OPEN}([^${DATE_CLOSE}]*)${DATE_CLOSE}`;
+
+/** Whether the whole text is one date (it must name a year). */
+function isDateText(text: string): boolean {
+    const trimmed = text.trim();
+    return (
+        new RegExp(`^${DATE_RUN}\\)?$`, "i").test(trimmed) &&
+        /(?<!\d)(?:19|20)\d{2}(?!\d)/.test(trimmed)
+    );
+}
+
+/**
+ * The text of a restriction notice with every date in it marked.
+ *
+ * Moodle highlights the date of a date restriction with `<strong>`, so on a
+ * real page the dates are those elements, provided their text is a date (the
+ * same element highlights an activity or grade item name in other
+ * conditions). Dates written without markup are found by their wording.
+ * Line and list item boundaries become spaces.
+ */
+function markNoticeDates(notice: Element | string): string {
+    // The marks themselves must not come from the page
+    const clean = (value: string): string =>
+        value.replaceAll(DATE_OPEN, "").replaceAll(DATE_CLOSE, "");
+    const mark = (date: string): string =>
+        `${DATE_OPEN}${normalizeText(date)}${DATE_CLOSE}`;
+
+    let text = "";
+    if (typeof notice === "string") {
+        text = clean(notice);
+    } else {
+        const walk = (node: Node): void => {
+            if (node.nodeType === 3) {
+                text += clean(node.textContent ?? "");
+                return;
+            }
+            if (node.nodeType !== 1) return;
+            const tag = node.nodeName.toUpperCase();
+            const content = clean(node.textContent ?? "");
+            if ((tag === "STRONG" || tag === "B") && isDateText(content)) {
+                text += mark(content);
+                return;
+            }
+            const isBreak = ["BR", "LI", "UL", "OL", "P", "DIV"].includes(tag);
+            if (isBreak) text += " ";
+            for (const child of Array.from(node.childNodes)) walk(child);
+            if (isBreak) text += " ";
+        };
+        walk(notice);
+    }
+
+    return normalizeText(
+        text.replace(
+            new RegExp(`${MARKED_DATE}|${DATE_RUN}`, "gi"),
+            (match: string) =>
+                match.startsWith(DATE_OPEN) || !isDateText(match)
+                    ? match
+                    : mark(match)
+        )
+    );
+}
+
+/**
+ * Read a date as the site shows it (`07 September 2026, 23:55 PM`,
+ * `2026-09-07 23:55`, `2026년 9월 7일, 오후 11:55`) into a timestamp, taking
+ * it as Korean time, which is what the site displays. Returns null when the
+ * date is not understood.
+ *
+ * @param endOfDay - Use the end of the day when the text has no time
+ */
+function parseNoticeDate(text: string, endOfDay: boolean): number | null {
+    let year: number;
+    let month: number;
+    let day: number;
+
+    const numeric =
+        text.match(/(\d{4})\s*년\s*(\d{1,2})\s*월\s*(\d{1,2})\s*일/) ??
+        text.match(/(?<!\d)(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})(?!\d)/);
+    const monthNames = MONTH_NAMES.join("|");
+    const dayFirst = text.match(
+        new RegExp(
+            `(?<!\\d)(\\d{1,2})\\s+(${monthNames})[a-z]*\\.?,?\\s+(\\d{4})`,
+            "i"
+        )
+    );
+    const monthFirst = text.match(
+        new RegExp(
+            `(?<![a-z])(${monthNames})[a-z]*\\.?\\s+(\\d{1,2}),?\\s+(\\d{4})`,
+            "i"
+        )
+    );
+    const monthIndex = (name: string | undefined): number =>
+        MONTH_NAMES.indexOf(
+            (name ?? "")
+                .slice(0, 3)
+                .toLowerCase() as (typeof MONTH_NAMES)[number]
+        ) + 1;
+
+    if (numeric) {
+        year = Number(numeric[1]);
+        month = Number(numeric[2]);
+        day = Number(numeric[3]);
+    } else if (dayFirst) {
+        day = Number(dayFirst[1]);
+        month = monthIndex(dayFirst[2]);
+        year = Number(dayFirst[3]);
+    } else if (monthFirst) {
+        month = monthIndex(monthFirst[1]);
+        day = Number(monthFirst[2]);
+        year = Number(monthFirst[3]);
+    } else {
+        return null;
+    }
+    if (month < 1 || month > 12 || day < 1 || day > 31) return null;
+
+    let hour = endOfDay ? 23 : 0;
+    let minute = endOfDay ? 59 : 0;
+    let second = endOfDay ? 59 : 0;
+    const time = text.match(/(?<!\d)(\d{1,2}):(\d{2})(?!\d)/);
+    if (time) {
+        hour = Number(time[1]);
+        minute = Number(time[2]);
+        second = 0;
+        if (hour > 23 || minute > 59) return null;
+        const isPm = /(?<![a-z])pm(?![a-z])|오후/i.test(text);
+        const isAm = /(?<![a-z])am(?![a-z])|오전/i.test(text);
+        if (isPm && hour < 12) hour += 12;
+        if (isAm && hour === 12) hour = 0;
+    }
+
+    const KST_OFFSET_HOURS = 9;
+    return Date.UTC(
+        year,
+        month - 1,
+        day,
+        hour - KST_OFFSET_HOURS,
+        minute,
+        second
+    );
+}
+
+/**
+ * Classify a quiz from its course-page item.
+ *
+ * A dimmed item carries the site's restriction notice. Date restrictions are
+ * sentences of Moodle's `availability_date` plugin; the English and Korean
+ * language-pack wordings are recognised, alone or together in one notice:
+ * - opening: `Available from <date>`, `It is after <date>`,
+ *   `<date> 부터 사용가능`
+ * - closing: `Available until <date>`, `Available until end of <date>`,
+ *   `It is before <date>`, `<date>까지 사용가능`,
+ *   `<date>의 마지막까지 사용가능`
+ *
+ * The dates are taken from the notice's `<strong>` elements when it has
+ * them (`notice`), otherwise from the wording of its text. With a closing
+ * date only the quiz is `closed`, with an opening date only it is
+ * `not_yet_open`. With both, the dates decide: `not_yet_open` before the
+ * opening, `closed` after the closing; when they cannot be read, or the
+ * quiz is unavailable inside its window, it is `restricted` and both dates
+ * are still reported.
+ *
+ * Anything else in the notice (another condition such as a grade or a
+ * completed activity, "Not available unless: ..." with several conditions,
+ * a clause that is not a date, another language) makes it `restricted`
+ * without any date: such a notice does not say when the quiz opens.
+ *
+ * @param notice - The item's `.availabilityinfo` element, when at hand
+ * @param now - Current time (ms), to place it against a notice with both dates
+ */
+function classifyQuizAvailability(
+    activity: ActivityItem,
+    notice: Element | null = null,
+    now: number = Date.now()
+): {
+    availability: QuizAvailability;
+    opensAt: string;
+    closesAt: string;
+} {
+    const none = { opensAt: "", closesAt: "" };
+    if (activity.available) return { availability: "available", ...none };
+    const restricted = { availability: "restricted" as const, ...none };
+
+    const marked = markNoticeDates(notice ?? activity.availabilityInfo);
+    const opens: string[] = [];
+    const closes: string[] = [];
+    const rest = marked
+        .replace(
+            new RegExp(
+                `(?<![a-z])(from|after|until(?:\\s+end\\s+of)?|before(?:\\s+end\\s+of)?)\\s*${MARKED_DATE}`,
+                "gi"
+            ),
+            (_match: string, keyword: string, date: string) => {
+                (/^(from|after)$/i.test(keyword) ? opens : closes).push(date);
+                return " ";
+            }
+        )
+        .replace(
+            new RegExp(
+                `${MARKED_DATE}\\s*(부터|의\\s*마지막\\s*까지|까지)`,
+                "g"
+            ),
+            (_match: string, date: string, particle: string) => {
+                (particle === "부터" ? opens : closes).push(date);
+                return " ";
+            }
+        )
+        // What a date sentence consists of besides the date itself
+        .replace(
+            /not available unless:?|available|it is|on or|(?<![a-z])and(?![a-z])|사용\s*가능(?:합니다)?|\([^)]*\)|[\s.,;:()·]/gi,
+            ""
+        );
+
+    // Words that are not part of a date sentence, a date without a known
+    // keyword, or two dates for the same end: not understood.
+    if (rest !== "" || opens.length > 1 || closes.length > 1) return restricted;
+
+    const opensAt = opens[0] ?? "";
+    const closesAt = closes[0] ?? "";
+    if (opensAt && closesAt) {
+        const opening = parseNoticeDate(opensAt, false);
+        const closing = parseNoticeDate(closesAt, true);
+        let availability: QuizAvailability = "restricted";
+        if (opening !== null && closing !== null && opening <= closing) {
+            if (now < opening) availability = "not_yet_open";
+            else if (now > closing) availability = "closed";
+        }
+        return { availability, opensAt, closesAt };
+    }
+    if (closesAt) return { availability: "closed", opensAt: "", closesAt };
+    if (opensAt) {
+        return { availability: "not_yet_open", opensAt, closesAt: "" };
+    }
+    return restricted;
+}
+
+const REDIRECT_STATUSES = new Set([301, 302, 303, 307, 308]);
+
+/** Redirect hops followed for one request, the limit `downloadFile` uses. */
+const MAX_REDIRECTS = 10;
+
+/**
+ * The request to send to a redirect target, as a browser would: a 303, and
+ * a 301/302 answering a POST, turn into a GET without the body; 307 and 308
+ * repeat the request unchanged.
+ */
+function requestAfterRedirect(
+    request: RequestInit,
+    status: number
+): RequestInit {
+    const method = (request.method || "GET").toUpperCase();
+    const toGet =
+        (status === 303 && method !== "GET" && method !== "HEAD") ||
+        ((status === 301 || status === 302) && method === "POST");
+    if (!toGet) return request;
+
+    const next: RequestInit = { ...request };
+    delete next.method;
+    delete next.body;
+    const headers = new Headers(request.headers);
+    headers.delete("Content-Type");
+    headers.delete("Content-Length");
+    next.headers = headers;
+    return next;
+}
+
+/** A secret for the trace log: first and last three characters only. */
+function maskSecret(value: string): string {
+    return value.length > 6
+        ? `${value.slice(0, 3)}...${value.slice(-3)}`
+        : "***";
+}
+
+/**
+ * A `Set-Cookie` header for the trace log: the cookie's name and attributes
+ * stay, its value goes.
+ */
+function maskSetCookie(value: string): string {
+    return value.replace(/^([^=;]*)=[^;]*/, "$1=***");
+}
+
+/**
+ * Wording of the attempt states in the "State" column of the attempt summary,
+ * from Moodle's `mod_quiz` language strings in English and in the Korean
+ * language pack:
+ *
+ * | string            | en                           | ko                      |
+ * | ----------------- | ---------------------------- | ----------------------- |
+ * | stateabandoned    | Never submitted              | 제출되지 않았습니다.    |
+ * | stateinprogress   | In progress                  | 진행중                  |
+ * | stateoverdue      | Overdue                      | 기한 만료               |
+ * | (overdue details) | Must be submitted by <date>  | <date>가 제출해야 합니다. |
+ * | statefinished     | Finished                     | 종료됨                  |
+ * | (finished details)| Submitted <date>             | <date>를 제출함         |
+ *
+ * The patterns are anchored at the start of the state, so wording that
+ * merely contains one of these words ("Not finished", "Unfinished", "Not
+ * submitted", "완료되지 않음") matches nothing, and the states that mean "not
+ * submitted" are tested first. A site may override these strings; an
+ * unrecognised state is `unknown`, never guessed.
+ */
+const ATTEMPT_STATE_PATTERNS: ReadonlyArray<[QuizAttemptStatus, RegExp]> = [
+    ["abandoned", /^(?:never submitted(?![a-z])|제출되지 않았)/i],
+    [
+        "in_progress",
+        /^(?:(?:in progress|overdue)(?![a-z])|진행\s*중|기한\s*만료)/i,
+    ],
+    ["finished", /^(?:(?:finished|submitted)(?![a-z])|종료됨)/i],
+];
+
+/**
+ * Derives the attempt state from a `mod/quiz/view.php` document.
+ *
+ * Moodle renders the attempt history as `table.quizattemptsummary`, a
+ * sibling that comes *before* the `.quizattempt` box; that box only holds
+ * the action buttons ("Attempt quiz now", "Continue the last attempt",
+ * "Back to the course"). The state of the latest attempt is therefore read
+ * from the last row of the summary table, not from the button box.
+ */
+function parseQuizAttemptStatus(doc: Document): QuizAttemptStatus {
+    const attemptBox = doc.querySelector(".quizattempt");
+    const table = doc.querySelector("table.quizattemptsummary");
+    const rows = table
+        ? Array.from(table.querySelectorAll("tbody tr")).filter(
+              (row: Element) =>
+                  row.querySelector("td") !== null &&
+                  normalizeText(row.textContent) !== ""
+          )
+        : [];
+    const lastRow = rows[rows.length - 1];
+
+    if (table && lastRow) {
+        const cells = Array.from(lastRow.querySelectorAll("td"));
+        // Columns are optional (attempt number, state, marks, grade,
+        // review, feedback), so locate the state column by its header.
+        let stateIndex = Array.from(
+            table.querySelectorAll("thead th")
+        ).findIndex((th: Element) =>
+            /^(state|상태)/i.test(normalizeText(th.textContent))
+        );
+        if (stateIndex < 0) {
+            stateIndex =
+                cells.length > 1 &&
+                /^\d+$/.test(normalizeText(cells[0]?.textContent))
+                    ? 1
+                    : 0;
+        }
+        // The cell is the state, followed by its details in
+        // `.statedetails` ("Submitted <date>", "Must be submitted by ...").
+        const stateCell = cells[stateIndex]?.cloneNode(true) as
+            Element | undefined;
+        for (const details of Array.from(
+            stateCell?.querySelectorAll(".statedetails") ?? []
+        )) {
+            details.remove();
+        }
+        const state = normalizeText(stateCell?.textContent);
+
+        for (const [status, pattern] of ATTEMPT_STATE_PATTERNS) {
+            if (pattern.test(state)) return status;
+        }
+        // No other sign is taken for "submitted". In particular a review
+        // link is not one: Moodle offers it for every attempt that is no
+        // longer open, which includes an abandoned (never submitted) one.
+    }
+
+    const startButton = attemptBox?.querySelector(
+        ".quizstartbuttondiv input[type='submit'], .quizstartbuttondiv button"
+    );
+    const buttonLabel = normalizeText(
+        startButton?.getAttribute("value") || startButton?.textContent
+    );
+    // en "Continue the last attempt" / "Continue your attempt",
+    // ko "지난번 시도 계속" (continueattemptquiz)
+    if (/continue|시도 계속/i.test(buttonLabel)) return "in_progress";
+
+    // Attempts exist but their state text was not recognised: saying
+    // "finished" here would report an unsubmitted attempt as submitted.
+    if (rows.length > 0) return "unknown";
+    // A rendered quiz page without any attempt row: never attempted
+    // (whether or not the quiz can still be started).
+    if (attemptBox) return "not_started";
+    return "unknown";
+}
+
+export { isEcampusUrl, isLoginUrl, isPluginfileUrl };
+
+/**
+ * Resolve a link to a Moodle `pluginfile.php` file on the site.
+ * Returns null for anything else, in particular for a link to another host
+ * or to another script: link targets are written by course authors (or come
+ * from a redirect), and a file URL is fetched with the session cookie.
+ *
+ * @param base - The URL of the page the link was found on
+ * @param site - The site origin
+ */
+function resolvePluginfileUrl(
+    href: string,
+    base: string | URL,
+    site: URL
+): URL | null {
+    let url: URL;
+    try {
+        url = new URL(href, base);
+    } catch {
+        return null;
+    }
+    return isPluginfileUrl(url, site) ? url : null;
+}
+
+/**
+ * Derive the file name from a Moodle `pluginfile.php` URL.
+ * Handles both the slash-argument form (`/pluginfile.php/1/mod_x/content/0/a.pdf`)
+ * and the query form (`/pluginfile.php?file=%2F1%2Fmod_x%2Fcontent%2F0%2Fa.pdf`).
+ */
+function fileNameFromPluginfileUrl(url: URL): string {
+    const filePath = url.searchParams.get("file");
+    if (filePath) {
+        return filePath.split("/").pop() || "";
+    }
+    const lastSegment = url.pathname.split("/").pop() || "";
+    try {
+        return decodeURIComponent(lastSegment);
+    } catch {
+        return lastSegment;
+    }
+}
+
+/**
+ * Extract the file name from a `Content-Disposition` header.
+ * Moodle sends the raw UTF-8 bytes in `filename="..."`, which `fetch` exposes
+ * as Latin-1, so non-ASCII (e.g. Korean) names are re-decoded as UTF-8.
+ */
+function fileNameFromContentDisposition(header: string | null): string {
+    if (!header) return "";
+    const extended = header.match(/filename\*\s*=\s*UTF-8''([^;]+)/i);
+    if (extended?.[1]) {
+        try {
+            return decodeURIComponent(extended[1].trim());
+        } catch {
+            // Fall through to the plain filename parameter
+        }
+    }
+    const plain = header.match(/filename\s*=\s*(?:"([^"]*)"|([^;]+))/i);
+    const raw = (plain?.[1] ?? plain?.[2] ?? "").trim();
+    try {
+        const bytes = Uint8Array.from(raw, (ch: string) => ch.charCodeAt(0));
+        return new TextDecoder("utf-8", { fatal: true }).decode(bytes);
+    } catch {
+        return raw;
+    }
+}
+
 export class Crawler {
     private storage: SessionStorage;
+    /** The site requests go to: the only origin that sees the session. */
+    private site: URL;
+    /** `site` as an origin string, without a trailing slash */
     private baseUrl: string;
     private timeout: number;
     /** Prevents concurrent auto-login attempts */
@@ -173,7 +987,8 @@ export class Crawler {
 
     constructor(options: CrawlerOptions = {}) {
         this.storage = options.storage || new MemoryStorage();
-        this.baseUrl = options.baseUrl || BASE_URL;
+        this.site = parseSiteUrl(options.baseUrl || undefined);
+        this.baseUrl = this.site.origin;
         this.timeout = options.timeout || 10000;
         if (options.logLevel) {
             setLogLevel(options.logLevel);
@@ -290,7 +1105,28 @@ export class Crawler {
         return parser.parseFromString(html, "text/html") as unknown as Document;
     }
 
-    async fetch(url: string, options: RequestInit = {}): Promise<Response> {
+    /**
+     * Resolve a path or URL against the site and refuse anything that is not
+     * on it. `//host/x` and `/\host/x` are other hosts to the URL parser, so
+     * they are refused here like any absolute off-site URL.
+     */
+    private resolveSiteUrl(url: string | URL): URL {
+        let resolved: URL;
+        try {
+            resolved = new URL(url, this.site);
+        } catch {
+            throw new Error(`Invalid URL: ${String(url)}`);
+        }
+        if (!isSiteUrl(resolved, this.site)) {
+            throw new Error(
+                `Refusing to send a request outside ${this.site.origin}: ${String(url)}`
+            );
+        }
+        return resolved;
+    }
+
+    /** One request to the site, with the session cookie, timeout and logging. */
+    private async send(target: URL, options: RequestInit): Promise<Response> {
         const log = getLogger().withTag("fetch");
         const startTime = Date.now();
         const cookie = await this.getSession();
@@ -299,17 +1135,12 @@ export class Crawler {
             headers.set("Cookie", cookie);
         }
 
-        const path = (url.startsWith("/") ? url : `/${url}`) as `/${string}`;
         const method = options.method || "GET";
+        const shown = target.pathname + target.search;
 
-        log.trace(`→ ${method} ${path}`);
+        log.trace(`→ ${method} ${shown}`);
         if (cookie) {
-            // Mask cookie value for security (show only first and last 3 chars)
-            const maskedCookie =
-                cookie.length > 6
-                    ? `${cookie.slice(0, 3)}...${cookie.slice(-3)}`
-                    : "***";
-            log.trace(`  Cookie: ${maskedCookie}`);
+            log.trace(`  Cookie: ${maskSecret(cookie)}`);
         }
 
         const controller = new AbortController();
@@ -317,13 +1148,16 @@ export class Crawler {
 
         let response: Response;
         try {
-            response = await fetchWithBase(path, {
+            // fetchWithBase refuses a target that is not on the site, so the
+            // cookie cannot leave it whatever `target` is.
+            response = await fetchWithBase(target.href, {
                 ...options,
                 headers,
                 signal: controller.signal,
+                baseUrl: this.baseUrl,
             });
         } catch (error) {
-            log.error(`✗ ${method} ${path} - Request failed:`, error);
+            log.error(`✗ ${method} ${shown} - Request failed:`, error);
             throw error;
         } finally {
             clearTimeout(timeoutId);
@@ -332,58 +1166,104 @@ export class Crawler {
         const elapsed = Date.now() - startTime;
         log.trace(`← ${response.status} ${response.statusText} (${elapsed}ms)`);
 
-        // Log response headers at trace level
+        // Log response headers at trace level. Set-Cookie holds the session
+        // the server just issued, so it is masked like the request cookie.
         const responseHeaders: Record<string, string> = {};
-        response.headers.forEach((value, key) => {
-            responseHeaders[key] = value;
+        response.headers.forEach((value: string, key: string) => {
+            if (key.toLowerCase() !== "set-cookie") {
+                responseHeaders[key] = value;
+            }
         });
+        const setCookies = response.headers.getSetCookie();
+        if (setCookies.length > 0) {
+            responseHeaders["set-cookie"] = setCookies
+                .map(maskSetCookie)
+                .join(", ");
+        }
         log.trace("  Response headers:", responseHeaders);
 
-        if (response.status === 303) {
+        return response;
+    }
+
+    /**
+     * Request a page of the site with the session cookie.
+     *
+     * `url` is a path (`/course/view.php?id=1`) or an absolute URL of the
+     * site. A URL on any other origin is refused with an error, and so is a
+     * redirect that leaves the site: the session cookie is only ever sent to
+     * the site itself.
+     *
+     * Redirects (301, 302, 303, 307, 308) are followed for up to 10 hops,
+     * each `Location` resolved against the URL of the response that sent it.
+     * A redirect to the site's login page means the session has expired: the
+     * stored credentials are used to log in again, once, and the request is
+     * repeated.
+     *
+     * @param behavior.followRedirects - When `false`, a redirect that is not
+     * a login redirect is returned to the caller instead of being followed.
+     * Defaults to `true`.
+     */
+    async fetch(
+        url: string | URL,
+        options: RequestInit = {},
+        behavior: { followRedirects?: boolean } = {}
+    ): Promise<Response> {
+        const log = getLogger().withTag("fetch");
+        const first = this.resolveSiteUrl(url);
+
+        let target = first;
+        let request = options;
+        let reloggedIn = false;
+        let hops = 0;
+
+        for (;;) {
+            const response = await this.send(target, request);
+            if (!REDIRECT_STATUSES.has(response.status)) return response;
             const location = response.headers.get("Location");
-            if (location) {
-                log.trace(`  → Redirect to: ${location}`);
+            if (!location) return response;
 
-                // Detect session expiry: Moodle redirects to the login page
-                // when the session cookie is no longer valid.
-                if (
-                    location.includes("/login/index.php") ||
-                    location.includes("/login/")
-                ) {
-                    // If auto-login is already in progress, we are being
-                    // called re-entrantly from checkSession() inside
-                    // _doAutoLogin().  Follow the redirect normally to
-                    // avoid a deadlock — checkSession() will see the login
-                    // page and report the session as invalid.
-                    if (this._autoLoginInProgress) {
-                        log.debug(
-                            "Auto-login already in progress; following redirect normally"
-                        );
-                        let redirectUrl = location;
-                        if (location.startsWith(this.baseUrl)) {
-                            redirectUrl = location.substring(
-                                this.baseUrl.length
-                            );
-                        } else if (
-                            location.startsWith("http://") ||
-                            location.startsWith("https://")
-                        ) {
-                            const parsed = new URL(location);
-                            redirectUrl = parsed.pathname + parsed.search;
-                        }
-                        return this.fetch(redirectUrl, options);
-                    }
+            let next: URL;
+            try {
+                next = new URL(location, target);
+            } catch {
+                throw new Error(
+                    `Invalid redirect target received from ${target.pathname}`
+                );
+            }
+            log.trace(`  → Redirect to: ${next.href}`);
 
+            // Detect session expiry: Moodle redirects to the login page
+            // when the session cookie is no longer valid.
+            if (isLoginUrl(next, this.site)) {
+                if (this._autoLoginInProgress) {
+                    // Called re-entrantly from checkSession() inside
+                    // _doAutoLogin(). Follow the redirect normally to avoid
+                    // a deadlock: checkSession() will see the login page
+                    // and report the session as invalid.
+                    log.debug(
+                        "Auto-login already in progress; following redirect normally"
+                    );
+                } else {
+                    await response.body?.cancel().catch(() => {});
                     log.debug(
                         "Redirected to login page — session may be expired"
                     );
-                    const refreshed = await this.tryAutoLogin();
-                    if (refreshed) {
-                        // Retry the original request with the new session
-                        return this.fetch(url, options);
+                    if (reloggedIn) {
+                        // Logging in worked, yet this page still wants a
+                        // login: trying again would never end.
+                        throw new Error(
+                            `Redirected to the login page again right after logging in (${first.pathname}).`
+                        );
                     }
-                    const hasCreds = await this.hasCredentials();
-                    if (!hasCreds) {
+                    if (await this.tryAutoLogin()) {
+                        // Retry the original request with the new session
+                        reloggedIn = true;
+                        target = first;
+                        request = options;
+                        hops = 0;
+                        continue;
+                    }
+                    if (!(await this.hasCredentials())) {
                         throw new Error(
                             "Session expired and no stored credentials available for auto-login. " +
                                 "Please run `kampus auth login`."
@@ -394,29 +1274,30 @@ export class Crawler {
                             "Please run `kampus auth login --force`."
                     );
                 }
-
-                let redirectUrl = location;
-                if (location.startsWith(this.baseUrl)) {
-                    redirectUrl = location.substring(this.baseUrl.length);
-                } else if (
-                    location.startsWith("http://") ||
-                    location.startsWith("https://")
-                ) {
-                    const parsed = new URL(location);
-                    redirectUrl = parsed.pathname + parsed.search;
-                }
-                return this.fetch(redirectUrl, options);
             }
-        }
 
-        return response;
+            if (behavior.followRedirects === false) return response;
+
+            await response.body?.cancel().catch(() => {});
+            if (!isSiteUrl(next, this.site)) {
+                throw new Error(
+                    `Refusing to follow a redirect outside ${this.site.origin}: ${next.origin}`
+                );
+            }
+            hops++;
+            if (hops > MAX_REDIRECTS) {
+                throw new Error(`Too many redirects (>${MAX_REDIRECTS})`);
+            }
+            request = requestAfterRedirect(request, response.status);
+            target = next;
+        }
     }
 
     async login(username: string, password: string): Promise<void> {
         const log = getLogger().withTag("auth");
         log.info("Attempting login...");
         try {
-            const cookie = await authLogin(username, password);
+            const cookie = await authLogin(username, password, this.baseUrl);
             await this.setSession(cookie);
 
             // Verify the session cookie actually grants access.
@@ -731,11 +1612,20 @@ export class Crawler {
                 "a[href*='pluginfile.php']"
             );
             for (const link of introLinks) {
-                const href = link.getAttribute("href") || "";
                 const fileName = normalizeText(link.textContent);
-                if (fileName && !seenUrls.has(href)) {
-                    seenUrls.add(href);
-                    files.push({ name: fileName, url: href });
+                // Absolute, and only a file on the e-campus itself
+                const url = resolvePluginfileUrl(
+                    link.getAttribute("href") || "",
+                    this.site,
+                    this.site
+                )?.toString();
+                if (!url) {
+                    log.warn(`Ignoring a file link outside the e-campus`);
+                    continue;
+                }
+                if (fileName && !seenUrls.has(url)) {
+                    seenUrls.add(url);
+                    files.push({ name: fileName, url });
                 }
             }
         }
@@ -779,16 +1669,17 @@ export class Crawler {
                         const fileLinks = cells[1]?.querySelectorAll("a");
                         if (fileLinks) {
                             for (const link of fileLinks) {
-                                const href = link.getAttribute("href") || "";
                                 const fileName = normalizeText(
                                     link.textContent
                                 );
-                                if (fileName && !seenUrls.has(href)) {
-                                    seenUrls.add(href);
-                                    files.push({
-                                        name: fileName,
-                                        url: href,
-                                    });
+                                const url = resolvePluginfileUrl(
+                                    link.getAttribute("href") || "",
+                                    this.site,
+                                    this.site
+                                )?.toString();
+                                if (url && fileName && !seenUrls.has(url)) {
+                                    seenUrls.add(url);
+                                    files.push({ name: fileName, url });
                                 }
                             }
                         }
@@ -829,7 +1720,9 @@ export class Crawler {
 
         const quizzes: QuizItem[] = [];
         const seenIds = new Set<string>();
-        const seenNames = new Set<string>();
+        // Quizzes whose view page is reachable (linked from the index or
+        // the course page), i.e. whose attempt state can be fetched.
+        const viewableIds = new Set<string>();
 
         const indexRows = indexDoc.querySelectorAll(
             "table.generaltable tbody tr"
@@ -851,54 +1744,88 @@ export class Crawler {
             const grade = normalizeText(tds[3]?.textContent);
 
             seenIds.add(id);
-            seenNames.add(name);
-            quizzes.push({ id, week, name, closesAt, grade });
+            viewableIds.add(id);
+            quizzes.push({
+                id,
+                week,
+                name,
+                opensAt: "",
+                closesAt,
+                grade,
+                attemptStatus: "unknown",
+                availability: "available",
+                availabilityInfo: "",
+            });
         }
 
-        // 2. Also scrape the course page for quizzes that are past/closed.
-        //    Moodle hides these from the quiz index but still lists them on
-        //    the course page as dimmed activities (no link, just module ID).
+        // 2. Also scrape the course page: the quiz index leaves out quizzes
+        //    that cannot be opened (closed, not yet open, or restricted by a
+        //    condition), but the course page still lists them, dimmed and
+        //    without a link.
         const courseResponse = await this.fetch(
             `/course/view.php?id=${courseId}`
         );
-        const courseHtml = await courseResponse.text();
+        const courseDoc = this.parseHtml(await courseResponse.text());
 
-        // Find every modtype_quiz block.  The matched text spans from
-        // "module-XXXX" through the instancename, so we search *inside*
-        // the block for the availability date (NOT in the prefix).
-        const quizBlockRegex =
-            /module-(\d+)[\s\S]*?modtype_quiz[\s\S]*?instancename[^>]*>([^<]+)</g;
-        let blockMatch: RegExpExecArray | null;
-        while ((blockMatch = quizBlockRegex.exec(courseHtml)) !== null) {
-            const moduleId = blockMatch[1] ?? "";
-            const name = normalizeText(blockMatch[2]);
-            if (!moduleId || seenNames.has(name)) continue;
+        // Each activity is `<li class="activity quiz modtype_quiz"
+        // id="module-XXXX">`: the class comes *before* the id, so the cmid
+        // must be read from the quiz's own <li>, never from whichever
+        // "module-XXXX" happens to precede "modtype_quiz" in the markup
+        // (that one belongs to the previous activity).
+        for (const item of courseDoc.querySelectorAll(
+            "li.activity.modtype_quiz"
+        )) {
+            const activity = parseActivityItem(item);
+            if (!activity.id || seenIds.has(activity.id)) continue;
 
-            // Search inside the matched block for the availability date.
-            const blockText = courseHtml.substring(
-                blockMatch.index,
-                blockMatch.index + blockMatch[0].length
+            const sectionName = normalizeText(
+                item.closest("li.section")?.querySelector(".sectionname")
+                    ?.textContent
             );
-            const closeMatch = blockText.match(
-                /Available until[^<]*<strong>([^<]+)<\/strong>/
-            );
-            const closesAt = closeMatch ? normalizeText(closeMatch[1]) : "";
+            const week = sectionName === "-" ? "" : sectionName;
 
-            // Search backwards from the module ID for the section heading.
-            const prefixStart = Math.max(0, blockMatch.index - 800);
-            const prefix = courseHtml.substring(prefixStart, blockMatch.index);
-            const sectionMatch = prefix.match(/(\d+회차)/);
-            const week = sectionMatch?.[1] ?? "";
-
-            seenIds.add(moduleId);
-            seenNames.add(name);
+            seenIds.add(activity.id);
+            if (activity.available) viewableIds.add(activity.id);
             quizzes.push({
-                id: moduleId,
+                id: activity.id,
                 week,
-                name,
-                closesAt,
+                name: activity.name,
                 grade: "",
+                // A dimmed (unlinked) quiz has no page to read the attempt
+                // state from: view.php only redirects back to the course.
+                attemptStatus: activity.available ? "unknown" : "unavailable",
+                ...classifyQuizAvailability(
+                    activity,
+                    item.querySelector(".availabilityinfo")
+                ),
+                availabilityInfo: activity.availabilityInfo,
             });
+        }
+
+        // 3. The index/course pages carry no attempt state, so read it from
+        //    each reachable quiz page.
+        for (const quiz of quizzes) {
+            if (!viewableIds.has(quiz.id)) continue;
+            try {
+                const detail = await this.getQuizDetail(quiz.id);
+                quiz.attemptStatus = detail.attemptStatus;
+                if (detail.availability !== "available") {
+                    // The listing linked the quiz, but its page was not
+                    // served: the site sent us to the course page, where
+                    // the quiz is dimmed. That page's notice is the truth.
+                    quiz.availability = detail.availability;
+                    quiz.availabilityInfo = detail.availabilityInfo;
+                    quiz.opensAt = detail.openedAt;
+                    // Keep the index's closing date when the notice has none
+                    if (detail.closedAt) quiz.closesAt = detail.closedAt;
+                }
+            } catch (error) {
+                log.warn(
+                    `Could not read attempt status of quiz ${quiz.id}:`,
+                    error
+                );
+                quiz.attemptStatus = "unknown";
+            }
         }
 
         // Sort by week number (1회차, 2회차, ...). Quizzes without a week
@@ -927,6 +1854,71 @@ export class Crawler {
         const response = await this.fetch(`/mod/quiz/view.php?id=${cmid}`);
         const html = await response.text();
         const doc = this.parseHtml(html);
+
+        // The view page of this quiz, as <body> states it (see
+        // isModulePage). Anything else is an error page, the course page
+        // the site sends an unavailable quiz to, or a page to refuse.
+        const page = pageIdentity(doc);
+        const isQuizPage = isModulePage(doc, "page-mod-quiz-view", cmid);
+
+        if (!isQuizPage) {
+            // Moodle error page, e.g. "Invalid course module ID" (HTTP 404).
+            const errorMessage = normalizeText(
+                doc.querySelector(".errormessage")?.textContent
+            );
+            if (errorMessage || response.status >= 400) {
+                throw new Error(
+                    `Failed to load quiz ${cmid}: ${
+                        errorMessage || `HTTP ${response.status}`
+                    }`
+                );
+            }
+
+            // A quiz that cannot be opened (closed, not yet open, or
+            // restricted) redirects to the course page, where it is listed
+            // as a dimmed activity. Only its name and the restriction
+            // notice are exposed there.
+            const moduleItem = /^\d+$/.test(cmid)
+                ? doc.querySelector(
+                      `li.modtype_quiz#module-${BigInt(cmid).toString()}`
+                  )
+                : null;
+            if (moduleItem) {
+                const activity = parseActivityItem(moduleItem);
+                const { availability, opensAt, closesAt } =
+                    classifyQuizAvailability(
+                        activity,
+                        moduleItem.querySelector(".availabilityinfo")
+                    );
+                const detail: QuizDetail = {
+                    id: cmid,
+                    name: activity.name,
+                    description: "",
+                    attemptsAllowed: "",
+                    openedAt: opensAt,
+                    closedAt: closesAt,
+                    timeLimit: "",
+                    attemptStatus: "unavailable",
+                    // The page was not served, whatever the listing says
+                    availability:
+                        availability === "available"
+                            ? "restricted"
+                            : availability,
+                    availabilityInfo: activity.availabilityInfo,
+                };
+                log.info(`Quiz ${cmid} is not available: ${detail.name}`);
+                log.debug("Quiz detail:", detail);
+                return detail;
+            }
+
+            // Neither the quiz page nor a course page listing the quiz:
+            // reading on would report that page's heading as the quiz.
+            throw new Error(
+                `Failed to load quiz ${cmid}: the response is not the page of this quiz${
+                    page.pageId ? ` (${page.pageId})` : ""
+                }`
+            );
+        }
 
         // Quiz name from the <h2> inside the main content area
         const name =
@@ -958,9 +1950,13 @@ export class Crawler {
                     text.toLowerCase().includes("will close") ||
                     text.toLowerCase().includes("closed")
                 ) {
-                    // "This quiz will close at 2026-05-25 23:55" or "This quiz closed at ..."
+                    // "This quiz will close at 2026-05-25 23:55" or
+                    // "This quiz closed on 2026-09-30 23:40"
                     closedAt = text
-                        .replace(/^this quiz (will close|closed)( at)?\s*/i, "")
+                        .replace(
+                            /^this quiz (will close|closed)( at| on)?\s*/i,
+                            ""
+                        )
                         .replace(/\.$/, "");
                 } else if (text.toLowerCase().includes("opened")) {
                     // "This quiz opened at 2026-05-19 09:00"
@@ -973,41 +1969,7 @@ export class Crawler {
             }
         }
 
-        // Determine attempt status
-        let attemptStatus: QuizDetail["attemptStatus"] = "unknown";
-        const attemptBox = doc.querySelector(".quizattempt");
-
-        if (attemptBox) {
-            const startButton = attemptBox.querySelector(
-                ".quizstartbuttondiv input[type='submit']"
-            );
-            const summaryTable = attemptBox.querySelector(
-                "table.generaltable, table.quizattemptsummary"
-            );
-
-            if (startButton) {
-                // "Attempt quiz now" or "Re-attempt quiz" button is visible
-                // Check if there's an existing attempt summary to distinguish
-                // between "not_started" and "finished" (with re-attempt allowed)
-                const existingAttempts =
-                    attemptBox.querySelectorAll("table tbody tr");
-                if (existingAttempts.length > 0) {
-                    attemptStatus = "finished";
-                } else {
-                    attemptStatus = "not_started";
-                }
-            } else if (summaryTable) {
-                // No start button but there's a summary table — check for in-progress
-                const continueLink = attemptBox.querySelector(
-                    "a[href*='attempt.php']"
-                );
-                if (continueLink) {
-                    attemptStatus = "in_progress";
-                } else {
-                    attemptStatus = "finished";
-                }
-            }
-        }
+        const attemptStatus = parseQuizAttemptStatus(doc);
 
         const detail: QuizDetail = {
             id: cmid,
@@ -1018,6 +1980,8 @@ export class Crawler {
             closedAt,
             timeLimit,
             attemptStatus,
+            availability: "available",
+            availabilityInfo: "",
         };
 
         log.info(`Quiz detail: ${name}`);
@@ -1033,10 +1997,7 @@ export class Crawler {
         const doc = this.parseHtml(html);
 
         const weeklyActivities: WeeklyActivity[] = [];
-        const sections = doc.querySelectorAll(
-            "ul.weeks.ubsweeks li.section.main, li.section.main"
-        );
-        for (const section of sections) {
+        for (const section of getCourseSections(doc)) {
             const weekId = section.getAttribute("id") || "";
             const sectionNameEl = section.querySelector(
                 ".sectionname, .section-title"
@@ -1047,43 +2008,11 @@ export class Crawler {
             const activities: ActivityItem[] = [];
             const activityEls = section.querySelectorAll("li.activity");
             for (const actEl of activityEls) {
-                const modIdAttr = actEl.getAttribute("id") || "";
-                const idMatch = modIdAttr.match(/module-(\d+)/);
-                const id = idMatch && idMatch[1] ? idMatch[1] : "";
-
-                let type: ActivityItem["type"] = "other";
-                const classList = actEl.className || "";
-                if (classList.includes("modtype_assign")) {
-                    type = "assign";
-                } else if (classList.includes("modtype_quiz")) {
-                    type = "quiz";
-                } else if (classList.includes("modtype_ubfile")) {
-                    type = "ubfile";
-                } else if (classList.includes("modtype_vod")) {
-                    type = "vod";
-                } else if (classList.includes("modtype_ubboard")) {
-                    type = "ubboard";
-                }
-
-                const linkEl = actEl.querySelector("a");
-                if (!linkEl) continue;
-                const url = linkEl.getAttribute("href") || "";
-
-                const instanceNameEl = actEl.querySelector(".instancename");
-                let name = "";
-                if (instanceNameEl) {
-                    const cloned = instanceNameEl.cloneNode(true) as Element;
-                    const hideEl = cloned.querySelector(".accesshide");
-                    if (hideEl) hideEl.remove();
-                    name = normalizeText(cloned.textContent);
-                }
-
-                activities.push({
-                    id,
-                    type,
-                    name,
-                    url,
-                });
+                const activity = parseActivityItem(actEl);
+                // A label is inline text on the course page, not an activity
+                // with a view page of its own.
+                if (activity.type === "label") continue;
+                activities.push(activity);
             }
 
             weeklyActivities.push({
@@ -1105,7 +2034,8 @@ export class Crawler {
     }
 
     /**
-     * Get all lecture resources (ubfile type) for a course, grouped by week.
+     * Get all lecture resources of a course in week order: every activity
+     * whose type is one of {@link RESOURCE_TYPES}.
      * @param courseId - The course ID
      */
     async getResources(courseId: string): Promise<ResourceItem[]> {
@@ -1116,12 +2046,15 @@ export class Crawler {
         const resources: ResourceItem[] = [];
         for (const week of activities) {
             for (const act of week.activities) {
-                if (act.type === "ubfile") {
+                if (isResourceType(act.type)) {
                     resources.push({
                         id: act.id,
+                        type: act.type,
                         weekTitle: week.weekTitle,
                         name: act.name,
                         url: act.url,
+                        available: act.available,
+                        availabilityInfo: act.availabilityInfo,
                     });
                 }
             }
@@ -1134,57 +2067,281 @@ export class Crawler {
     /**
      * Get detailed information about a single lecture resource,
      * including downloadable file links.
+     *
+     * Files are only taken from the resource itself: the pluginfile its view
+     * URL redirects to, the file the view URL serves, or the links on its own
+     * view page. When the site sends the request back to the course page (a
+     * restricted or closed resource) the result has `available: false` and
+     * no files; any other answer throws.
+     *
      * @param cmid - The course module ID of the resource
+     * @param type - The resource's module type ({@link ResourceItem.type}).
+     * Must be a type with files; `url` and `page` have none and are rejected.
      */
-    async getResourceDetail(cmid: string): Promise<ResourceDetail> {
+    async getResourceDetail(
+        cmid: string,
+        type: ResourceType = "ubfile"
+    ): Promise<ResourceDetail> {
         const log = getLogger().withTag("resource-detail");
-        log.info(`Fetching resource detail for cmid=${cmid}...`);
+        log.info(`Fetching resource detail for cmid=${cmid} (${type})...`);
 
-        const response = await this.fetch(`/mod/ubfile/view.php?id=${cmid}`);
-        const html = await response.text();
-        const doc = this.parseHtml(html);
-
-        // Resource name from the <h2> inside the main content area
-        const name =
-            normalizeText(doc.querySelector('[role="main"] h2')?.textContent) ||
-            normalizeText(doc.querySelector("h2")?.textContent);
-
-        // Description from the intro box — use textContent for clean decoded text
-        const description = normalizeText(
-            doc.querySelector("#intro")?.textContent
-        );
-
-        // Extract file links from the intro/content area
-        const files: ResourceFile[] = [];
-        const seenUrls = new Set<string>();
-
-        // ubfile pages typically have file links in #intro or the main content area
-        const contentArea =
-            doc.querySelector("#intro") || doc.querySelector('[role="main"]');
-        if (contentArea) {
-            const fileLinks = contentArea.querySelectorAll(
-                "a[href*='pluginfile.php']"
+        if (!resourceTypeHasFiles(type)) {
+            throw new Error(
+                `'${type}' 유형의 강의자료에는 다운로드할 파일이 없습니다.`
             );
-            for (const link of fileLinks) {
-                const href = link.getAttribute("href") || "";
-                const fileName = normalizeText(link.textContent);
-                if (fileName && !seenUrls.has(href)) {
-                    seenUrls.add(href);
-                    files.push({ name: fileName, url: href });
-                }
-            }
         }
 
-        const detail: ResourceDetail = {
-            id: cmid,
-            name,
-            description,
-            files,
+        const fail = (reason: string): Error =>
+            new Error(`강의자료 ${cmid}을(를) 불러올 수 없습니다: ${reason}`);
+
+        const viewUrl = new URL(`/mod/${type}/view.php`, this.site);
+        viewUrl.searchParams.set("id", cmid);
+        // A single-file ubfile (or a standard `resource`) answers with a
+        // redirect to pluginfile.php, while a `folder` serves a page listing
+        // its files as pluginfile links. Following the redirect would hand us
+        // the file itself instead of something parseable, so it is inspected
+        // here rather than followed.
+        const response = await this.fetch(
+            viewUrl,
+            {},
+            { followRedirects: false }
+        );
+
+        const files: ResourceFile[] = [];
+        const seenUrls = new Set<string>();
+        const addFileUrl = (fileUrl: URL, label?: string): boolean => {
+            const absolute = fileUrl.toString();
+            if (seenUrls.has(absolute)) return true;
+            // The URL carries the stored file name; the link text may be a
+            // generic label ("다운로드") shared by several files.
+            const fileName = fileNameFromPluginfileUrl(fileUrl) || label;
+            if (!fileName) return false;
+            seenUrls.add(absolute);
+            files.push({ name: fileName, url: absolute });
+            return true;
+        };
+        const addFile = (href: string, label?: string): boolean => {
+            // Only a pluginfile on the site itself: the URL is later
+            // fetched with the session cookie. Relative links are relative
+            // to the view page.
+            const fileUrl = resolvePluginfileUrl(href, viewUrl, this.site);
+            return fileUrl !== null && addFileUrl(fileUrl, label);
+        };
+        const addLinks = (root: ParentNode | null): void => {
+            if (!root) return;
+            for (const link of root.querySelectorAll(
+                "a[href*='pluginfile.php']"
+            )) {
+                // The parser decodes entities such as `&amp;` in the href
+                addFile(
+                    link.getAttribute("href") || "",
+                    normalizeText(link.textContent)
+                );
+            }
+        };
+        /**
+         * A `mod/resource` shown on its page instead of linked: an image
+         * (`<img class="resourceimage">`) or a media/PDF object
+         * (`#resourceobject`, an `<object data>` or `<iframe src>`, inside
+         * `.resourcecontent`). There is no `<a>` to the file then.
+         */
+        const addEmbedded = (root: ParentNode | null): void => {
+            if (!root) return;
+            for (const el of root.querySelectorAll(
+                "img.resourceimage[src], #resourceobject, .resourcecontent [src], .resourcecontent [data]"
+            )) {
+                for (const attribute of ["src", "data"]) {
+                    const value = el.getAttribute(attribute);
+                    if (value) addFile(value, el.getAttribute("title") || "");
+                }
+            }
+        };
+        const done = (
+            detail: Omit<ResourceDetail, "id" | "files">
+        ): ResourceDetail => {
+            const result: ResourceDetail = {
+                id: cmid,
+                ...detail,
+                name: detail.name || files[0]?.name || "",
+                files,
+            };
+            log.info(`Resource detail: ${result.name} (${files.length} files)`);
+            log.debug("Resource detail:", result);
+            return result;
+        };
+        const available = { available: true, availabilityInfo: "" };
+
+        const fromCoursePage = (courseDoc: Document): ResourceDetail => {
+            const item = /^\d+$/.test(cmid)
+                ? courseDoc.querySelector(
+                      `li.activity#module-${BigInt(cmid).toString()}`
+                  )
+                : null;
+            if (!item) {
+                throw fail(
+                    "과목 페이지로 이동되었고, 그 과목에 이 자료가 없습니다."
+                );
+            }
+            const activity = parseActivityItem(item);
+            log.info(`Resource ${cmid} is not available: ${activity.name}`);
+            return done({
+                name: activity.name,
+                description: "",
+                available: false,
+                availabilityInfo: activity.availabilityInfo,
+            });
+        };
+        /**
+         * The resource led to `target` (a `Location`, a meta refresh or a
+         * "Continue" link). A pluginfile is the resource's file. Otherwise
+         * only the course page is understood (that is where the site sends
+         * a restricted or closed resource); the files linked there are not
+         * this resource's.
+         */
+        const fromRedirectTarget = async (
+            target: string
+        ): Promise<ResourceDetail> => {
+            let url: URL;
+            try {
+                url = new URL(target, viewUrl);
+            } catch {
+                throw fail("이동할 주소를 해석할 수 없습니다.");
+            }
+            if (!isSiteUrl(url, this.site)) {
+                throw fail(
+                    `e-campus 밖의 주소(${url.origin === "null" ? url.protocol : url.origin})로 연결되어 파일을 가져올 수 없습니다.`
+                );
+            }
+            if (isPluginfileUrl(url, this.site) && addFileUrl(url)) {
+                return done({ name: "", description: "", ...available });
+            }
+            if (url.pathname !== "/course/view.php") {
+                throw fail(
+                    `파일이 아닌 다른 페이지(${url.pathname})로 이동되었습니다.`
+                );
+            }
+            const courseResponse = await this.fetch(url);
+            return fromCoursePage(this.parseHtml(await courseResponse.text()));
         };
 
-        log.info(`Resource detail: ${name} (${files.length} files)`);
-        log.debug("Resource detail:", detail);
-        return detail;
+        if (REDIRECT_STATUSES.has(response.status)) {
+            const location = response.headers.get("Location");
+            if (location) {
+                await response.body?.cancel();
+                return fromRedirectTarget(location);
+            }
+            // No Location header: the redirect page says where to go. Only
+            // that target counts, not whatever else the page links to.
+            const target = redirectPageTarget(
+                this.parseHtml(await response.text()),
+                true
+            );
+            if (!target) {
+                throw fail(`대상이 없는 리다이렉트(HTTP ${response.status})`);
+            }
+            return fromRedirectTarget(target);
+        }
+
+        const contentType = response.headers.get("Content-Type") || "";
+        const disposition = response.headers.get("Content-Disposition");
+        const isText = contentType === "" || /^text\//i.test(contentType);
+        // Structured data (e.g. an AJAX error) is an answer, not a document
+        const isData = /^application\/([\w.-]+\+)?(json|xml)\b/i.test(
+            contentType
+        );
+
+        if (response.ok && (disposition !== null || (!isText && !isData))) {
+            // The view URL served the file itself
+            await response.body?.cancel();
+            files.push({
+                name:
+                    fileNameFromContentDisposition(disposition) ||
+                    `${type}_${cmid}`,
+                url: viewUrl.toString(),
+            });
+            return done({ name: "", description: "", ...available });
+        }
+        if (!isText) {
+            await response.body?.cancel();
+            throw fail(
+                `예상하지 못한 응답입니다 (HTTP ${response.status}, ${contentType}).`
+            );
+        }
+
+        const doc = this.parseHtml(await response.text());
+
+        // Moodle error page, e.g. "Invalid course module ID" (HTTP 404)
+        const errorMessage = normalizeText(
+            doc.querySelector(".errormessage")?.textContent
+        );
+        if (errorMessage || response.status >= 400) {
+            throw fail(errorMessage || `HTTP ${response.status}`);
+        }
+
+        const page = pageIdentity(doc);
+        if (isModulePage(doc, `page-mod-${type}-view`, cmid)) {
+            // The resource's own view page
+            const main = doc.querySelector('[role="main"]');
+            const intro = doc.querySelector("#intro");
+
+            // File links live in #intro or the main content area
+            addLinks(intro);
+            addLinks(main);
+            addEmbedded(main ?? doc);
+
+            return done({
+                // Resource name from the <h2> inside the main content area
+                name:
+                    normalizeText(main?.querySelector("h2")?.textContent) ||
+                    normalizeText(doc.querySelector("h2")?.textContent),
+                // textContent gives clean decoded text
+                description: normalizeText(intro?.textContent),
+                ...available,
+            });
+        }
+
+        if (page.pageId.startsWith("page-course-view")) {
+            return fromCoursePage(doc);
+        }
+
+        // A `mod/resource` in frame display is a frameset without <body>:
+        // one frame is this module's own navigation bar
+        // (`view.php?id=<cmid>&frameset=top`), which identifies the page,
+        // and the other one is the file.
+        const frames = Array.from(doc.querySelectorAll("frameset frame[src]"))
+            .map((frame: Element) => {
+                try {
+                    return new URL(frame.getAttribute("src") || "", viewUrl);
+                } catch {
+                    return null;
+                }
+            })
+            .filter((url: URL | null): url is URL => url !== null);
+        const isOwnFrame = (url: URL): boolean =>
+            isSiteUrl(url, this.site) &&
+            url.pathname === viewUrl.pathname &&
+            url.searchParams.get("frameset") === "top" &&
+            sameModuleId(url.searchParams.get("id") ?? "", cmid);
+        if (frames.some(isOwnFrame)) {
+            for (const frame of frames) {
+                if (isPluginfileUrl(frame, this.site)) addFileUrl(frame);
+            }
+            return done({
+                name: normalizeText(doc.querySelector("title")?.textContent),
+                description: "",
+                ...available,
+            });
+        }
+
+        if (page.pageId === "") {
+            // A bare redirect page served with 200
+            const target = redirectPageTarget(doc, false);
+            if (target) return fromRedirectTarget(target);
+        }
+
+        throw fail(
+            `이 자료의 페이지가 아닌 응답을 받았습니다 (${page.pageId || "알 수 없는 페이지"}).`
+        );
     }
 
     /**
@@ -1356,18 +2513,9 @@ export class Crawler {
 
         const vods: VodItem[] = [];
         const seenCmid = new Set<string>();
-        const seenSectionIds = new Set<string>();
         const vodCountByWeek = new Map<number, number>();
 
-        const sections = doc.querySelectorAll(
-            "ul.weeks.ubsweeks li.section.main, li.section.main"
-        );
-
-        for (const section of sections) {
-            const secId = section.getAttribute("id") || "";
-            if (secId && seenSectionIds.has(secId)) continue;
-            if (secId) seenSectionIds.add(secId);
-
+        for (const section of getCourseSections(doc)) {
             const sectionNameEl = section.querySelector(
                 ".sectionname, .section-title"
             );
@@ -1384,8 +2532,7 @@ export class Crawler {
                 if (!cmid || seenCmid.has(cmid)) continue;
                 seenCmid.add(cmid);
 
-                const linkEl = actEl.querySelector("a");
-                const url = linkEl?.getAttribute("href") || "";
+                const url = getActivityUrl(actEl);
 
                 const instanceNameEl = actEl.querySelector(".instancename");
                 let name = "";
@@ -1533,5 +2680,365 @@ export class Crawler {
         log.info(`VOD detail: ${name} (${m3u8Url})`);
         log.debug("VOD detail:", detail);
         return detail;
+    }
+
+    // ── Notices (ubboard) ────────────────────────────────────────
+
+    /**
+     * Find the notice board of a course.
+     *
+     * Every ubboard instance shares the `modtype_ubboard` class, so the
+     * notice board is told apart from the Q&A board (and from boards a
+     * professor added by hand) by its activity icon, `ubboard_notice`.
+     * When that marker is missing, the "More" link of the course header's
+     * announcement widget is used, and the board name only as a last resort.
+     *
+     * @param courseId - The course ID
+     * @returns The board, or null when the course has none
+     */
+    async getNoticeBoard(courseId: string): Promise<NoticeBoard | null> {
+        const log = getLogger().withTag("notices");
+        log.info(`Locating notice board for course ${courseId}...`);
+        const response = await this.fetch(`/course/view.php?id=${courseId}`);
+        const html = await response.text();
+        const doc = this.parseHtml(html);
+
+        const boards: Array<NoticeBoard & { icon: string }> = [];
+        for (const el of doc.querySelectorAll("li.activity.modtype_ubboard")) {
+            const linkEl = el.querySelector("a[href*='mod/ubboard/view.php']");
+            const href = linkEl?.getAttribute("href") || "";
+            const id =
+                (el.getAttribute("id") || "").match(/module-(\d+)/)?.[1] ||
+                href.match(/[?&]id=(\d+)/)?.[1] ||
+                "";
+            if (!id || boards.some((b) => b.id === id)) continue;
+
+            const nameEl = el.querySelector(".instancename");
+            let name = "";
+            if (nameEl) {
+                const cloned = nameEl.cloneNode(true) as Element;
+                cloned.querySelector(".accesshide")?.remove();
+                name = normalizeText(cloned.textContent);
+            }
+            boards.push({
+                id,
+                name,
+                url: noticeBoardUrl(this.baseUrl, id),
+                icon: safeDecode(
+                    el.querySelector("img.activityicon")?.getAttribute("src")
+                ),
+            });
+        }
+
+        let found = boards.find((b) => /ubboard_notice\b/.test(b.icon));
+        if (!found) {
+            const moreHref =
+                doc
+                    .querySelector(
+                        ".upcommings a.more[href*='mod/ubboard/view.php']"
+                    )
+                    ?.getAttribute("href") || "";
+            const moreId = moreHref.match(/[?&]id=(\d+)/)?.[1];
+            if (moreId) {
+                found = boards.find((b) => b.id === moreId) ?? {
+                    id: moreId,
+                    name: "",
+                    url: noticeBoardUrl(this.baseUrl, moreId),
+                    icon: "",
+                };
+            }
+        }
+        if (!found) {
+            found = boards.find((b) =>
+                /공지|notice|announcement/i.test(b.name)
+            );
+        }
+
+        if (!found) {
+            log.info(`Course ${courseId} has no notice board`);
+            return null;
+        }
+        log.info(`Notice board: ${found.name} (cmid=${found.id})`);
+        return { id: found.id, name: found.name, url: found.url };
+    }
+
+    /**
+     * Get the notices of a course from its notice board.
+     * A course without a notice board yields `board: null` and no notices.
+     *
+     * @param courseId - The course ID
+     * @param options - Paging options
+     */
+    async getNotices(
+        courseId: string,
+        options: NoticeListOptions = {}
+    ): Promise<NoticeList> {
+        const board = await this.getNoticeBoard(courseId);
+        if (!board) {
+            return {
+                courseId,
+                board: null,
+                notices: [],
+                totalCount: 0,
+                page: 1,
+                totalPages: 1,
+            };
+        }
+        const posts = await this.getBoardPosts(board.id, options);
+        return { courseId, board, ...posts };
+    }
+
+    /**
+     * List the posts of a ubboard instance (`mod/ubboard/view.php`).
+     *
+     * @param cmid - The course module ID of the board
+     * @param options - Paging options
+     */
+    async getBoardPosts(
+        cmid: string,
+        options: NoticeListOptions = {}
+    ): Promise<Omit<NoticeList, "courseId" | "board">> {
+        const log = getLogger().withTag("notices");
+        const fetchPage = async (page: number) => {
+            let path = `/mod/ubboard/view.php?id=${cmid}`;
+            if (options.pageSize) path += `&ls=${options.pageSize}`;
+            if (page > 1) path += `&page=${page}`;
+            log.info(`Fetching board ${cmid} page ${page}...`);
+            const response = await this.fetch(path);
+            if (response.status >= 400) {
+                throw new Error(
+                    `게시판을 불러올 수 없습니다. (cmid=${cmid}, HTTP ${response.status})`
+                );
+            }
+            return this.parseBoardList(await response.text(), cmid);
+        };
+
+        if (!options.all) {
+            const page = Math.max(1, Math.floor(options.page ?? 1));
+            const result = await fetchPage(page);
+            log.info(`Found ${result.notices.length} posts`);
+            return { ...result, page };
+        }
+
+        // Pinned posts are repeated at the top of every page. Those with an
+        // ID are merged by it; a hidden (secret) pinned post has no ID, so
+        // on every page after the first a pinned post without one is a
+        // repeat as well. An ordinary hidden post appears on one page only
+        // and is kept.
+        const first = await fetchPage(1);
+        const notices = [...first.notices];
+        const seen = new Set(notices.map((n) => n.id).filter(Boolean));
+        for (let page = 2; page <= first.totalPages; page++) {
+            const next = await fetchPage(page);
+            if (next.notices.length === 0) break;
+            for (const notice of next.notices) {
+                if (notice.id ? seen.has(notice.id) : notice.isPinned) continue;
+                if (notice.id) seen.add(notice.id);
+                notices.push(notice);
+            }
+        }
+        log.info(`Found ${notices.length} posts in ${first.totalPages} pages`);
+        return {
+            notices,
+            totalCount: first.totalCount,
+            page: 1,
+            totalPages: first.totalPages,
+        };
+    }
+
+    private parseBoardList(
+        html: string,
+        cmid: string
+    ): Omit<NoticeList, "courseId" | "board"> {
+        const doc = this.parseHtml(html);
+        const hasIcon = (cell: Element | undefined, icon: string): boolean =>
+            [...(cell?.querySelectorAll("img") ?? [])].some((img) =>
+                safeDecode(img.getAttribute("src")).endsWith(`icon/${icon}`)
+            );
+
+        const notices: NoticeItem[] = [];
+        for (const row of doc.querySelectorAll(
+            "table.ubboard_table tbody tr"
+        )) {
+            const cells = [...row.querySelectorAll("td")];
+            // An empty board renders a single "No registered post." cell
+            if (cells.length < 5) continue;
+            const [numberCell, titleCell, authorCell, dateCell, viewsCell] =
+                cells;
+
+            const linkEl = titleCell?.querySelector("a[href*='article.php']");
+            const href = linkEl?.getAttribute("href") || "";
+            const id = href.match(/[?&]bwid=(\d+)/)?.[1] || "";
+            const secretEl = titleCell?.querySelector(".secret");
+            const numberText = normalizeText(numberCell?.textContent);
+            const viewsText = normalizeText(viewsCell?.textContent).replace(
+                /,/g,
+                ""
+            );
+
+            notices.push({
+                id,
+                boardId: cmid,
+                number: /^\d+$/.test(numberText) ? numberText : "",
+                title: normalizeText((linkEl ?? secretEl)?.textContent),
+                author: normalizeText(authorCell?.textContent),
+                date: normalizeText(dateCell?.textContent),
+                views: /^\d+$/.test(viewsText) ? Number(viewsText) : null,
+                isPinned:
+                    hasIcon(numberCell, "notice") ||
+                    !!titleCell?.querySelector(".notice_bold"),
+                isNew: hasIcon(titleCell, "new"),
+                hasAttachment: hasIcon(titleCell, "disk"),
+                isSecret: !!secretEl,
+                url: id ? noticePostUrl(this.baseUrl, cmid, id) : "",
+            });
+        }
+
+        const countText = normalizeText(
+            doc.querySelector(".paging_info .tc span")?.textContent
+        ).replace(/,/g, "");
+        const pageMatch = normalizeText(
+            doc.querySelector(".paging_info .tp span")?.textContent
+        ).match(/(\d+)\s*\/\s*(\d+)/);
+
+        return {
+            notices,
+            totalCount: /^\d+$/.test(countText) ? Number(countText) : 0,
+            page: pageMatch?.[1] ? Number(pageMatch[1]) : 1,
+            totalPages: pageMatch?.[2] ? Number(pageMatch[2]) : 1,
+        };
+    }
+
+    /**
+     * Get the body and attachments of a notice of a course.
+     * Note that opening a post increases its view count on the server.
+     *
+     * @param courseId - The course ID
+     * @param postId - The post ID (`NoticeItem.id`)
+     */
+    async getNoticeDetail(
+        courseId: string,
+        postId: string
+    ): Promise<NoticeDetail> {
+        const board = await this.getNoticeBoard(courseId);
+        if (!board) {
+            throw new Error(
+                `공지사항 게시판을 찾을 수 없습니다. (courseId=${courseId})`
+            );
+        }
+        return this.getBoardPostDetail(board.id, postId);
+    }
+
+    /**
+     * Get a single post of a ubboard instance (`mod/ubboard/article.php`).
+     *
+     * @param cmid - The course module ID of the board
+     * @param postId - The post ID (`bwid`)
+     */
+    async getBoardPostDetail(
+        cmid: string,
+        postId: string
+    ): Promise<NoticeDetail> {
+        const log = getLogger().withTag("notice-detail");
+        log.info(`Fetching post ${postId} of board ${cmid}...`);
+        const response = await this.fetch(
+            `/mod/ubboard/article.php?id=${cmid}&bwid=${postId}`
+        );
+        const doc = this.parseHtml(await response.text());
+
+        const view = doc.querySelector(".ubboard_view");
+        if (!view) {
+            const reason = normalizeText(
+                doc.querySelector(
+                    "[role='main'] .alert, .errormessage, .alert-danger"
+                )?.textContent
+            );
+            throw new Error(
+                `게시글을 불러올 수 없습니다. (cmid=${cmid}, bwid=${postId})${reason ? `: ${reason}` : ""}`
+            );
+        }
+
+        // "<span class="title">Writer</span> : value" → "value"
+        const infoValue = (selector: string): string => {
+            const el = view.querySelector(selector);
+            if (!el) return "";
+            const cloned = el.cloneNode(true) as Element;
+            cloned.querySelector(".title")?.remove();
+            return normalizeText(cloned.textContent).replace(/^:\s*/, "");
+        };
+
+        const files: NoticeFile[] = [];
+        const seenUrls = new Set<string>();
+        for (const link of view.querySelectorAll(
+            "ul.files a[href*='pluginfile.php']"
+        )) {
+            const name = normalizeText(link.textContent);
+            // Absolute, and only a file on the e-campus itself
+            const url = resolvePluginfileUrl(
+                link.getAttribute("href") || "",
+                this.site,
+                this.site
+            )?.toString();
+            if (url && name && !seenUrls.has(url)) {
+                seenUrls.add(url);
+                files.push({ name, url });
+            }
+        }
+
+        const contentEl =
+            view.querySelector(".content .text_to_html") ||
+            view.querySelector(".content");
+        const viewsText = infoValue(".info .hit").replace(/,/g, "");
+
+        const detail: NoticeDetail = {
+            id: postId,
+            boardId: cmid,
+            title: normalizeText(view.querySelector(".subject")?.textContent),
+            author: infoValue(".info .writer"),
+            date: infoValue(".info .date"),
+            views: /^\d+$/.test(viewsText) ? Number(viewsText) : null,
+            content: this.htmlToText(contentEl?.innerHTML ?? ""),
+            files,
+            url: noticePostUrl(this.baseUrl, cmid, postId),
+        };
+
+        log.info(`Post: ${detail.title} (${files.length} files)`);
+        log.debug("Post detail:", detail);
+        return detail;
+    }
+
+    /** Convert an HTML fragment to plain text, keeping block-level breaks. */
+    private htmlToText(html: string): string {
+        const withBreaks = html
+            .replace(/<br\s*\/?>/gi, "\n")
+            .replace(/<\/(p|div|li|tr|h[1-6]|blockquote)>/gi, "$&\n");
+        const text =
+            this.parseHtml(
+                `<!DOCTYPE html><html><body><div id="html-to-text">${withBreaks}</div></body></html>`
+            ).querySelector("#html-to-text")?.textContent ?? "";
+        return text
+            .split("\n")
+            .map((line) => line.replace(/[^\S\n]+/g, " ").trim())
+            .join("\n")
+            .replace(/\n{3,}/g, "\n\n")
+            .trim();
+    }
+}
+
+function noticeBoardUrl(baseUrl: string, cmid: string): string {
+    return `${baseUrl}/mod/ubboard/view.php?id=${cmid}`;
+}
+
+function noticePostUrl(baseUrl: string, cmid: string, postId: string): string {
+    return `${baseUrl}/mod/ubboard/article.php?id=${cmid}&bwid=${postId}`;
+}
+
+/** decodeURIComponent that returns the input unchanged on malformed escapes. */
+function safeDecode(value: string | null | undefined): string {
+    const raw = value ?? "";
+    try {
+        return decodeURIComponent(raw);
+    } catch {
+        return raw;
     }
 }

@@ -17,7 +17,7 @@ export const listCommand = new Command("list")
         "after",
         `
 ${pc.bold("예시:")}
-  ${pc.green("kampus assignments list 49341")}
+  ${pc.green("kampus assignments list 52333")}
 `
     )
     .action(async (courseId: string) => {

@@ -9,6 +9,7 @@ import {
     spinnerStart,
     stripEmoji,
 } from "../lib/format.ts";
+import { formatQuizStatus } from "../lib/quiz-status.ts";
 
 export const listCommand = new Command("list")
     .description("특정 과목의 퀴즈 목록을 조회합니다")
@@ -17,7 +18,7 @@ export const listCommand = new Command("list")
         "after",
         `
 ${pc.bold("예시:")}
-  ${pc.green("kampus quizzes list 50541")}
+  ${pc.green("kampus quizzes list 53380")}
 `
     )
     .action(async (courseId: string) => {
@@ -47,8 +48,19 @@ ${pc.bold("예시:")}
                 console.log(`${pc.bold("ID")}: ${pc.dim(q.id)}`);
                 console.log(`${pc.bold("주차")}: ${q.week}`);
                 console.log(`${pc.bold("퀴즈명")}: ${q.name}`);
-                console.log(`${pc.bold("마감일시")}: ${q.closesAt}`);
+                if (q.opensAt) {
+                    console.log(`${pc.bold("오픈일시")}: ${q.opensAt}`);
+                }
+                console.log(`${pc.bold("마감일시")}: ${q.closesAt || "-"}`);
                 console.log(`${pc.bold("학점")}: ${pc.yellow(q.grade || "-")}`);
+                console.log(
+                    `${pc.bold("응시 상태")}: ${formatQuizStatus(q.attemptStatus, q.availability)}`
+                );
+                if (q.availabilityInfo) {
+                    console.log(
+                        `${pc.bold("이용 제한")}: ${pc.dim(q.availabilityInfo)}`
+                    );
+                }
             }
             console.log(separator(40));
         } catch (err: unknown) {
