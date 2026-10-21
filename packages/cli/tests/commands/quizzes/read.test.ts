@@ -56,6 +56,8 @@ describe("quizzes read command", () => {
         closedAt: "2026-05-25 23:55",
         timeLimit: "1 day",
         attemptStatus: "not_started",
+        availability: "available",
+        availabilityInfo: "",
     };
 
     it("should call getQuizDetail with quizId and display result", async () => {
@@ -174,6 +176,44 @@ describe("quizzes read command", () => {
         consoleLogSpy.mockRestore();
         stdoutSpy.mockRestore();
     });
+
+    it.each([
+        ["abandoned", "미제출"],
+        ["unavailable", "확인 불가"],
+    ] as const)(
+        "should display a dedicated label for %s status",
+        async (attemptStatus, label) => {
+            getQuizDetailMock.mockResolvedValue({
+                ...sampleQuiz,
+                attemptStatus,
+            });
+
+            const program = new Command();
+            program.addCommand(quizzesCommand);
+            program.exitOverride();
+
+            const consoleLogSpy = vi
+                .spyOn(console, "log")
+                .mockImplementation(() => {});
+            const stdoutSpy = vi
+                .spyOn(process.stdout, "write")
+                .mockImplementation(() => true);
+
+            await program.parseAsync(["quizzes", "read", "677443"], {
+                from: "user",
+            });
+
+            expect(consoleLogSpy).toHaveBeenCalledWith(
+                expect.stringContaining(label)
+            );
+            expect(consoleLogSpy).not.toHaveBeenCalledWith(
+                expect.stringContaining("알 수 없음")
+            );
+
+            consoleLogSpy.mockRestore();
+            stdoutSpy.mockRestore();
+        }
+    );
 
     it("should display 알 수 없음 for unknown status", async () => {
         getQuizDetailMock.mockResolvedValue({

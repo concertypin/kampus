@@ -3,6 +3,7 @@ import { createCrawler } from "../../crawler.ts";
 import { getLogLevel } from "../../log-level.ts";
 import { cr, pc, separator, stripEmoji } from "../lib/format.ts";
 import { spinner } from "../lib/cli-utils.ts";
+import { formatQuizStatus } from "../lib/quiz-status.ts";
 
 export const readCommand = new Command("read")
     .description("퀴즈 상세 정보를 조회합니다")
@@ -50,31 +51,14 @@ ${pc.bold("예시:")}
                 `${pc.bold("시간 제한")}: ${pc.yellow(quiz.timeLimit || "-")}`
             );
 
-            const statusLabel = ((): string => {
-                switch (quiz.attemptStatus) {
-                    case "not_started":
-                        return "미응시";
-                    case "in_progress":
-                        return "진행 중";
-                    case "finished":
-                        return "응시 완료";
-                    default:
-                        return "알 수 없음";
-                }
-            })();
-            const statusColor = ((): ((s: string) => string) => {
-                switch (quiz.attemptStatus) {
-                    case "not_started":
-                        return pc.blue;
-                    case "in_progress":
-                        return pc.yellow;
-                    case "finished":
-                        return pc.green;
-                    default:
-                        return pc.dim;
-                }
-            })();
-            console.log(`${pc.bold("응시 상태")}: ${statusColor(statusLabel)}`);
+            console.log(
+                `${pc.bold("응시 상태")}: ${formatQuizStatus(quiz.attemptStatus, quiz.availability)}`
+            );
+            if (quiz.availabilityInfo) {
+                console.log(
+                    `${pc.bold("이용 제한")}: ${pc.dim(quiz.availabilityInfo)}`
+                );
+            }
             console.log(separator(50));
         } catch (err: unknown) {
             const message = err instanceof Error ? err.message : String(err);

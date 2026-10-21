@@ -1,11 +1,12 @@
 import { Command } from "commander";
 import { mkdir, stat } from "node:fs/promises";
-import { basename, join } from "node:path";
+import { join } from "node:path";
 import { createCrawler } from "../../crawler.ts";
 import { getLogLevel } from "../../log-level.ts";
-import { cr, pc, separator, stripEmoji } from "../lib/format.ts";
+import { cr, pc, plainText, separator, stripEmoji } from "../lib/format.ts";
 import { spinner } from "../lib/cli-utils.ts";
 import { downloadFile, extractMoodleSession } from "../lib/download-utils.ts";
+import { claimFilename, sanitizeFilename } from "../lib/filename.ts";
 
 export const downloadCommand = new Command("download")
     .description("과제 첨부파일을 다운로드합니다")
@@ -53,7 +54,9 @@ ${pc.bold("예시:")}
             spin.stop();
         } catch (err: unknown) {
             const message = err instanceof Error ? err.message : String(err);
-            console.error(`${cr}${pc.red(stripEmoji(`❌ 오류: ${message}`))}`);
+            console.error(
+                `${cr}${pc.red(stripEmoji(`❌ 오류: ${plainText(message)}`))}`
+            );
             process.exitCode = 1;
             return;
         }
@@ -91,21 +94,39 @@ ${pc.bold("예시:")}
             )
         );
         console.log(separator(50));
-        console.log(`${pc.bold("과제명")}: ${pc.green(assignment.name)}`);
+        console.log(
+            `${pc.bold("과제명")}: ${pc.green(plainText(assignment.name))}`
+        );
         console.log(`${pc.bold("저장 위치")}: ${pc.dim(outputDir)}`);
         console.log(separator(50));
 
         // 4. Download each file
         let successCount = 0;
         let failCount = 0;
+        const usedNames = new Set<string>();
 
         for (const file of assignment.files) {
-            // Sanitize filename to prevent path traversal
-            const safeName = basename(file.name);
+            // The name is server-provided: make it a safe single path
+            // component, and keep same-named files from overwriting each
+            // other.
+            const safeName = claimFilename(
+                sanitizeFilename(file.name) || `file_${usedNames.size + 1}`,
+                usedNames
+            );
             const destPath = join(outputDir, safeName);
-            process.stdout.write(pc.dim(`  다운로드 중: ${file.name}...`));
+            // Only the sanitised name is printed: the server's own may hold
+            // terminal escape sequences or bidirectional overrides.
+            const shownName =
+                safeName === file.name
+                    ? safeName
+                    : `${safeName} ${pc.dim("(이름 정리됨)")}`;
+            process.stdout.write(pc.dim(`  다운로드 중: ${shownName}...`));
             try {
-                await downloadFile(file.url, destPath, sessionCookie);
+                // Files must stay inside the folder the user chose with -o,
+                // which may legitimately be outside the working directory.
+                await downloadFile(file.url, destPath, sessionCookie, {
+                    allowedDir: outputDir,
+                });
 
                 // Get file size
                 let sizeStr = "";
@@ -118,14 +139,14 @@ ${pc.bold("예시:")}
                 }
 
                 process.stdout.write(
-                    `${cr}${pc.green(stripEmoji("  ✓"))} ${file.name}${pc.dim(sizeStr)}\n`
+                    `${cr}${pc.green(stripEmoji("  ✓"))} ${shownName}${pc.dim(sizeStr)}\n`
                 );
                 successCount++;
             } catch (err: unknown) {
                 const message =
                     err instanceof Error ? err.message : String(err);
                 process.stdout.write(
-                    `${cr}${pc.red(stripEmoji("  ✗"))} ${file.name} ${pc.dim(`- ${message}`)}\n`
+                    `${cr}${pc.red(stripEmoji("  ✗"))} ${safeName} ${pc.dim(`- ${plainText(message)}`)}\n`
                 );
                 failCount++;
             }

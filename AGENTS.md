@@ -16,9 +16,10 @@ assignment/
     ├── library/                   # @concertypin/ecampus-crawler (크롤링 코어)
     │   ├── src/                   # 크롤러, 인증, HTTP 클라이언트, 세션 스토리지, 로거
     │   ├── tests/                 # Vitest 단위 테스트
+    │   ├── README.md              # 라이브러리 API 문서 (루트 README에는 두지 않음)
     │   └── vite.config.ts         # ESM + D.TS 번들 설정
     └── cli/                       # @concertypin/kampus (터미널 CLI)
-        ├── src/                   # Commander 기반 CLI, 커맨드 그룹 (auth/courses/attendance/assignments/quizzes/messages/resources/syllabus)
+        ├── src/                   # Commander 기반 CLI, 커맨드 그룹 (auth/courses/attendance/assignments/quizzes/messages/resources/syllabus/notices)
         ├── tests/                 # CLI 테스트
         └── vite.config.ts         # Node SSR 번들 설정 (shebang 포함)
 ```
@@ -34,7 +35,7 @@ pnpm install
 # Build both packages in correct dependency order
 pnpm build
 
-# Run unit tests for @concertypin/ecampus-crawler (Vitest)
+# Build the library, then run the Vitest suites of both packages
 pnpm test
 
 # Format all files in workspace
@@ -61,7 +62,10 @@ pnpm run lint:check
 5. **Vite Configurations**:
     - Library uses `vite-plugin-dts` to bundle declaration files. Ensure `include` in `vite.config.ts` matches all `.ts` files to prevent type errors.
     - CLI is bundled in `ssr` target mode for Node execution.
-6. **CLI Command Structure**:
+6. **Library scope and docs**:
+    - The library is an internal module of the CLI (`"private": true`, not published to npm). Its API is best-effort: versioning and breaking-change decisions follow CLI usage only, so library API changes may ship in any release, including a patch.
+    - Document library API changes in `packages/library/README.md`, not in the root README. The root README covers CLI usage and development.
+7. **CLI Command Structure**:
     - All CLI commands are organized into subcommand groups under `commands/` (e.g., `auth/`, `courses/`, `assignments/`).
     - Each group has an `index.ts` that creates the parent `Command` and registers subcommands.
     - Individual command files (e.g., `login.ts`, `list.ts`, `read.ts`) export the subcommand.
@@ -70,7 +74,8 @@ pnpm run lint:check
 
 ## Testing Guidelines
 
-- **Mock tests**: Ensure tests that do not require an active login session mock responses or use pre-saved HTML fixtures (such as `dashboard.html`, `attendance_50541.html`, etc.).
-- **Integration tests**: Exploratory tests that require live e-campus connection (e.g. `tests/unit/explore.test.ts`) are marked as `.skip` by default to prevent CI build failures due to expired session cookies. Do not enable them in default test runs.
+- **Mock tests**: Tests must not need an active login session. Mock `fetchWithBase` (library) or the crawler (CLI) and feed it either inline HTML built in the test or a pre-saved HTML fixture.
+- **Fixtures**: HTML fixtures live in `packages/library/tests/fixtures/<area>/` (currently `activities/`, `notices/`, `quiz/`) and are loaded with `readFileSync(join(import.meta.dirname, "..", "fixtures", "<area>", name), "utf8")`. Strip session data, sesskeys and personal data from live captures, and state in a comment at the top of the fixture whether it is a trimmed live capture or written from stock Moodle markup. The CLI tests use no HTML fixtures.
+- **Integration tests**: The repository currently has no tests that need a live e-campus connection. If you add an exploratory one, mark it `.skip` so CI does not fail on expired session cookies, and never enable it in default test runs.
 - **CLI tests**: CLI tests are located in `packages/cli/tests/` and follow the same structure as the source commands directory.
 - **Test files**: Each subdirectory under `tests/commands/` mirrors the structure under `src/commands/` for easy mapping.

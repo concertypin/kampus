@@ -1,5 +1,12 @@
 export {
     Crawler,
+    RESOURCE_TYPES,
+    isResourceType,
+    resourceTypeHasFiles,
+    isEcampusUrl,
+    isLoginUrl,
+    isPluginfileUrl,
+    type ResourceType,
     type CrawlerOptions,
     type Course,
     type AttendanceItem,
@@ -9,6 +16,8 @@ export {
     type AssignmentFile,
     type QuizItem,
     type QuizDetail,
+    type QuizAttemptStatus,
+    type QuizAvailability,
     type ActivityItem,
     type WeeklyActivity,
     type ResourceItem,
@@ -17,6 +26,12 @@ export {
     type SyllabusParams,
     type VodItem,
     type VodDetail,
+    type NoticeBoard,
+    type NoticeItem,
+    type NoticeList,
+    type NoticeListOptions,
+    type NoticeFile,
+    type NoticeDetail,
 } from "./crawler";
 
 export { type SessionStorage } from "./storage/storage";

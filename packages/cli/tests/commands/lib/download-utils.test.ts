@@ -5,12 +5,30 @@ import {
     validateDestPath,
 } from "@/commands/lib/download-utils";
 
-// Mock DNS module
-vi.mock("node:dns/promises", () => ({
-    resolve4: vi.fn<(hostname: string) => Promise<string[]>>(),
-}));
+// Name resolution goes through the real `dns.lookup` unless a test replaces
+// it; the address checks themselves always run on the real `node:net`.
+vi.mock("node:dns/promises", async (importOriginal) => {
+    const original = await importOriginal<typeof import("node:dns/promises")>();
+    return {
+        ...original,
+        lookup: vi.fn<typeof original.lookup>(original.lookup),
+    };
+});
 
-import { resolve4 } from "node:dns/promises";
+import { lookup } from "node:dns/promises";
+
+type Resolved = Array<{ address: string; family: number }>;
+
+/** Make every name resolve to the given addresses. */
+function resolveTo(...addresses: string[]): void {
+    vi.mocked(lookup).mockImplementation((() =>
+        Promise.resolve(
+            addresses.map((address) => ({
+                address,
+                family: address.includes(":") ? 6 : 4,
+            })) satisfies Resolved
+        )) as unknown as typeof lookup);
+}
 
 describe("extractMoodleSession", () => {
     it("should extract MoodleSession from valid cookie string", () => {
@@ -44,8 +62,16 @@ describe("extractMoodleSession", () => {
 });
 
 describe("isPrivateHost", () => {
-    beforeEach(() => {
-        vi.mocked(resolve4).mockReset();
+    let realLookup: typeof lookup;
+
+    beforeEach(async () => {
+        realLookup = (
+            await vi.importActual<typeof import("node:dns/promises")>(
+                "node:dns/promises"
+            )
+        ).lookup;
+        vi.mocked(lookup).mockReset();
+        vi.mocked(lookup).mockImplementation(realLookup);
     });
 
     afterEach(() => {
@@ -53,97 +79,156 @@ describe("isPrivateHost", () => {
     });
 
     describe("IPv4 literals", () => {
-        it("should detect loopback addresses (127.x.x.x)", async () => {
-            expect(await isPrivateHost("127.0.0.1")).toBe(true);
-            expect(await isPrivateHost("127.255.255.255")).toBe(true);
+        it.each([
+            ["loopback", "127.0.0.1"],
+            ["loopback", "127.255.255.255"],
+            ["10/8", "10.0.0.1"],
+            ["10/8", "10.255.255.255"],
+            ["172.16/12", "172.16.0.1"],
+            ["172.16/12", "172.31.255.255"],
+            ["192.168/16", "192.168.0.1"],
+            ["192.168/16", "192.168.255.255"],
+            ["link-local", "169.254.0.1"],
+            ["cloud metadata", "169.254.169.254"],
+            ["'this' network", "0.0.0.0"],
+            ["'this' network", "0.1.2.3"],
+            ["carrier-grade NAT", "100.64.0.1"],
+            ["multicast", "224.0.0.1"],
+            ["broadcast", "255.255.255.255"],
+        ])("blocks %s %s", async (_label, address) => {
+            expect(await isPrivateHost(address)).toBe(true);
         });
 
-        it("should detect 10.x.x.x private range", async () => {
-            expect(await isPrivateHost("10.0.0.1")).toBe(true);
-            expect(await isPrivateHost("10.255.255.255")).toBe(true);
-        });
-
-        it("should detect 172.16-31.x.x private range", async () => {
-            expect(await isPrivateHost("172.16.0.1")).toBe(true);
-            expect(await isPrivateHost("172.31.255.255")).toBe(true);
-            // 172.15.x.x is NOT private
-            expect(await isPrivateHost("172.15.0.1")).toBe(false);
-        });
-
-        it("should detect 192.168.x.x private range", async () => {
-            expect(await isPrivateHost("192.168.0.1")).toBe(true);
-            expect(await isPrivateHost("192.168.255.255")).toBe(true);
-        });
-
-        it("should detect link-local addresses (169.254.x.x)", async () => {
-            expect(await isPrivateHost("169.254.0.1")).toBe(true);
-        });
-
-        it("should detect 'this' network (0.x.x.x)", async () => {
-            expect(await isPrivateHost("0.0.0.0")).toBe(true);
-        });
-
-        it("should allow public IP addresses", async () => {
-            expect(await isPrivateHost("8.8.8.8")).toBe(false);
-            expect(await isPrivateHost("1.1.1.1")).toBe(false);
+        it.each([
+            "8.8.8.8",
+            "1.1.1.1",
+            "172.15.0.1",
+            "172.32.0.1",
+            "100.63.0.1",
+        ])("allows the public address %s", async (address) => {
+            expect(await isPrivateHost(address)).toBe(false);
         });
     });
 
     describe("IPv6 literals", () => {
-        it("should detect IPv6 loopback (::1)", async () => {
-            expect(await isPrivateHost("::1")).toBe(true);
-            expect(await isPrivateHost("[::1]")).toBe(true);
+        it.each([
+            ["loopback", "::1"],
+            ["loopback in brackets", "[::1]"],
+            ["unspecified", "::"],
+            ["unspecified in brackets", "[::]"],
+            ["link-local", "fe80::1"],
+            ["link-local", "fe80:1234::1"],
+            ["link-local, upper half of fe80::/10", "febf::1"],
+            ["unique local", "fc00::1"],
+            ["unique local", "fd00::1"],
+            ["unique local", "fdff:ffff::1"],
+            ["IPv4-mapped loopback", "::ffff:127.0.0.1"],
+            ["IPv4-mapped loopback in brackets", "[::ffff:127.0.0.1]"],
+            ["IPv4-mapped loopback, hex form", "::ffff:7f00:1"],
+            ["IPv4-mapped loopback, hex form in brackets", "[::ffff:7f00:1]"],
+            ["IPv4-mapped private", "::ffff:10.0.0.1"],
+            ["IPv4-mapped private", "::ffff:192.168.1.1"],
+            ["IPv4-mapped metadata", "[::ffff:169.254.169.254]"],
+            ["IPv4-mapped metadata, hex form", "[::ffff:a9fe:a9fe]"],
+            ["IPv4-compatible loopback", "::127.0.0.1"],
+            ["multicast", "ff02::1"],
+            ["upper-case", "FE80::1"],
+        ])("blocks %s %s", async (_label, address) => {
+            expect(await isPrivateHost(address)).toBe(true);
         });
 
-        it("should detect IPv6 link-local (fe80::)", async () => {
-            expect(await isPrivateHost("fe80::1")).toBe(true);
-            expect(await isPrivateHost("fe80:1234::1")).toBe(true);
+        it.each([
+            "::ffff:8.8.8.8",
+            "[::ffff:808:808]",
+            "2001:4860:4860::8888",
+            "[2606:4700:4700::1111]",
+        ])("allows the public address %s", async (address) => {
+            expect(await isPrivateHost(address)).toBe(false);
         });
 
-        it("should detect IPv6 unique local addresses (fc00::/7)", async () => {
-            expect(await isPrivateHost("fc00::1")).toBe(true);
-            expect(await isPrivateHost("fd00::1")).toBe(true);
-            expect(await isPrivateHost("fdff:ffff::1")).toBe(true);
+        it("blocks what the URL parser makes of an IPv4-mapped host", async () => {
+            // `new URL()` rewrites the dotted form to hex: the form the
+            // download code actually passes in.
+            for (const url of [
+                "http://[::ffff:127.0.0.1]/",
+                "http://[::ffff:169.254.169.254]/latest/meta-data/",
+                "http://[::]/",
+                "http://[0:0:0:0:0:0:0:1]/",
+                "http://2130706433/",
+                "http://0x7f.1/",
+                "http://127.1/",
+            ]) {
+                expect(await isPrivateHost(new URL(url).hostname)).toBe(true);
+            }
         });
 
-        it("should detect IPv4-mapped IPv6 addresses", async () => {
-            expect(await isPrivateHost("::ffff:127.0.0.1")).toBe(true);
-            expect(await isPrivateHost("::ffff:10.0.0.1")).toBe(true);
-            expect(await isPrivateHost("::ffff:192.168.1.1")).toBe(true);
-            // Public IPv4 mapped should not be private
-            expect(await isPrivateHost("::ffff:8.8.8.8")).toBe(false);
+        it("never asks DNS about an address literal", async () => {
+            await isPrivateHost("[::ffff:7f00:1]");
+            await isPrivateHost("8.8.8.8");
+
+            expect(lookup).not.toHaveBeenCalled();
         });
     });
 
     describe("Cloud metadata endpoints", () => {
-        it("should block AWS/GCP metadata IP", async () => {
-            expect(await isPrivateHost("169.254.169.254")).toBe(true);
-        });
-
-        it("should block GCP metadata hostname", async () => {
-            vi.mocked(resolve4).mockResolvedValue(["169.254.169.254"]);
-            expect(await isPrivateHost("metadata.google.internal")).toBe(true);
-        });
-
-        it("should block Azure metadata hostname", async () => {
-            vi.mocked(resolve4).mockResolvedValue(["169.254.169.254"]);
-            expect(await isPrivateHost("metadata.azure")).toBe(true);
-        });
+        it.each([
+            "metadata.google.internal",
+            "metadata.azure",
+            "Metadata.Google.Internal.",
+        ])(
+            "blocks the metadata host name %s without resolving it",
+            async (host) => {
+                expect(await isPrivateHost(host)).toBe(true);
+                expect(lookup).not.toHaveBeenCalled();
+            }
+        );
     });
 
     describe("DNS resolution", () => {
+        it("resolves localhost with the real resolver and blocks it", async () => {
+            expect(await isPrivateHost("localhost")).toBe(true);
+            expect(await isPrivateHost("localhost.")).toBe(true);
+        });
+
         it("should resolve hostname and check resolved IPs", async () => {
-            // Public IP resolved
-            vi.mocked(resolve4).mockResolvedValue(["8.8.8.8"]);
+            resolveTo("8.8.8.8");
             expect(await isPrivateHost("example.com")).toBe(false);
 
-            // Private IP resolved
-            vi.mocked(resolve4).mockResolvedValue(["192.168.1.1"]);
+            resolveTo("192.168.1.1");
             expect(await isPrivateHost("internal.example.com")).toBe(true);
         });
 
+        it("asks for every address of the name, IPv6 included", async () => {
+            resolveTo("8.8.8.8");
+
+            await isPrivateHost("example.com");
+
+            expect(lookup).toHaveBeenCalledWith(
+                "example.com",
+                expect.objectContaining({ all: true })
+            );
+        });
+
+        it.each([
+            ["an AAAA record that is loopback", ["8.8.8.8", "::1"]],
+            ["an AAAA record that is unique local", ["8.8.8.8", "fd12::5"]],
+            ["an AAAA record that is IPv4-mapped private", ["::ffff:10.0.0.5"]],
+            ["an A record that is the metadata address", ["169.254.169.254"]],
+            ["one private address among public ones", ["1.1.1.1", "10.0.0.1"]],
+        ])("blocks a name with %s", async (_label, addresses) => {
+            resolveTo(...addresses);
+
+            expect(await isPrivateHost("rebind.example.com")).toBe(true);
+        });
+
+        it("allows a name whose A and AAAA records are all public", async () => {
+            resolveTo("8.8.8.8", "2001:4860:4860::8888");
+
+            expect(await isPrivateHost("dns.example.com")).toBe(false);
+        });
+
         it("should allow hostname when DNS resolution fails", async () => {
-            vi.mocked(resolve4).mockRejectedValue(new Error("DNS failed"));
+            vi.mocked(lookup).mockRejectedValue(new Error("DNS failed"));
             expect(await isPrivateHost("unknown.domain")).toBe(false);
         });
     });

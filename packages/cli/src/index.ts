@@ -10,6 +10,7 @@ import { messagesCommand } from "./commands/messages/index.ts";
 import { resourcesCommand } from "./commands/resources/index.ts";
 import { syllabusCommand } from "./commands/syllabus/index.ts";
 import { vodCommand } from "./commands/vod/index.ts";
+import { noticesCommand } from "./commands/notices/index.ts";
 
 const program = new Command();
 
@@ -45,6 +46,8 @@ ${pc.bold("사용 예시:")}
   ${pc.green("kampus quizzes list <courseId>")}           특정 과목 퀴즈 목록 조회
   ${pc.green("kampus quizzes read <quizId>")}             퀴즈 상세 정보 조회
   ${pc.green("kampus messages list [--page N]")}          교수님 메시지 조회
+  ${pc.green("kampus notices <courseId> [--json]")}         특정 과목 공지사항 목록 조회
+  ${pc.green("kampus notices read <courseId> <postId>")} 공지사항 본문/첨부파일 조회
   ${pc.green("kampus resources list <courseId>")}         특정 과목 강의자료 목록 조회
   ${pc.green("kampus resources download <resourceId>")}   강의자료 첨부파일 다운로드
   ${pc.green("kampus syllabus download <courseId>")}      특정 과목 강의계획서 PDF 다운로드
@@ -65,6 +68,7 @@ program.addCommand(quizzesCommand);
 program.addCommand(messagesCommand);
 program.addCommand(resourcesCommand);
 program.addCommand(syllabusCommand);
+program.addCommand(noticesCommand);
 
 program.parseAsync(process.argv).catch((err: unknown) => {
     const message = err instanceof Error ? err.message : String(err);

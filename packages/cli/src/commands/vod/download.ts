@@ -12,6 +12,7 @@ import {
     spinnerStop,
     stripEmoji,
 } from "../lib/format.ts";
+import { sanitizeFilename } from "../lib/filename.ts";
 
 /**
  * Check whether ffmpeg is available in the current PATH.
@@ -26,16 +27,6 @@ export function isFfmpegAvailable(): boolean {
     } catch {
         return false;
     }
-}
-
-/**
- * Sanitize a string to be safely used as a filename.
- */
-export function sanitizeFilename(name: string): string {
-    return name
-        .replace(/[<>:"/\\|?*]/g, "_")
-        .replace(/\s+/g, " ")
-        .trim();
 }
 
 export const downloadCommand = new Command("download")

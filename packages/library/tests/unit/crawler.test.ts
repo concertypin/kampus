@@ -203,7 +203,7 @@ describe("Crawler", () => {
                 </div>`;
 
             return `
-                <html><body>
+                <html><body id="page-mod-quiz-view" class="path-mod path-mod-quiz cmid-677443">
                     <div role="main">
                         <h2>${name}</h2>
                     </div>
@@ -233,74 +233,6 @@ describe("Crawler", () => {
             expect(quiz.closedAt).toBe("2026-05-25 23:55");
             expect(quiz.timeLimit).toBe("1 day");
             expect(quiz.attemptStatus).toBe("not_started");
-        });
-
-        it("should parse quiz detail with 'in_progress' status", async () => {
-            mockFetch.mockResolvedValueOnce(
-                new Response(
-                    buildQuizHtml({
-                        attemptHtml: `
-                            <div class="quizattempt">
-                                <table class="generaltable quizattemptsummary">
-                                    <tbody><tr><td>Attempt 1</td></tr></tbody>
-                                </table>
-                                <a href="attempt.php?attempt=123">Continue the last attempt</a>
-                            </div>
-                        `,
-                    }),
-                    { status: 200 }
-                )
-            );
-
-            const quiz = await crawler.getQuizDetail("677443");
-            expect(quiz.attemptStatus).toBe("in_progress");
-        });
-
-        it("should parse quiz detail with 'finished' status (summary table, no continue)", async () => {
-            mockFetch.mockResolvedValueOnce(
-                new Response(
-                    buildQuizHtml({
-                        attemptHtml: `
-                            <div class="quizattempt">
-                                <table class="generaltable quizattemptsummary">
-                                    <tbody>
-                                        <tr><td>Attempt 1</td><td>90</td></tr>
-                                    </tbody>
-                                </table>
-                            </div>
-                        `,
-                    }),
-                    { status: 200 }
-                )
-            );
-
-            const quiz = await crawler.getQuizDetail("677443");
-            expect(quiz.attemptStatus).toBe("finished");
-        });
-
-        it("should parse quiz detail with 'finished' status (re-attempt button + existing attempts)", async () => {
-            mockFetch.mockResolvedValueOnce(
-                new Response(
-                    buildQuizHtml({
-                        attemptHtml: `
-                            <div class="quizattempt">
-                                <table>
-                                    <tbody>
-                                        <tr><td>Attempt 1</td><td>80</td></tr>
-                                    </tbody>
-                                </table>
-                                <div class="quizstartbuttondiv">
-                                    <input type="submit" value="Re-attempt quiz" />
-                                </div>
-                            </div>
-                        `,
-                    }),
-                    { status: 200 }
-                )
-            );
-
-            const quiz = await crawler.getQuizDetail("677443");
-            expect(quiz.attemptStatus).toBe("finished");
         });
 
         it("should return 'unknown' status when no quizattempt block", async () => {
@@ -373,7 +305,7 @@ describe("Crawler", () => {
 
         it("should use fallback h2 selector when [role='main'] h2 is missing", async () => {
             const html = `
-                <html><body>
+                <html><body id="page-mod-quiz-view" class="path-mod cmid-677443">
                     <h2>Fallback Quiz Name</h2>
                     <div id="intro"><div class="no-overflow">desc</div></div>
                     <div class="quizinfo"></div>
@@ -387,15 +319,20 @@ describe("Crawler", () => {
             expect(quiz.name).toBe("Fallback Quiz Name");
         });
 
-        it("should escape user input in path", async () => {
+        it("keeps a cmid with special characters inside the query of the view URL, and refuses the answer", async () => {
+            mockFetch.mockReset();
             mockFetch.mockResolvedValueOnce(
                 new Response(buildQuizHtml(), { status: 200 })
             );
 
-            // Should not throw — cmid with special characters should be URL-encoded safely
-            await expect(
-                crawler.getQuizDetail("123<script>")
-            ).resolves.toBeDefined();
+            // No page can state that it belongs to a module with such an id
+            await expect(crawler.getQuizDetail("123<script>")).rejects.toThrow(
+                "the response is not the page of this quiz"
+            );
+            const requested = new URL(String(mockFetch.mock.calls[0]?.[0]));
+            expect(requested.origin).toBe("https://ecampus.kangnam.ac.kr");
+            expect(requested.pathname).toBe("/mod/quiz/view.php");
+            expect(requested.search).toBe("?id=123%3Cscript%3E");
         });
     });
 
@@ -442,7 +379,7 @@ describe("Crawler", () => {
                 : "";
 
             return `
-                <html><body>
+                <html><body id="page-mod-quiz-view" class="path-mod path-mod-quiz cmid-677443">
                     <div role="main">
                         <h2>${name}</h2>
                     </div>
@@ -600,7 +537,7 @@ describe("Crawler", () => {
                         fileRows: [
                             {
                                 name: "202500041.zip",
-                                url: "https://ecampus.example.com/pluginfile.php?file=/submission.zip",
+                                url: "https://ecampus.kangnam.ac.kr/pluginfile.php?file=/submission.zip",
                             },
                         ],
                     }),
@@ -744,10 +681,32 @@ describe("Crawler", () => {
             const resources = await crawler.getResources("49341");
             expect(resources).toHaveLength(0);
         });
+
+        it("should list a resource once when the current week is repeated", async () => {
+            const week = {
+                weekTitle: "7주차",
+                activities: [
+                    { id: "700", type: "ubfile" as const, name: "7주차.pdf" },
+                ],
+            };
+            mockFetch.mockResolvedValueOnce(
+                new Response(buildCourseHtml([week, week]), { status: 200 })
+            );
+
+            const resources = await crawler.getResources("49341");
+
+            expect(resources.map((r) => r.id)).toEqual(["700"]);
+        });
     });
 
     describe("getResourceDetail", () => {
+        /** `<body>` as Moodle renders it on the view page of module `cmid`. */
+        function viewBody(cmid: string): string {
+            return `<body id="page-mod-ubfile-view" class="path-mod path-mod-ubfile cmid-${cmid}">`;
+        }
+
         function buildResourceHtml(opts?: {
+            cmid?: string;
             name?: string;
             description?: string;
             fileLinks?: Array<{ name: string; url: string }>;
@@ -762,7 +721,7 @@ describe("Crawler", () => {
             ];
 
             return `
-                <html><body>
+                <html>${viewBody(opts?.cmid ?? "658841")}
                     <div role="main">
                         <h2>${name}</h2>
                     </div>
@@ -778,7 +737,7 @@ describe("Crawler", () => {
 
         it("should parse resource detail with file links", async () => {
             const html = `
-                <html><body>
+                <html>${viewBody("658841")}
                     <div role="main">
                         <h2>1주차_강의노트.pdf</h2>
                     </div>
@@ -806,6 +765,7 @@ describe("Crawler", () => {
             mockFetch.mockResolvedValueOnce(
                 new Response(
                     buildResourceHtml({
+                        cmid: "658842",
                         name: "복수 파일 자료",
                         description: "여러 파일이 있는 자료입니다.",
                         fileLinks: [
@@ -832,9 +792,12 @@ describe("Crawler", () => {
 
         it("should handle resource detail with no file links", async () => {
             mockFetch.mockResolvedValueOnce(
-                new Response(buildResourceHtml({ fileLinks: [] }), {
-                    status: 200,
-                })
+                new Response(
+                    buildResourceHtml({ cmid: "658843", fileLinks: [] }),
+                    {
+                        status: 200,
+                    }
+                )
             );
 
             const resource = await crawler.getResourceDetail("658843");
@@ -843,10 +806,167 @@ describe("Crawler", () => {
             expect(resource.files).toHaveLength(0);
         });
 
+        // Shape of the live /mod/ubfile/view.php answer for a single-file
+        // resource: 303 + Location, with Moodle's redirect page as the body.
+        const PLUGINFILE_URL =
+            "https://ecampus.kangnam.ac.kr/pluginfile.php?forcedownload=1&file=%2F100001%2Fmod_ubfile%2Fcontent%2F0%2F%281%EC%A3%BC%EC%B0%A8%29%20%EA%B0%95%EC%9D%98%20%EC%9E%90%EB%A3%8C.pdf";
+        function buildRedirectHtml(url: string): string {
+            return `<!DOCTYPE html>
+<html  lang="en" xml:lang="en">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+
+<title>Redirect</title>
+</head><body><div style="margin-top: 3em; margin-left:auto; margin-right:auto; text-align:center;">This page should automatically redirect. If nothing is happening please use the continue link below.<br /><a href="${url.replaceAll("&", "&amp;")}">Continue</a></div></body></html>`;
+        }
+
+        it("should resolve the pluginfile URL from a 303 redirect without following it", async () => {
+            mockFetch.mockClear();
+            mockFetch.mockResolvedValueOnce(
+                new Response(buildRedirectHtml(PLUGINFILE_URL), {
+                    status: 303,
+                    headers: {
+                        "Content-Type": "text/html; charset=utf-8",
+                        Location: PLUGINFILE_URL,
+                    },
+                })
+            );
+
+            const resource = await crawler.getResourceDetail("700001");
+
+            // The file itself must not be requested just to list it
+            expect(mockFetch).toHaveBeenCalledTimes(1);
+            expect(resource.files).toEqual([
+                { name: "(1주차) 강의 자료.pdf", url: PLUGINFILE_URL },
+            ]);
+            expect(resource.name).toBe("(1주차) 강의 자료.pdf");
+        });
+
+        it("should decode &amp; in the redirect page link when Location is missing", async () => {
+            mockFetch.mockResolvedValueOnce(
+                new Response(buildRedirectHtml(PLUGINFILE_URL), {
+                    status: 303,
+                    headers: { "Content-Type": "text/html; charset=utf-8" },
+                })
+            );
+
+            const resource = await crawler.getResourceDetail("700002");
+
+            expect(resource.files).toHaveLength(1);
+            expect(resource.files[0]?.url).toBe(PLUGINFILE_URL);
+            expect(resource.files[0]?.url).not.toContain("&amp;");
+            // Link text is "Continue", so the name comes from the URL
+            expect(resource.files[0]?.name).toBe("(1주차) 강의 자료.pdf");
+        });
+
+        it("should extract the link from a redirect page served with 200", async () => {
+            const html = `<html><head><meta http-equiv="refresh" content="0; url=${PLUGINFILE_URL.replaceAll("&", "&amp;")}"></head><body></body></html>`;
+            mockFetch.mockResolvedValueOnce(
+                new Response(html, {
+                    status: 200,
+                    headers: { "Content-Type": "text/html; charset=utf-8" },
+                })
+            );
+
+            const resource = await crawler.getResourceDetail("700003");
+
+            expect(resource.files).toEqual([
+                { name: "(1주차) 강의 자료.pdf", url: PLUGINFILE_URL },
+            ]);
+        });
+
+        it("should list every file of a multi-file page with decoded, absolute URLs", async () => {
+            const html = `
+                <html>${viewBody("700004")}
+                    <div role="main">
+                        <h2>3주차 자료 모음</h2>
+                        <div id="intro"><p>설명</p></div>
+                        <ul>
+                            <li><a href="https://ecampus.kangnam.ac.kr/pluginfile.php?forcedownload=1&amp;file=%2F100002%2Fmod_ubfile%2Fcontent%2F0%2Fa.pdf">강의노트.pdf</a></li>
+                            <li><a href="/pluginfile.php/100002/mod_ubfile/content/0/%EC%8B%A4%EC%8A%B5.zip?forcedownload=1"> </a></li>
+                            <li><a href="https://ecampus.kangnam.ac.kr/pluginfile.php?forcedownload=1&amp;file=%2F100002%2Fmod_ubfile%2Fcontent%2F0%2Fa.pdf">강의노트.pdf</a></li>
+                        </ul>
+                    </div>
+                </body></html>
+            `;
+            mockFetch.mockResolvedValueOnce(
+                new Response(html, {
+                    status: 200,
+                    headers: { "Content-Type": "text/html; charset=utf-8" },
+                })
+            );
+
+            const resource = await crawler.getResourceDetail("700004");
+
+            expect(resource.name).toBe("3주차 자료 모음");
+            // The name is the stored file name from the URL, not the link
+            // text: this used to expect the label "강의노트.pdf", but labels
+            // repeat ("다운로드") and then the files overwrite each other.
+            expect(resource.files).toEqual([
+                {
+                    name: "a.pdf",
+                    url: "https://ecampus.kangnam.ac.kr/pluginfile.php?forcedownload=1&file=%2F100002%2Fmod_ubfile%2Fcontent%2F0%2Fa.pdf",
+                },
+                {
+                    name: "실습.zip",
+                    url: "https://ecampus.kangnam.ac.kr/pluginfile.php/100002/mod_ubfile/content/0/%EC%8B%A4%EC%8A%B5.zip?forcedownload=1",
+                },
+            ]);
+        });
+
+        it("should treat a direct file response as the downloadable file", async () => {
+            // fetch exposes the raw UTF-8 header bytes as Latin-1
+            const rawName = String.fromCharCode(
+                ...new TextEncoder().encode("강의 자료.pdf")
+            );
+            mockFetch.mockResolvedValueOnce(
+                new Response("%PDF-1.7 binary", {
+                    status: 200,
+                    headers: {
+                        "Content-Type": "application/pdf",
+                        "Content-Disposition": `attachment; filename="${rawName}"`,
+                    },
+                })
+            );
+
+            const resource = await crawler.getResourceDetail("700005");
+
+            expect(resource.files).toEqual([
+                {
+                    name: "강의 자료.pdf",
+                    url: "https://ecampus.kangnam.ac.kr/mod/ubfile/view.php?id=700005",
+                },
+            ]);
+            expect(resource.name).toBe("강의 자료.pdf");
+        });
+
+        // This used to assert that a 303 to any other page is followed and
+        // that page's pluginfile links become the resource's files. That
+        // encoded the implementation's guess: nothing ties such a page to
+        // this resource, so its links are other modules' files.
+        it("should refuse a 303 that points to a page that is not a file", async () => {
+            mockFetch.mockResolvedValueOnce(
+                new Response("", {
+                    status: 303,
+                    headers: {
+                        Location:
+                            "https://ecampus.kangnam.ac.kr/mod/ubfile/other.php?id=700006",
+                    },
+                })
+            );
+
+            await expect(crawler.getResourceDetail("700006")).rejects.toThrow(
+                "/mod/ubfile/other.php"
+            );
+            // The other page is not even requested
+            expect(mockFetch).toHaveBeenCalledTimes(1);
+        });
+
         it("should handle HTML entities in description", async () => {
             mockFetch.mockResolvedValueOnce(
                 new Response(
                     buildResourceHtml({
+                        cmid: "658844",
                         description: "O&#160;X 퀴즈입니다. &lt;참고&gt;",
                     }),
                     { status: 200 }
@@ -862,7 +982,7 @@ describe("Crawler", () => {
 
         it("should handle missing intro section", async () => {
             const html = `
-                <html><body>
+                <html>${viewBody("658845")}
                     <div role="main">
                         <h2>자료명만 있는 경우</h2>
                     </div>

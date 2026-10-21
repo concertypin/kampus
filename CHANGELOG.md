@@ -5,6 +5,45 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.1] - 2026-10-21
+
+### Added
+
+#### CLI (`@concertypin/kampus`)
+
+- **Notices**: `notices <courseId>` (shortcut for `notices list`) lists a course's notice board, with `--page`, `--all` and `--json`; `notices read <courseId> <postId>` prints a post and its attachments
+- **Resources**: `resources list` also lists standard Moodle `resource`, `folder`, `url` and `page` modules, and shows restricted items as unavailable; `resources download` gains `-c, --course` and `-t, --type`
+- **Quizzes**: `quizzes list` shows each quiz's attempt state
+
+#### Library (`@concertypin/ecampus-crawler`)
+
+- **`getNoticeBoard()`, `getNotices()`, `getNoticeDetail()`**: course notice board listing and post detail
+- Availability fields on quizzes, activities and resources
+
+### Fixed
+
+#### CLI (`@concertypin/kampus`)
+
+- `resources download` saved 0 files for `mod/ubfile` resources
+- `quizzes list` printed the wrong id for closed quizzes, and `quizzes read` showed `응시 상태: 알 수 없음` for them
+- `resources download` and `assignments download` failed with "Path traversal detected" for `-o` outside the working directory
+- The current week's items were listed twice
+- A failed re-download no longer deletes the previous copy, and login or error pages are no longer saved as files
+
+#### Library (`@concertypin/ecampus-crawler`)
+
+- Attempt state is read from the attempt summary table, and closed, not-yet-open and restricted quizzes are told apart
+- Link-less (restricted) activities are kept instead of dropped
+
+### Changed
+
+- Library API docs moved from the root README to `packages/library/README.md`, which states that the library is an internal module (not published to npm) with a best-effort API
+
+### Security
+
+- Requests and redirects outside the e-campus https origin are refused, so the session cookie and stored credentials cannot be sent to another host
+- Downloads drop the session cookie when a redirect leaves the e-campus, and sanitise server-provided file names
+
 ## [0.3.0] - 2026-09-27
 
 ### Added
