@@ -28,7 +28,6 @@ coverage
 __screenshots__
 *.lcov
 .vitest/
-.vitest-reports/
 
 # nyc test coverage
 .nyc_output
