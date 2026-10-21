@@ -43,10 +43,10 @@ jobs:
         with:
           name: blob-report-${{ matrix.shardIndex }}
           # Two paths: the artifact root is their common ancestor (packages/),
-          # so each package's blobs keep their place on download.
+          # so each package's blobs land back in place on download.
           path: |
             packages/library/.vitest/
-            packages/cli/.vitest-reports/
+            packages/cli/.vitest/
           if-no-files-found: error
           include-hidden-files: true
           retention-days: 1
