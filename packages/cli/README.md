@@ -109,7 +109,7 @@ npx @concertypin/kampus messages list --page 2
 
 ## 라이브러리
 
-크롤링 라이브러리를 직접 사용하려면 [`@concertypin/ecampus-crawler`](https://www.npmjs.com/package/@concertypin/ecampus-crawler)를 설치하세요.
+크롤링 라이브러리 `@concertypin/ecampus-crawler`는 이 CLI의 내부 모듈이라 npm에 배포하지 않습니다. 직접 쓰려면 [레포](https://github.com/concertypin/kampus)를 클론하세요. 사용법과 주의사항은 [라이브러리 README](https://github.com/concertypin/kampus/blob/main/packages/library/README.md)에 있습니다.
 
 ## 라이선스
 

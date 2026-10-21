@@ -35,6 +35,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Attempt state is read from the attempt summary table, and closed, not-yet-open and restricted quizzes are told apart
 - Link-less (restricted) activities are kept instead of dropped
 
+### Changed
+
+- Library API docs moved from the root README to `packages/library/README.md`, which states that the library is an internal module (not published to npm) with a best-effort API
+
 ### Security
 
 - Requests and redirects outside the e-campus https origin are refused, so the session cookie and stored credentials cannot be sent to another host

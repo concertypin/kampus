@@ -16,6 +16,7 @@ assignment/
     ├── library/                   # @concertypin/ecampus-crawler (크롤링 코어)
     │   ├── src/                   # 크롤러, 인증, HTTP 클라이언트, 세션 스토리지, 로거
     │   ├── tests/                 # Vitest 단위 테스트
+    │   ├── README.md              # 라이브러리 API 문서 (루트 README에는 두지 않음)
     │   └── vite.config.ts         # ESM + D.TS 번들 설정
     └── cli/                       # @concertypin/kampus (터미널 CLI)
         ├── src/                   # Commander 기반 CLI, 커맨드 그룹 (auth/courses/attendance/assignments/quizzes/messages/resources/syllabus/notices)
@@ -61,7 +62,10 @@ pnpm run lint:check
 5. **Vite Configurations**:
     - Library uses `vite-plugin-dts` to bundle declaration files. Ensure `include` in `vite.config.ts` matches all `.ts` files to prevent type errors.
     - CLI is bundled in `ssr` target mode for Node execution.
-6. **CLI Command Structure**:
+6. **Library scope and docs**:
+    - The library is an internal module of the CLI (`"private": true`, not published to npm). Its API is best-effort: versioning and breaking-change decisions follow CLI usage only, so library API changes may ship in any release, including a patch.
+    - Document library API changes in `packages/library/README.md`, not in the root README. The root README covers CLI usage and development.
+7. **CLI Command Structure**:
     - All CLI commands are organized into subcommand groups under `commands/` (e.g., `auth/`, `courses/`, `assignments/`).
     - Each group has an `index.ts` that creates the parent `Command` and registers subcommands.
     - Individual command files (e.g., `login.ts`, `list.ts`, `read.ts`) export the subcommand.
