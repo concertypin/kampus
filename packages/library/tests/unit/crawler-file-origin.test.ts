@@ -64,7 +64,7 @@ describe("file URLs stay on the e-campus origin", () => {
                 })
             );
 
-            await expect(crawler.getResourceDetail("700010")).rejects.toThrow(
+            await expect(crawler.getResourceDetail("479453")).rejects.toThrow(
                 "files.example.com"
             );
             // Nothing is requested on behalf of the foreign URL either
@@ -81,7 +81,7 @@ describe("file URLs stay on the e-campus origin", () => {
                 })
             );
 
-            await expect(crawler.getResourceDetail("700011")).rejects.toThrow(
+            await expect(crawler.getResourceDetail("479454")).rejects.toThrow(
                 "http://ecampus.kangnam.ac.kr"
             );
             expect(mockFetch).toHaveBeenCalledTimes(1);
@@ -89,7 +89,7 @@ describe("file URLs stay on the e-campus origin", () => {
 
         it("leaves out off-origin links written in the page body", async () => {
             const html = `
-                <html><body id="page-mod-ubfile-view" class="path-mod cmid-700012">
+                <html><body id="page-mod-ubfile-view" class="path-mod cmid-479455">
                     <div role="main">
                         <h2>자료</h2>
                         <div id="intro">
@@ -107,7 +107,7 @@ describe("file URLs stay on the e-campus origin", () => {
                 })
             );
 
-            const detail = await crawler.getResourceDetail("700012");
+            const detail = await crawler.getResourceDetail("479455");
 
             expect(detail.files.map((f) => f.url)).toEqual([OWN_FILE]);
         });
@@ -191,7 +191,7 @@ describe("file URLs stay on the e-campus origin", () => {
                 new Response(html, { status: 200 })
             );
 
-            const detail = await crawler.getBoardPostDetail("690359", "1");
+            const detail = await crawler.getBoardPostDetail("442287", "1");
 
             expect(detail.files).toEqual([{ name: "own.pdf", url: OWN_FILE }]);
         });

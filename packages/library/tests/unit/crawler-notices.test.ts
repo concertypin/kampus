@@ -51,13 +51,13 @@ describe("Crawler notices", () => {
         it("should pick the board with the notice icon, not the Q&A or custom boards", async () => {
             respondWith("course.html");
 
-            const board = await crawler.getNoticeBoard("52333");
+            const board = await crawler.getNoticeBoard("365529");
 
-            expect(requestedPaths()).toEqual(["/course/view.php?id=52333"]);
+            expect(requestedPaths()).toEqual(["/course/view.php?id=365529"]);
             expect(board).toEqual({
-                id: "690359",
+                id: "442287",
                 name: "공지사항",
-                url: `${BASE}/mod/ubboard/view.php?id=690359`,
+                url: `${BASE}/mod/ubboard/view.php?id=442287`,
             });
         });
 
@@ -72,9 +72,9 @@ describe("Crawler notices", () => {
                 )
             );
 
-            const board = await crawler.getNoticeBoard("52333");
+            const board = await crawler.getNoticeBoard("365529");
 
-            expect(board?.id).toBe("690359");
+            expect(board?.id).toBe("442287");
         });
 
         it("should fall back to the board name as a last resort", async () => {
@@ -90,15 +90,15 @@ describe("Crawler notices", () => {
                 )
             );
 
-            const board = await crawler.getNoticeBoard("52333");
+            const board = await crawler.getNoticeBoard("365529");
 
-            expect(board?.id).toBe("690359");
+            expect(board?.id).toBe("442287");
         });
 
         it("should return null for a course without a board", async () => {
             respondWith("course-no-board.html");
 
-            expect(await crawler.getNoticeBoard("53692")).toBeNull();
+            expect(await crawler.getNoticeBoard("377555")).toBeNull();
         });
     });
 
@@ -106,21 +106,21 @@ describe("Crawler notices", () => {
         it("should parse the post list of the notice board", async () => {
             respondWith("course.html", "board-list.html");
 
-            const result = await crawler.getNotices("52333");
+            const result = await crawler.getNotices("365529");
 
             expect(requestedPaths()).toEqual([
-                "/course/view.php?id=52333",
-                "/mod/ubboard/view.php?id=690359",
+                "/course/view.php?id=365529",
+                "/mod/ubboard/view.php?id=442287",
             ]);
-            expect(result.courseId).toBe("52333");
-            expect(result.board?.id).toBe("690359");
+            expect(result.courseId).toBe("365529");
+            expect(result.board?.id).toBe("442287");
             expect(result.totalCount).toBe(3);
             expect(result.page).toBe(1);
             expect(result.totalPages).toBe(1);
             expect(result.notices).toHaveLength(3);
             expect(result.notices[0]).toEqual({
-                id: "268544",
-                boardId: "690359",
+                id: "413476",
+                boardId: "442287",
                 number: "3",
                 title: "[공지] 중간고사 안내",
                 author: "Professor A",
@@ -130,19 +130,19 @@ describe("Crawler notices", () => {
                 isNew: true,
                 hasAttachment: true,
                 isSecret: false,
-                url: `${BASE}/mod/ubboard/article.php?id=690359&bwid=268544`,
+                url: `${BASE}/mod/ubboard/article.php?id=442287&bwid=413476`,
             });
         });
 
         it("should read flags and view counts per row", async () => {
             respondWith("course.html", "board-list.html");
 
-            const { notices } = await crawler.getNotices("52333");
+            const { notices } = await crawler.getNotices("365529");
 
             expect(notices.map((n) => n.id)).toEqual([
-                "268544",
-                "266792",
-                "262071",
+                "413476",
+                "408664",
+                "395920",
             ]);
             expect(notices.map((n) => n.isNew)).toEqual([true, false, false]);
             expect(notices.map((n) => n.hasAttachment)).toEqual([
@@ -157,9 +157,9 @@ describe("Crawler notices", () => {
         it("should return no notices for an empty board", async () => {
             respondWith("course.html", "board-empty.html");
 
-            const result = await crawler.getNotices("53472");
+            const result = await crawler.getNotices("374621");
 
-            expect(result.board?.id).toBe("690359");
+            expect(result.board?.id).toBe("442287");
             expect(result.notices).toEqual([]);
             expect(result.totalCount).toBe(0);
             expect(result.totalPages).toBe(1);
@@ -168,10 +168,10 @@ describe("Crawler notices", () => {
         it("should return a null board without fetching a board page for a course without one", async () => {
             respondWith("course-no-board.html");
 
-            const result = await crawler.getNotices("53692");
+            const result = await crawler.getNotices("377555");
 
             expect(result).toEqual({
-                courseId: "53692",
+                courseId: "377555",
                 board: null,
                 notices: [],
                 totalCount: 0,
@@ -195,7 +195,7 @@ describe("Crawler notices", () => {
                 false,
             ]);
             expect(result.notices[0]).toMatchObject({
-                id: "265820",
+                id: "403135",
                 number: "",
                 title: "원격수업의 학습활동 시간 인정 기준 안내",
                 hasAttachment: true,
@@ -216,7 +216,7 @@ describe("Crawler notices", () => {
             ]);
             expect(result.page).toBe(2);
             expect(result.notices.at(-1)?.url).toBe(
-                `${BASE}/mod/ubboard/article.php?id=1&bwid=259915`
+                `${BASE}/mod/ubboard/article.php?id=1&bwid=385066`
             );
         });
 
@@ -245,11 +245,11 @@ describe("Crawler notices", () => {
                 "/mod/ubboard/view.php?id=1&page=2",
             ]);
             expect(result.notices.map((n) => n.id)).toEqual([
-                "265820",
-                "266781",
-                "261483",
+                "403135",
+                "408653",
+                "391898",
                 "",
-                "259915",
+                "385066",
             ]);
             expect(result.notices.filter((n) => n.isPinned)).toHaveLength(1);
             expect(result.totalCount).toBe(4);
@@ -261,7 +261,7 @@ describe("Crawler notices", () => {
             // keeps its "Notice" icon but exposes no link, hence no id.
             const hidePinned = (page: string): string => {
                 const hidden = page.replace(
-                    /<a href="[^"]*bwid=265820">[^<]*<\/a>/,
+                    /<a href="[^"]*bwid=403135">[^<]*<\/a>/,
                     '<span class="secret">This is a hidden post.</span>'
                 );
                 expect(hidden).not.toBe(page);
@@ -279,11 +279,11 @@ describe("Crawler notices", () => {
                 result.notices.map((n) => [n.id, n.isPinned, n.isSecret])
             ).toEqual([
                 ["", true, true],
-                ["266781", false, false],
-                ["261483", false, false],
+                ["408653", false, false],
+                ["391898", false, false],
                 // The ordinary hidden post of page 2 is a different post
                 ["", false, true],
-                ["259915", false, false],
+                ["385066", false, false],
             ]);
         });
 
@@ -304,15 +304,15 @@ describe("Crawler notices", () => {
         it("should parse the post body, metadata and attachments", async () => {
             respondWith("course.html", "article.html");
 
-            const detail = await crawler.getNoticeDetail("52333", "268544");
+            const detail = await crawler.getNoticeDetail("365529", "413476");
 
             expect(requestedPaths()).toEqual([
-                "/course/view.php?id=52333",
-                "/mod/ubboard/article.php?id=690359&bwid=268544",
+                "/course/view.php?id=365529",
+                "/mod/ubboard/article.php?id=442287&bwid=413476",
             ]);
             expect(detail).toEqual({
-                id: "268544",
-                boardId: "690359",
+                id: "413476",
+                boardId: "442287",
                 title: "[공지] 중간고사 안내",
                 author: "Professor A",
                 date: "2026-10-12 09:40",
@@ -326,10 +326,10 @@ describe("Crawler notices", () => {
                 files: [
                     {
                         name: "sample.pdf",
-                        url: `${BASE}/pluginfile.php?forcedownload=1&file=%2F100000%2Fmod_ubboard%2Fattachment%2F268544%2Fsample.pdf`,
+                        url: `${BASE}/pluginfile.php?forcedownload=1&file=%2F100000%2Fmod_ubboard%2Fattachment%2F413476%2Fsample.pdf`,
                     },
                 ],
-                url: `${BASE}/mod/ubboard/article.php?id=690359&bwid=268544`,
+                url: `${BASE}/mod/ubboard/article.php?id=442287&bwid=413476`,
             });
         });
 
@@ -348,7 +348,7 @@ describe("Crawler notices", () => {
                 )
             );
 
-            const detail = await crawler.getBoardPostDetail("690359", "7");
+            const detail = await crawler.getBoardPostDetail("442287", "7");
 
             expect(detail.files).toEqual([
                 {
@@ -365,17 +365,17 @@ describe("Crawler notices", () => {
         it("should throw with the site's reason when the post does not exist", async () => {
             respondWith("course.html", "article-missing.html");
 
-            await expect(crawler.getNoticeDetail("52333", "1")).rejects.toThrow(
-                "No registered post."
-            );
+            await expect(
+                crawler.getNoticeDetail("365529", "1")
+            ).rejects.toThrow("No registered post.");
         });
 
         it("should throw when the course has no notice board", async () => {
             respondWith("course-no-board.html");
 
-            await expect(crawler.getNoticeDetail("53692", "1")).rejects.toThrow(
-                "공지사항 게시판을 찾을 수 없습니다"
-            );
+            await expect(
+                crawler.getNoticeDetail("377555", "1")
+            ).rejects.toThrow("공지사항 게시판을 찾을 수 없습니다");
             expect(mockFetch).toHaveBeenCalledTimes(1);
         });
     });

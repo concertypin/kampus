@@ -29,7 +29,7 @@ function fixture(name: string): string {
  * `<body>` as the site renders it on the view page of quiz `cmid`. The
  * captures below hold the main region only, so the attributes are put back
  * here. Confirmed by a read-only request to the live site (2026-10-14,
- * quiz 709855): `<body id="page-mod-quiz-view" class="... cmid-709855 ...">`.
+ * quiz 491165): `<body id="page-mod-quiz-view" class="... cmid-491165 ...">`.
  */
 function asQuizPage(page: string, cmid: string): string {
     return page.replace(
@@ -39,10 +39,10 @@ function asQuizPage(page: string, cmid: string): string {
 }
 
 /** Live captures (main region only, session data stripped). */
-const VIEW_NOT_STARTED = asQuizPage(fixture("view_not_started.html"), "709855");
+const VIEW_NOT_STARTED = asQuizPage(fixture("view_not_started.html"), "491165");
 const VIEW_CLOSED_NO_ATTEMPT = asQuizPage(
     fixture("view_closed_no_attempt.html"),
-    "705568"
+    "487947"
 );
 const QUIZ_INDEX = fixture("index.html");
 const COURSE_VIEW = fixture("course_view.html");
@@ -76,7 +76,7 @@ const FINISHED_ROW = `<tr class="lastrow">
 <td class="cell c2 lastcol" style="text-align:center;"><a title="Review your responses to this attempt" href="https://ecampus.kangnam.ac.kr/mod/quiz/review.php?attempt=1">Review</a></td>
 </tr>`;
 
-const BACK_TO_COURSE_BOX = `<div class="box quizattempt"><p>No more attempts are allowed</p><div class="continuebutton"><form method="get" action="https://ecampus.kangnam.ac.kr/course/view.php"><div><input type="submit" value="Back to the course" /><input type="hidden" name="id" value="53380" /></div></form></div></div></div>
+const BACK_TO_COURSE_BOX = `<div class="box quizattempt"><p>No more attempts are allowed</p><div class="continuebutton"><form method="get" action="https://ecampus.kangnam.ac.kr/course/view.php"><div><input type="submit" value="Back to the course" /><input type="hidden" name="id" value="373565" /></div></form></div></div></div>
 </div></body></html>`;
 
 /** Submitted quiz, one attempt allowed: history table + "Back to the course". */
@@ -112,10 +112,10 @@ describe("Crawler quizzes", () => {
         it("reports 'not_started' for an open quiz without attempts", async () => {
             mockFetch.mockResolvedValueOnce(html(VIEW_NOT_STARTED));
 
-            const quiz = await crawler.getQuizDetail("709855");
+            const quiz = await crawler.getQuizDetail("491165");
 
             expect(quiz).toMatchObject({
-                id: "709855",
+                id: "491165",
                 name: "퀴즈_4차",
                 attemptsAllowed: "1",
                 openedAt: "2026-10-13 09:00",
@@ -128,7 +128,7 @@ describe("Crawler quizzes", () => {
         it("reports 'not_started' for a closed quiz that was never attempted", async () => {
             mockFetch.mockResolvedValueOnce(html(VIEW_CLOSED_NO_ATTEMPT));
 
-            const quiz = await crawler.getQuizDetail("705568");
+            const quiz = await crawler.getQuizDetail("487947");
 
             expect(quiz.attemptStatus).toBe("not_started");
             // "This quiz closed on <date>" must not leak the "on" prefix.
@@ -138,7 +138,7 @@ describe("Crawler quizzes", () => {
         it("reports 'finished' for a submitted quiz whose history table sits outside the button box", async () => {
             mockFetch.mockResolvedValueOnce(html(viewFinished()));
 
-            const quiz = await crawler.getQuizDetail("709855");
+            const quiz = await crawler.getQuizDetail("491165");
 
             expect(quiz.attemptStatus).toBe("finished");
             expect(quiz.name).toBe("퀴즈_4차");
@@ -154,7 +154,7 @@ describe("Crawler quizzes", () => {
                 )
             );
 
-            const quiz = await crawler.getQuizDetail("709855");
+            const quiz = await crawler.getQuizDetail("491165");
 
             expect(quiz.attemptStatus).toBe("finished");
         });
@@ -181,7 +181,7 @@ describe("Crawler quizzes", () => {
                 )
             );
 
-            const quiz = await crawler.getQuizDetail("709855");
+            const quiz = await crawler.getQuizDetail("491165");
 
             expect(quiz.attemptStatus).toBe("in_progress");
         });
@@ -201,7 +201,7 @@ describe("Crawler quizzes", () => {
                 )
             );
 
-            const quiz = await crawler.getQuizDetail("705568");
+            const quiz = await crawler.getQuizDetail("487947");
 
             expect(quiz.attemptStatus).toBe("abandoned");
         });
@@ -209,10 +209,10 @@ describe("Crawler quizzes", () => {
         it("reports 'unavailable' when a quiz past its availability window redirects to the course page", async () => {
             mockFetch.mockResolvedValueOnce(html(COURSE_VIEW));
 
-            const quiz = await crawler.getQuizDetail("699361");
+            const quiz = await crawler.getQuizDetail("462341");
 
             expect(quiz).toMatchObject({
-                id: "699361",
+                id: "462341",
                 name: "퀴즈_2차",
                 closedAt: "21 September 2026, 23:55 PM",
                 attemptStatus: "unavailable",
@@ -227,7 +227,7 @@ describe("Crawler quizzes", () => {
                 )
             );
 
-            await expect(crawler.getQuizDetail("699395")).rejects.toThrow(
+            await expect(crawler.getQuizDetail("472336")).rejects.toThrow(
                 "Invalid course module ID"
             );
         });
@@ -254,53 +254,53 @@ describe("Crawler quizzes", () => {
         }
 
         it("takes each closed quiz's cmid from its own module, not the preceding activity", async () => {
-            mockSite({ "709855": VIEW_NOT_STARTED });
+            mockSite({ "491165": VIEW_NOT_STARTED });
 
-            const quizzes = await crawler.getQuizzes("53380");
+            const quizzes = await crawler.getQuizzes("373565");
 
-            // The VODs right before each quiz are module-691640/699395/704386;
+            // The VODs right before each quiz are module-447552/472336/483931;
             // those must never be reported as quiz ids.
             expect(
                 quizzes.map((q) => [q.id, q.name, q.week.split(" ")[0]])
             ).toEqual([
-                ["691631", "퀴즈_1차", "1회차"],
-                ["699361", "퀴즈_2차", "2회차"],
-                ["704394", "퀴즈_3차", "3회차"],
-                ["709855", "퀴즈_4차", "4회차"],
+                ["447543", "퀴즈_1차", "1회차"],
+                ["462341", "퀴즈_2차", "2회차"],
+                ["483939", "퀴즈_3차", "3회차"],
+                ["491165", "퀴즈_4차", "4회차"],
             ]);
             expect(quizzes[1]?.closesAt).toBe("21 September 2026, 23:55 PM");
         });
 
         it("reports the attempt status of every quiz", async () => {
-            mockSite({ "709855": viewFinished() });
+            mockSite({ "491165": viewFinished() });
 
-            const quizzes = await crawler.getQuizzes("53380");
+            const quizzes = await crawler.getQuizzes("373565");
 
             expect(quizzes.map((q) => [q.id, q.attemptStatus])).toEqual([
-                ["691631", "unavailable"],
-                ["699361", "unavailable"],
-                ["704394", "unavailable"],
-                ["709855", "finished"],
+                ["447543", "unavailable"],
+                ["462341", "unavailable"],
+                ["483939", "unavailable"],
+                ["491165", "finished"],
             ]);
         });
 
         it("only requests the view page of quizzes that are still reachable", async () => {
-            mockSite({ "709855": VIEW_NOT_STARTED });
+            mockSite({ "491165": VIEW_NOT_STARTED });
 
-            await crawler.getQuizzes("53380");
+            await crawler.getQuizzes("373565");
 
             const viewRequests = mockFetch.mock.calls
                 .map(([url]) => requestPath(url))
                 .filter((url) => url.startsWith("/mod/quiz/view.php"));
-            expect(viewRequests).toEqual(["/mod/quiz/view.php?id=709855"]);
+            expect(viewRequests).toEqual(["/mod/quiz/view.php?id=491165"]);
         });
 
         it("falls back to 'unknown' when a quiz page cannot be loaded", async () => {
             mockSite({});
 
-            const quizzes = await crawler.getQuizzes("53380");
+            const quizzes = await crawler.getQuizzes("373565");
 
-            expect(quizzes.find((q) => q.id === "709855")?.attemptStatus).toBe(
+            expect(quizzes.find((q) => q.id === "491165")?.attemptStatus).toBe(
                 "unknown"
             );
         });
@@ -450,7 +450,7 @@ describe("Crawler quizzes", () => {
         it("getQuizDetail reports a quiz past its window as closed", async () => {
             mockFetch.mockResolvedValueOnce(html(COURSE_VIEW));
 
-            const quiz = await crawler.getQuizDetail("699361");
+            const quiz = await crawler.getQuizDetail("462341");
 
             expect(quiz).toMatchObject({
                 closedAt: "21 September 2026, 23:55 PM",
@@ -461,7 +461,7 @@ describe("Crawler quizzes", () => {
         it("getQuizDetail reports an open quiz page as available", async () => {
             mockFetch.mockResolvedValueOnce(html(VIEW_NOT_STARTED));
 
-            const quiz = await crawler.getQuizDetail("709855");
+            const quiz = await crawler.getQuizDetail("491165");
 
             expect(quiz.availability).toBe("available");
             expect(quiz.availabilityInfo).toBe("");
@@ -524,7 +524,7 @@ describe("Crawler quizzes", () => {
                     html(viewWithState(stateHtml, lang === "ko"))
                 );
 
-                const quiz = await crawler.getQuizDetail("705568");
+                const quiz = await crawler.getQuizDetail("487947");
 
                 expect(quiz.attemptStatus).toBe(expected);
             }
@@ -535,7 +535,7 @@ describe("Crawler quizzes", () => {
                 html(viewWithState("Abgegeben?", false))
             );
 
-            const quiz = await crawler.getQuizDetail("705568");
+            const quiz = await crawler.getQuizDetail("487947");
 
             expect(quiz.attemptStatus).toBe("unknown");
         });
@@ -557,7 +557,7 @@ describe("Crawler quizzes", () => {
                     html(viewWithState(state, false))
                 );
 
-                const quiz = await crawler.getQuizDetail("705568");
+                const quiz = await crawler.getQuizDetail("487947");
 
                 expect(quiz.attemptStatus).toBe("unknown");
             }
@@ -574,7 +574,7 @@ describe("Crawler quizzes", () => {
                 )
             );
 
-            const quiz = await crawler.getQuizDetail("705568");
+            const quiz = await crawler.getQuizDetail("487947");
 
             expect(quiz.attemptStatus).toBe("unknown");
         });
@@ -596,7 +596,7 @@ describe("Crawler quizzes", () => {
                     )
                 );
 
-                const quiz = await crawler.getQuizDetail("705568");
+                const quiz = await crawler.getQuizDetail("487947");
 
                 expect(quiz.attemptStatus).toBe("unknown");
             }
@@ -613,7 +613,7 @@ describe("Crawler quizzes", () => {
                 )
             );
 
-            const quiz = await crawler.getQuizDetail("705568");
+            const quiz = await crawler.getQuizDetail("487947");
 
             expect(quiz.attemptStatus).toBe("abandoned");
         });
@@ -631,7 +631,7 @@ describe("Crawler quizzes", () => {
                 )
             );
 
-            const quiz = await crawler.getQuizDetail("709855");
+            const quiz = await crawler.getQuizDetail("491165");
 
             expect(quiz.attemptStatus).toBe("in_progress");
         });
@@ -654,7 +654,7 @@ describe("Crawler quizzes", () => {
                 )
             );
 
-            await expect(crawler.getQuizDetail("709855")).rejects.toThrow(
+            await expect(crawler.getQuizDetail("491165")).rejects.toThrow(
                 "page-site-index"
             );
         });
@@ -664,17 +664,17 @@ describe("Crawler quizzes", () => {
                 html(asQuizPage(VIEW_NOT_STARTED, "111111"))
             );
 
-            await expect(crawler.getQuizDetail("709855")).rejects.toThrow(
-                "Failed to load quiz 709855"
+            await expect(crawler.getQuizDetail("491165")).rejects.toThrow(
+                "Failed to load quiz 491165"
             );
         });
 
         it("accepts the quiz view page that names this quiz on <body>", async () => {
             mockFetch.mockResolvedValueOnce(
-                html(asQuizPage(VIEW_NOT_STARTED, "709855"))
+                html(asQuizPage(VIEW_NOT_STARTED, "491165"))
             );
 
-            const quiz = await crawler.getQuizDetail("709855");
+            const quiz = await crawler.getQuizDetail("491165");
 
             expect(quiz.attemptStatus).toBe("not_started");
             expect(quiz.name).not.toBe("");
@@ -691,22 +691,22 @@ describe("Crawler quizzes", () => {
             ],
             [
                 "a body without the page id",
-                '<body class="path-mod cmid-709855">',
+                '<body class="path-mod cmid-491165">',
             ],
             [
                 "the page of another quiz",
-                '<body id="page-mod-quiz-view" class="path-mod cmid-709856">',
+                '<body id="page-mod-quiz-view" class="path-mod cmid-491166">',
             ],
             [
                 "another page type of this module",
-                '<body id="page-mod-quiz-attempt" class="path-mod cmid-709855">',
+                '<body id="page-mod-quiz-attempt" class="path-mod cmid-491165">',
             ],
         ])("throws for %s", async (_label, body) => {
             mockFetch.mockResolvedValueOnce(
                 html(BARE.replace(/<body[^>]*>/, body))
             );
 
-            await expect(crawler.getQuizDetail("709855")).rejects.toThrow(
+            await expect(crawler.getQuizDetail("491165")).rejects.toThrow(
                 "the response is not the page of this quiz"
             );
         });
@@ -714,7 +714,7 @@ describe("Crawler quizzes", () => {
         it("compares the module id as a number", async () => {
             mockFetch.mockResolvedValueOnce(html(VIEW_NOT_STARTED));
 
-            const quiz = await crawler.getQuizDetail("0709855");
+            const quiz = await crawler.getQuizDetail("0491165");
 
             expect(quiz.attemptStatus).toBe("not_started");
         });

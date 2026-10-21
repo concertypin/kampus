@@ -431,7 +431,7 @@ describe("Crawler course activities", () => {
                 )
             );
 
-            await expect(crawler.getResourceDetail("699395")).rejects.toThrow(
+            await expect(crawler.getResourceDetail("472336")).rejects.toThrow(
                 "Invalid course module ID"
             );
         });

@@ -43,7 +43,7 @@ describe("vod list command", () => {
     it("should call getVods with courseId", async () => {
         getVodsMock.mockResolvedValue([
             {
-                id: "698813",
+                id: "456468",
                 week: 2,
                 weekTitle: "2주차",
                 name: "2주차 강의1",
@@ -53,7 +53,7 @@ describe("vod list command", () => {
                 status: "O",
                 watchedTime: "26:20 View: 3 time(s)",
                 requiredTime: "23:00",
-                url: "https://ecampus.kangnam.ac.kr/mod/vod/view.php?id=698813",
+                url: "https://ecampus.kangnam.ac.kr/mod/vod/view.php?id=456468",
             },
         ]);
 
@@ -65,11 +65,11 @@ describe("vod list command", () => {
             .spyOn(process.stdout, "write")
             .mockImplementation(() => true);
 
-        await program.parseAsync(["vod", "list", "52328"], {
+        await program.parseAsync(["vod", "list", "365524"], {
             from: "user",
         });
 
-        expect(getVodsMock).toHaveBeenCalledWith("52328");
+        expect(getVodsMock).toHaveBeenCalledWith("365524");
 
         stdoutSpy.mockRestore();
     });
@@ -85,11 +85,11 @@ describe("vod list command", () => {
             .spyOn(process.stdout, "write")
             .mockImplementation(() => true);
 
-        await program.parseAsync(["vod", "list", "52328"], {
+        await program.parseAsync(["vod", "list", "365524"], {
             from: "user",
         });
 
-        expect(getVodsMock).toHaveBeenCalledWith("52328");
+        expect(getVodsMock).toHaveBeenCalledWith("365524");
         stdoutSpy.mockRestore();
     });
 
@@ -108,7 +108,7 @@ describe("vod list command", () => {
             .mockImplementation(() => true);
 
         try {
-            await program.parseAsync(["vod", "list", "52328"], {
+            await program.parseAsync(["vod", "list", "365524"], {
                 from: "user",
             });
         } catch {

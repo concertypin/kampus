@@ -77,9 +77,9 @@ export const downloadCommand = new Command("download")
         "after",
         `
 ${pc.bold("예시:")}
-  ${pc.green("kampus syllabus download 53472")}
-  ${pc.green("kampus syllabus download 53472 -o ./syllabus.pdf")}
-  ${pc.green("kampus syllabus download 53472 -o ./my-folder")}
+  ${pc.green("kampus syllabus download <courseId>")}
+  ${pc.green("kampus syllabus download <courseId> -o ./syllabus.pdf")}
+  ${pc.green("kampus syllabus download <courseId> -o ./my-folder")}
 `
     )
     .action(async (courseId: string, options: { output?: string }) => {

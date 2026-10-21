@@ -48,7 +48,7 @@ describe("quizzes read command", () => {
     });
 
     const sampleQuiz: QuizDetail = {
-        id: "677443",
+        id: "433393",
         name: "퀴즈_6차",
         description: "이것은 테스트 퀴즈입니다.",
         attemptsAllowed: "1",
@@ -74,16 +74,16 @@ describe("quizzes read command", () => {
             .spyOn(process.stdout, "write")
             .mockImplementation(() => true);
 
-        await program.parseAsync(["quizzes", "read", "677443"], {
+        await program.parseAsync(["quizzes", "read", "433393"], {
             from: "user",
         });
 
-        expect(getQuizDetailMock).toHaveBeenCalledWith("677443");
+        expect(getQuizDetailMock).toHaveBeenCalledWith("433393");
         expect(consoleLogSpy).toHaveBeenCalledWith(
             expect.stringContaining("퀴즈_6차")
         );
         expect(consoleLogSpy).toHaveBeenCalledWith(
-            expect.stringContaining("677443")
+            expect.stringContaining("433393")
         );
 
         consoleLogSpy.mockRestore();
@@ -107,7 +107,7 @@ describe("quizzes read command", () => {
             .spyOn(process.stdout, "write")
             .mockImplementation(() => true);
 
-        await program.parseAsync(["quizzes", "read", "677443"], {
+        await program.parseAsync(["quizzes", "read", "433393"], {
             from: "user",
         });
 
@@ -136,7 +136,7 @@ describe("quizzes read command", () => {
             .spyOn(process.stdout, "write")
             .mockImplementation(() => true);
 
-        await program.parseAsync(["quizzes", "read", "677443"], {
+        await program.parseAsync(["quizzes", "read", "433393"], {
             from: "user",
         });
 
@@ -165,7 +165,7 @@ describe("quizzes read command", () => {
             .spyOn(process.stdout, "write")
             .mockImplementation(() => true);
 
-        await program.parseAsync(["quizzes", "read", "677443"], {
+        await program.parseAsync(["quizzes", "read", "433393"], {
             from: "user",
         });
 
@@ -199,7 +199,7 @@ describe("quizzes read command", () => {
                 .spyOn(process.stdout, "write")
                 .mockImplementation(() => true);
 
-            await program.parseAsync(["quizzes", "read", "677443"], {
+            await program.parseAsync(["quizzes", "read", "433393"], {
                 from: "user",
             });
 
@@ -232,7 +232,7 @@ describe("quizzes read command", () => {
             .spyOn(process.stdout, "write")
             .mockImplementation(() => true);
 
-        await program.parseAsync(["quizzes", "read", "677443"], {
+        await program.parseAsync(["quizzes", "read", "433393"], {
             from: "user",
         });
 
@@ -261,7 +261,7 @@ describe("quizzes read command", () => {
             .spyOn(process.stdout, "write")
             .mockImplementation(() => true);
 
-        await program.parseAsync(["quizzes", "read", "677443"], {
+        await program.parseAsync(["quizzes", "read", "433393"], {
             from: "user",
         });
 
@@ -290,7 +290,7 @@ describe("quizzes read command", () => {
             .mockImplementation(() => true);
 
         try {
-            await program.parseAsync(["quizzes", "read", "677443"], {
+            await program.parseAsync(["quizzes", "read", "433393"], {
                 from: "user",
             });
         } catch {
@@ -318,7 +318,7 @@ describe("quizzes read command", () => {
             .mockImplementation(() => true);
 
         try {
-            await program.parseAsync(["quizzes", "read", "677443"], {
+            await program.parseAsync(["quizzes", "read", "433393"], {
                 from: "user",
             });
         } catch {

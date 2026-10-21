@@ -13,9 +13,9 @@ export const syllabusCommand = new Command("syllabus")
         "after",
         `
 ${pc.bold("예시:")}
-  ${pc.green("kampus syllabus 53472")}
-  ${pc.green("kampus syllabus download 53472")}
-  ${pc.green("kampus syllabus download 53472 -o ./downloads")}
+  ${pc.green("kampus syllabus <courseId>")}
+  ${pc.green("kampus syllabus download <courseId>")}
+  ${pc.green("kampus syllabus download <courseId> -o ./downloads")}
 `
     )
     .action(

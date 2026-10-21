@@ -67,10 +67,10 @@ export const downloadCommand = new Command("download")
         "after",
         `
 ${pc.bold("예시:")}
-  ${pc.green("kampus resources download 658841")}
-  ${pc.green("kampus resources download 658841 -o ./my-files")}
-  ${pc.green("kampus resources download 658841 --course 52333")}
-  ${pc.green("kampus resources download 658841 --type folder")}
+  ${pc.green("kampus resources download <resourceId>")}
+  ${pc.green("kampus resources download <resourceId> -o ./my-files")}
+  ${pc.green("kampus resources download <resourceId> --course <courseId>")}
+  ${pc.green("kampus resources download <resourceId> --type folder")}
 `
     )
     .action(async (resourceId: string, options: DownloadOptions) => {

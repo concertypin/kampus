@@ -17,10 +17,10 @@ ${pc.bold("서브커맨드:")}
   ${pc.green("read <courseId> <postId>")}   공지사항 본문/첨부파일 조회
 
 ${pc.bold("예시:")}
-  ${pc.green("kampus notices 52333")}
-  ${pc.green("kampus notices 52333 --json")}
-  ${pc.green("kampus notices list 52333 --all")}
-  ${pc.green("kampus notices read 52333 268544")}
+  ${pc.green("kampus notices <courseId>")}
+  ${pc.green("kampus notices <courseId> --json")}
+  ${pc.green("kampus notices list <courseId> --all")}
+  ${pc.green("kampus notices read <courseId> <postId>")}
 `
     )
     .action(async (courseId: string | undefined, options: ListOptions) => {

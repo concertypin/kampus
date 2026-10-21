@@ -21,8 +21,8 @@ export const readCommand = new Command("read")
         "after",
         `
 ${pc.bold("예시:")}
-  ${pc.green("kampus notices read 52333 268544")}
-  ${pc.green("kampus notices read 52333 268544 --json")}
+  ${pc.green("kampus notices read <courseId> <postId>")}
+  ${pc.green("kampus notices read <courseId> <postId> --json")}
 `
     )
     .action(

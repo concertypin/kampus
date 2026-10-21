@@ -12,7 +12,7 @@ export const readCommand = new Command("read")
         "after",
         `
 ${pc.bold("예시:")}
-  ${pc.green("kampus quizzes read 677443")}
+  ${pc.green("kampus quizzes read <quizId>")}
 `
     )
     .action(async (quizId: string) => {

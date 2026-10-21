@@ -17,7 +17,7 @@ export const readCommand = new Command("read")
         "after",
         `
 ${pc.bold("예시:")}
-  ${pc.green("kampus assignments read 674989")}
+  ${pc.green("kampus assignments read <assignmentId>")}
 `
     )
     .action(async (assignmentId: string) => {

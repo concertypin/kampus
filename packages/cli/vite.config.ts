@@ -3,7 +3,7 @@
 import { type UserConfig, defineConfig } from "vite";
 import { fileURLToPath } from "node:url";
 
-import { version } from "./package.json" with { type: "json" };
+import packageJson from "./package.json" with { type: "json" };
 type Config = Required<UserConfig>;
 
 const resolve: Config["resolve"] = {
@@ -63,7 +63,7 @@ export default defineConfig({
         ssr: true,
     },
     define: {
-        "import.meta.env.VITE_VERSION": JSON.stringify(version),
+        "import.meta.env.VITE_VERSION": JSON.stringify(packageJson.version),
     },
     clearScreen: false,
     plugins: [shebangPlugin()],

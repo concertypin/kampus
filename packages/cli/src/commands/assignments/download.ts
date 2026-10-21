@@ -20,8 +20,8 @@ export const downloadCommand = new Command("download")
         "after",
         `
 ${pc.bold("예시:")}
-  ${pc.green("kampus assignments download 658841")}
-  ${pc.green("kampus assignments download 658841 -o ./my-files")}
+  ${pc.green("kampus assignments download <assignmentId>")}
+  ${pc.green("kampus assignments download <assignmentId> -o ./my-files")}
 `
     )
     .action(async (assignmentId: string, options: { output: string }) => {

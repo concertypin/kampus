@@ -37,8 +37,8 @@ const mockCrawler = fragile<Crawler>({
 });
 
 const notice: NoticeItem = {
-    id: "268544",
-    boardId: "690359",
+    id: "413476",
+    boardId: "442287",
     number: "",
     title: "[공지] 중간고사 안내",
     author: "Professor A",
@@ -48,16 +48,16 @@ const notice: NoticeItem = {
     isNew: false,
     hasAttachment: true,
     isSecret: false,
-    url: "https://ecampus.kangnam.ac.kr/mod/ubboard/article.php?id=690359&bwid=268544",
+    url: "https://ecampus.kangnam.ac.kr/mod/ubboard/article.php?id=442287&bwid=413476",
 };
 
 function listOf(notices: NoticeItem[]): NoticeList {
     return {
-        courseId: "52333",
+        courseId: "365529",
         board: {
-            id: "690359",
+            id: "442287",
             name: "공지사항",
-            url: "https://ecampus.kangnam.ac.kr/mod/ubboard/view.php?id=690359",
+            url: "https://ecampus.kangnam.ac.kr/mod/ubboard/view.php?id=442287",
         },
         notices,
         totalCount: notices.length,
@@ -67,7 +67,7 @@ function listOf(notices: NoticeItem[]): NoticeList {
 }
 
 const noBoard: NoticeList = {
-    courseId: "53692",
+    courseId: "377555",
     board: null,
     notices: [],
     totalCount: 0,
@@ -125,20 +125,20 @@ describe("notices list command", () => {
     it("should request page 1 by default", async () => {
         getNoticesMock.mockResolvedValue(listOf([]));
 
-        await run(["notices", "list", "52333"]);
+        await run(["notices", "list", "365529"]);
 
-        expect(getNoticesMock).toHaveBeenCalledWith("52333", { page: 1 });
+        expect(getNoticesMock).toHaveBeenCalledWith("365529", { page: 1 });
     });
 
     it("should list notices with the bare `notices <courseId>` form", async () => {
         getNoticesMock.mockResolvedValue(listOf([notice]));
 
-        await run(["notices", "52333"]);
+        await run(["notices", "365529"]);
 
-        expect(getNoticesMock).toHaveBeenCalledWith("52333", { page: 1 });
+        expect(getNoticesMock).toHaveBeenCalledWith("365529", { page: 1 });
         const out = loggedText(logSpy);
         expect(out).toContain("[공지] 중간고사 안내");
-        expect(out).toContain("268544");
+        expect(out).toContain("413476");
         expect(out).toContain("Professor A");
         expect(out).toContain("2026-10-12");
         expect(out).toContain(notice.url);
@@ -149,24 +149,24 @@ describe("notices list command", () => {
     it("should pass --page through", async () => {
         getNoticesMock.mockResolvedValue(listOf([]));
 
-        await run(["notices", "list", "52333", "--page", "3"]);
+        await run(["notices", "list", "365529", "--page", "3"]);
 
-        expect(getNoticesMock).toHaveBeenCalledWith("52333", { page: 3 });
+        expect(getNoticesMock).toHaveBeenCalledWith("365529", { page: 3 });
     });
 
     it("should request every page with --all", async () => {
         getNoticesMock.mockResolvedValue(listOf([]));
 
-        await run(["notices", "52333", "--all"]);
+        await run(["notices", "365529", "--all"]);
 
-        expect(getNoticesMock).toHaveBeenCalledWith("52333", { all: true });
+        expect(getNoticesMock).toHaveBeenCalledWith("365529", { all: true });
     });
 
     it("should print only parseable JSON with --json", async () => {
         const result = listOf([notice]);
         getNoticesMock.mockResolvedValue(result);
 
-        await run(["notices", "list", "52333", "--json"]);
+        await run(["notices", "list", "365529", "--json"]);
 
         expect(logSpy).toHaveBeenCalledTimes(1);
         expect(JSON.parse(String(logSpy.mock.calls[0]?.[0]))).toEqual(result);
@@ -175,7 +175,7 @@ describe("notices list command", () => {
     it("should accept --json on the bare form", async () => {
         getNoticesMock.mockResolvedValue(noBoard);
 
-        await run(["notices", "53692", "--json"]);
+        await run(["notices", "377555", "--json"]);
 
         expect(JSON.parse(String(logSpy.mock.calls[0]?.[0]))).toEqual(noBoard);
         expect(process.exitCode).toBeUndefined();
@@ -184,7 +184,7 @@ describe("notices list command", () => {
     it("should report a course without a notice board without failing", async () => {
         getNoticesMock.mockResolvedValue(noBoard);
 
-        await run(["notices", "list", "53692"]);
+        await run(["notices", "list", "377555"]);
 
         expect(loggedText(logSpy)).toContain("공지사항 게시판이 없습니다");
         expect(process.exitCode).toBeUndefined();
@@ -193,7 +193,7 @@ describe("notices list command", () => {
     it("should report an empty board", async () => {
         getNoticesMock.mockResolvedValue(listOf([]));
 
-        await run(["notices", "list", "52333"]);
+        await run(["notices", "list", "365529"]);
 
         expect(loggedText(logSpy)).toContain("등록된 공지사항이 없습니다");
     });
@@ -201,7 +201,7 @@ describe("notices list command", () => {
     it("should set a failing exit code on errors", async () => {
         getNoticesMock.mockRejectedValue(new Error("Network error"));
 
-        await run(["notices", "list", "52333"]);
+        await run(["notices", "list", "365529"]);
 
         expect(loggedText(errorSpy)).toContain("Network error");
         expect(process.exitCode).toBe(1);
@@ -220,13 +220,13 @@ describe("notices list command", () => {
             getNoticesMock.mockResolvedValue({
                 ...listOf([hostile]),
                 board: {
-                    id: "690359",
+                    id: "442287",
                     name: `공지${ESC}[5m사항`,
-                    url: "https://ecampus.kangnam.ac.kr/mod/ubboard/view.php?id=690359",
+                    url: "https://ecampus.kangnam.ac.kr/mod/ubboard/view.php?id=442287",
                 },
             });
 
-            await run(["notices", "list", "52333"]);
+            await run(["notices", "list", "365529"]);
 
             const out = loggedText(logSpy);
             for (const forbidden of [
@@ -248,7 +248,7 @@ describe("notices list command", () => {
         it("keeps the values intact, escaped, with --json", async () => {
             getNoticesMock.mockResolvedValue(listOf([hostile]));
 
-            await run(["notices", "list", "52333", "--json"]);
+            await run(["notices", "list", "365529", "--json"]);
 
             const printed = String(logSpy.mock.calls[0]?.[0]);
             // Nothing raw reaches the terminal: JSON escapes control chars

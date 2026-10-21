@@ -55,7 +55,7 @@ const mockCrawler = fragile<Crawler>({
 });
 
 const sampleAssignment: AssignmentDetail = {
-    id: "658841",
+    id: "421889",
     name: "과제 #1",
     description: "테스트 과제",
     submissionStatus: "Submitted for grading",
@@ -144,7 +144,7 @@ describe("assignments download command", () => {
             .mockImplementation(() => true);
 
         try {
-            await program.parseAsync(["assignments", "download", "658841"], {
+            await program.parseAsync(["assignments", "download", "421889"], {
                 from: "user",
             });
         } catch {
@@ -177,7 +177,7 @@ describe("assignments download command", () => {
             .spyOn(process.stdout, "write")
             .mockImplementation(() => true);
 
-        await program.parseAsync(["assignments", "download", "658841"], {
+        await program.parseAsync(["assignments", "download", "421889"], {
             from: "user",
         });
 
@@ -205,7 +205,7 @@ describe("assignments download command", () => {
             .mockImplementation(() => true);
 
         try {
-            await program.parseAsync(["assignments", "download", "658841"], {
+            await program.parseAsync(["assignments", "download", "421889"], {
                 from: "user",
             });
         } catch {
@@ -233,7 +233,7 @@ describe("assignments download command", () => {
             .mockImplementation(() => true);
 
         try {
-            await program.parseAsync(["assignments", "download", "658841"], {
+            await program.parseAsync(["assignments", "download", "421889"], {
                 from: "user",
             });
         } catch {
@@ -256,7 +256,7 @@ describe("assignments download command", () => {
         );
         vi.stubGlobal("fetch", fetchMock);
 
-        const { logs } = await run(["658841", "-o", out]);
+        const { logs } = await run(["421889", "-o", out]);
 
         expect(fetchMock).toHaveBeenCalledTimes(1);
         expect(readdirSync(out)).toEqual(["report.zip"]);
@@ -287,7 +287,7 @@ describe("assignments download command", () => {
             )
         );
 
-        const { logs } = await run(["674989", "-o", out]);
+        const { logs } = await run(["426033", "-o", out]);
 
         expect(readdirSync(out).sort()).toEqual(
             ["과제.hwp", "과제 (2).hwp", "_AUX.hwp", "a_b.hwp"].sort()
@@ -329,7 +329,7 @@ describe("assignments download command", () => {
             )
         );
 
-        const { logs, stdout } = await run(["674989", "-o", out]);
+        const { logs, stdout } = await run(["426033", "-o", out]);
 
         expect(readdirSync(out)).toEqual(["[2Jreportfdp.exe"]);
         const printed = stdout + logs.join("\n");
@@ -354,7 +354,7 @@ describe("assignments download command", () => {
         // sub-folder does not exist yet.
         const outsideDir = join(out, "new", "folder");
         expect(outsideDir.startsWith(process.cwd())).toBe(false);
-        const { logs, stdout } = await run(["658841", "-o", outsideDir]);
+        const { logs, stdout } = await run(["421889", "-o", outsideDir]);
 
         expect(stdout).not.toContain("Path traversal");
         expect(fetchMock).toHaveBeenCalled();

@@ -41,6 +41,6 @@
     },
     "dependencies": {
         "consola": "^3.4.2",
-        "linkedom": "^0.18.12"
+        "linkedom": "0.18.12"
     }
 }

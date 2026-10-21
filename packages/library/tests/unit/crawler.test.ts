@@ -203,7 +203,7 @@ describe("Crawler", () => {
                 </div>`;
 
             return `
-                <html><body id="page-mod-quiz-view" class="path-mod path-mod-quiz cmid-677443">
+                <html><body id="page-mod-quiz-view" class="path-mod path-mod-quiz cmid-433393">
                     <div role="main">
                         <h2>${name}</h2>
                     </div>
@@ -223,9 +223,9 @@ describe("Crawler", () => {
                 new Response(buildQuizHtml(), { status: 200 })
             );
 
-            const quiz = await crawler.getQuizDetail("677443");
+            const quiz = await crawler.getQuizDetail("433393");
 
-            expect(quiz.id).toBe("677443");
+            expect(quiz.id).toBe("433393");
             expect(quiz.name).toBe("퀴즈_6차");
             expect(quiz.description).toBe("이것은 테스트 퀴즈입니다.");
             expect(quiz.attemptsAllowed).toBe("1");
@@ -242,7 +242,7 @@ describe("Crawler", () => {
                 })
             );
 
-            const quiz = await crawler.getQuizDetail("677443");
+            const quiz = await crawler.getQuizDetail("433393");
             expect(quiz.attemptStatus).toBe("unknown");
         });
 
@@ -257,7 +257,7 @@ describe("Crawler", () => {
                 )
             );
 
-            const quiz = await crawler.getQuizDetail("677443");
+            const quiz = await crawler.getQuizDetail("433393");
             // textContent should return decoded text
             expect(quiz.description).toContain("O");
             expect(quiz.description).toContain("X");
@@ -275,7 +275,7 @@ describe("Crawler", () => {
                 )
             );
 
-            const quiz = await crawler.getQuizDetail("677443");
+            const quiz = await crawler.getQuizDetail("433393");
             expect(quiz.attemptsAllowed).toBe("");
             expect(quiz.openedAt).toBe("");
             expect(quiz.closedAt).toBe("");
@@ -297,7 +297,7 @@ describe("Crawler", () => {
                 )
             );
 
-            const quiz = await crawler.getQuizDetail("677443");
+            const quiz = await crawler.getQuizDetail("433393");
             expect(quiz.closedAt).toBe("2026-05-10 23:55");
             expect(quiz.attemptsAllowed).toBe("2");
             expect(quiz.timeLimit).toBe("1 hour");
@@ -305,7 +305,7 @@ describe("Crawler", () => {
 
         it("should use fallback h2 selector when [role='main'] h2 is missing", async () => {
             const html = `
-                <html><body id="page-mod-quiz-view" class="path-mod cmid-677443">
+                <html><body id="page-mod-quiz-view" class="path-mod cmid-433393">
                     <h2>Fallback Quiz Name</h2>
                     <div id="intro"><div class="no-overflow">desc</div></div>
                     <div class="quizinfo"></div>
@@ -315,7 +315,7 @@ describe("Crawler", () => {
                 new Response(html, { status: 200 })
             );
 
-            const quiz = await crawler.getQuizDetail("677443");
+            const quiz = await crawler.getQuizDetail("433393");
             expect(quiz.name).toBe("Fallback Quiz Name");
         });
 
@@ -379,7 +379,7 @@ describe("Crawler", () => {
                 : "";
 
             return `
-                <html><body id="page-mod-quiz-view" class="path-mod path-mod-quiz cmid-677443">
+                <html><body id="page-mod-quiz-view" class="path-mod path-mod-quiz cmid-433393">
                     <div role="main">
                         <h2>${name}</h2>
                     </div>
@@ -415,9 +415,9 @@ describe("Crawler", () => {
                 new Response(buildAssignmentHtml(), { status: 200 })
             );
 
-            const assignment = await crawler.getAssignmentDetail("674989");
+            const assignment = await crawler.getAssignmentDetail("426033");
 
-            expect(assignment.id).toBe("674989");
+            expect(assignment.id).toBe("426033");
             expect(assignment.name).toBe("11주차 활동보고서");
             expect(assignment.description).toBe("이것은 테스트 과제입니다.");
             expect(assignment.submissionStatus).toBe("No attempt");
@@ -458,7 +458,7 @@ describe("Crawler", () => {
                 )
             );
 
-            const assignment = await crawler.getAssignmentDetail("658841");
+            const assignment = await crawler.getAssignmentDetail("421889");
 
             expect(assignment.submissionStatus).toBe("Submitted for grading");
             expect(assignment.gradingStatus).toBe("Graded");
@@ -472,7 +472,7 @@ describe("Crawler", () => {
                 })
             );
 
-            const assignment = await crawler.getAssignmentDetail("674989");
+            const assignment = await crawler.getAssignmentDetail("426033");
             expect(assignment.description).toBe("");
         });
 
@@ -489,7 +489,7 @@ describe("Crawler", () => {
                 new Response(html, { status: 200 })
             );
 
-            const assignment = await crawler.getAssignmentDetail("674989");
+            const assignment = await crawler.getAssignmentDetail("426033");
             expect(assignment.submissionStatus).toBe("");
             expect(assignment.gradingStatus).toBe("");
             expect(assignment.dueDate).toBe("");
@@ -509,7 +509,7 @@ describe("Crawler", () => {
                 new Response(html, { status: 200 })
             );
 
-            const assignment = await crawler.getAssignmentDetail("674989");
+            const assignment = await crawler.getAssignmentDetail("426033");
             expect(assignment.name).toBe("Fallback Assignment");
         });
 
@@ -524,7 +524,7 @@ describe("Crawler", () => {
                 )
             );
 
-            const assignment = await crawler.getAssignmentDetail("674989");
+            const assignment = await crawler.getAssignmentDetail("426033");
             expect(assignment.description).toContain("O");
             expect(assignment.description).not.toContain("&#160;");
             expect(assignment.description).not.toContain("&lt;");
@@ -545,7 +545,7 @@ describe("Crawler", () => {
                 )
             );
 
-            const assignment = await crawler.getAssignmentDetail("658841");
+            const assignment = await crawler.getAssignmentDetail("421889");
             expect(assignment.files).toHaveLength(1);
             expect(assignment.files[0]?.name).toBe("202500041.zip");
             expect(assignment.files[0]?.url).toContain("pluginfile.php");
@@ -567,7 +567,7 @@ describe("Crawler", () => {
                 )
             );
 
-            const assignment = await crawler.getAssignmentDetail("674989");
+            const assignment = await crawler.getAssignmentDetail("426033");
             expect(assignment.submissionStatus).toBe("Submitted for grading");
             expect(assignment.dueDate).toBe("2026-05-20 00:00");
             // Fields not in the table should remain empty
@@ -652,7 +652,7 @@ describe("Crawler", () => {
                 )
             );
 
-            const resources = await crawler.getResources("49341");
+            const resources = await crawler.getResources("342309");
 
             expect(resources).toHaveLength(2);
             expect(resources[0]?.name).toBe("1주차 강의노트.pdf");
@@ -678,7 +678,7 @@ describe("Crawler", () => {
                 )
             );
 
-            const resources = await crawler.getResources("49341");
+            const resources = await crawler.getResources("342309");
             expect(resources).toHaveLength(0);
         });
 
@@ -693,7 +693,7 @@ describe("Crawler", () => {
                 new Response(buildCourseHtml([week, week]), { status: 200 })
             );
 
-            const resources = await crawler.getResources("49341");
+            const resources = await crawler.getResources("342309");
 
             expect(resources.map((r) => r.id)).toEqual(["700"]);
         });
@@ -721,7 +721,7 @@ describe("Crawler", () => {
             ];
 
             return `
-                <html>${viewBody(opts?.cmid ?? "658841")}
+                <html>${viewBody(opts?.cmid ?? "421889")}
                     <div role="main">
                         <h2>${name}</h2>
                     </div>
@@ -737,7 +737,7 @@ describe("Crawler", () => {
 
         it("should parse resource detail with file links", async () => {
             const html = `
-                <html>${viewBody("658841")}
+                <html>${viewBody("421889")}
                     <div role="main">
                         <h2>1주차_강의노트.pdf</h2>
                     </div>
@@ -751,9 +751,9 @@ describe("Crawler", () => {
                 new Response(html, { status: 200 })
             );
 
-            const resource = await crawler.getResourceDetail("658841");
+            const resource = await crawler.getResourceDetail("421889");
 
-            expect(resource.id).toBe("658841");
+            expect(resource.id).toBe("421889");
             expect(resource.name).toBe("1주차_강의노트.pdf");
             expect(resource.description).toContain("1주차 강의 자료입니다.");
             expect(resource.files).toHaveLength(1);
@@ -765,7 +765,7 @@ describe("Crawler", () => {
             mockFetch.mockResolvedValueOnce(
                 new Response(
                     buildResourceHtml({
-                        cmid: "658842",
+                        cmid: "421890",
                         name: "복수 파일 자료",
                         description: "여러 파일이 있는 자료입니다.",
                         fileLinks: [
@@ -783,7 +783,7 @@ describe("Crawler", () => {
                 )
             );
 
-            const resource = await crawler.getResourceDetail("658842");
+            const resource = await crawler.getResourceDetail("421890");
 
             expect(resource.files).toHaveLength(2);
             expect(resource.files[0]?.name).toBe("lecture.pdf");
@@ -793,14 +793,14 @@ describe("Crawler", () => {
         it("should handle resource detail with no file links", async () => {
             mockFetch.mockResolvedValueOnce(
                 new Response(
-                    buildResourceHtml({ cmid: "658843", fileLinks: [] }),
+                    buildResourceHtml({ cmid: "421891", fileLinks: [] }),
                     {
                         status: 200,
                     }
                 )
             );
 
-            const resource = await crawler.getResourceDetail("658843");
+            const resource = await crawler.getResourceDetail("421891");
 
             expect(resource.name).toBe("1주차_강의노트.pdf");
             expect(resource.files).toHaveLength(0);
@@ -832,7 +832,7 @@ describe("Crawler", () => {
                 })
             );
 
-            const resource = await crawler.getResourceDetail("700001");
+            const resource = await crawler.getResourceDetail("479444");
 
             // The file itself must not be requested just to list it
             expect(mockFetch).toHaveBeenCalledTimes(1);
@@ -850,7 +850,7 @@ describe("Crawler", () => {
                 })
             );
 
-            const resource = await crawler.getResourceDetail("700002");
+            const resource = await crawler.getResourceDetail("479445");
 
             expect(resource.files).toHaveLength(1);
             expect(resource.files[0]?.url).toBe(PLUGINFILE_URL);
@@ -868,7 +868,7 @@ describe("Crawler", () => {
                 })
             );
 
-            const resource = await crawler.getResourceDetail("700003");
+            const resource = await crawler.getResourceDetail("479446");
 
             expect(resource.files).toEqual([
                 { name: "(1주차) 강의 자료.pdf", url: PLUGINFILE_URL },
@@ -877,7 +877,7 @@ describe("Crawler", () => {
 
         it("should list every file of a multi-file page with decoded, absolute URLs", async () => {
             const html = `
-                <html>${viewBody("700004")}
+                <html>${viewBody("479447")}
                     <div role="main">
                         <h2>3주차 자료 모음</h2>
                         <div id="intro"><p>설명</p></div>
@@ -896,7 +896,7 @@ describe("Crawler", () => {
                 })
             );
 
-            const resource = await crawler.getResourceDetail("700004");
+            const resource = await crawler.getResourceDetail("479447");
 
             expect(resource.name).toBe("3주차 자료 모음");
             // The name is the stored file name from the URL, not the link
@@ -929,12 +929,12 @@ describe("Crawler", () => {
                 })
             );
 
-            const resource = await crawler.getResourceDetail("700005");
+            const resource = await crawler.getResourceDetail("479448");
 
             expect(resource.files).toEqual([
                 {
                     name: "강의 자료.pdf",
-                    url: "https://ecampus.kangnam.ac.kr/mod/ubfile/view.php?id=700005",
+                    url: "https://ecampus.kangnam.ac.kr/mod/ubfile/view.php?id=479448",
                 },
             ]);
             expect(resource.name).toBe("강의 자료.pdf");
@@ -950,12 +950,12 @@ describe("Crawler", () => {
                     status: 303,
                     headers: {
                         Location:
-                            "https://ecampus.kangnam.ac.kr/mod/ubfile/other.php?id=700006",
+                            "https://ecampus.kangnam.ac.kr/mod/ubfile/other.php?id=479449",
                     },
                 })
             );
 
-            await expect(crawler.getResourceDetail("700006")).rejects.toThrow(
+            await expect(crawler.getResourceDetail("479449")).rejects.toThrow(
                 "/mod/ubfile/other.php"
             );
             // The other page is not even requested
@@ -966,14 +966,14 @@ describe("Crawler", () => {
             mockFetch.mockResolvedValueOnce(
                 new Response(
                     buildResourceHtml({
-                        cmid: "658844",
+                        cmid: "421892",
                         description: "O&#160;X 퀴즈입니다. &lt;참고&gt;",
                     }),
                     { status: 200 }
                 )
             );
 
-            const resource = await crawler.getResourceDetail("658844");
+            const resource = await crawler.getResourceDetail("421892");
 
             expect(resource.description).toContain("O");
             expect(resource.description).not.toContain("&#160;");
@@ -982,7 +982,7 @@ describe("Crawler", () => {
 
         it("should handle missing intro section", async () => {
             const html = `
-                <html>${viewBody("658845")}
+                <html>${viewBody("421893")}
                     <div role="main">
                         <h2>자료명만 있는 경우</h2>
                     </div>
@@ -992,7 +992,7 @@ describe("Crawler", () => {
                 new Response(html, { status: 200 })
             );
 
-            const resource = await crawler.getResourceDetail("658845");
+            const resource = await crawler.getResourceDetail("421893");
 
             expect(resource.name).toBe("자료명만 있는 경우");
             expect(resource.description).toBe("");
@@ -1006,7 +1006,7 @@ describe("Crawler", () => {
                 <ul>
                     <li class="expand">
                         <ul>
-                            <li><a href="#" class="submenu-syllabus" onclick="window.open('https://app.kangnam.ac.kr/knumis/sbr/syllabus2026.jsp?schl_year=2026&schl_smst=2&subj_numb=NE21705&lctr_clas=00&empl_numb=103609&rz=xyz','copyright','width=850'); return false;">Syllabus</a></li>
+                            <li><a href="#" class="submenu-syllabus" onclick="window.open('https://app.kangnam.ac.kr/knumis/sbr/syllabus2026.jsp?schl_year=2026&schl_smst=2&subj_numb=AB12345&lctr_clas=00&empl_numb=383965&rz=xyz','copyright','width=850'); return false;">Syllabus</a></li>
                         </ul>
                     </li>
                 </ul>
@@ -1019,14 +1019,14 @@ describe("Crawler", () => {
                     new Response(sampleCourseHtml, { status: 200 })
                 );
 
-                const params = await crawler.getSyllabusParams("53472");
+                const params = await crawler.getSyllabusParams("374621");
 
                 expect(params).toEqual({
                     year: "2026",
                     smst: "2",
-                    subjNumb: "NE21705",
+                    subjNumb: "AB12345",
                     lctrClas: "00",
-                    emplNumb: "103609",
+                    emplNumb: "383965",
                 });
             });
 
@@ -1038,7 +1038,7 @@ describe("Crawler", () => {
                 );
 
                 await expect(
-                    crawler.getSyllabusParams("50949")
+                    crawler.getSyllabusParams("356209")
                 ).rejects.toThrow("강의계획서 링크를 찾을 수 없습니다");
             });
 
@@ -1053,7 +1053,7 @@ describe("Crawler", () => {
                 );
 
                 await expect(
-                    crawler.getSyllabusParams("53472")
+                    crawler.getSyllabusParams("374621")
                 ).rejects.toThrow("강의계획서 파라미터가 불완전합니다");
             });
         });
@@ -1081,7 +1081,7 @@ describe("Crawler", () => {
                     const dest =
                         "c:/Users/PC/Projects/VSCode/kampus/.tmp/test_download.pdf";
                     const saved = await crawler.downloadSyllabusPdf(
-                        "53472",
+                        "374621",
                         dest
                     );
                     expect(saved).toContain("test_download.pdf");
@@ -1147,7 +1147,7 @@ describe("Crawler", () => {
                 new Response(buildCourseWithVodsHtml(), { status: 200 })
             );
 
-            const vods = await crawler.getVods("52328");
+            const vods = await crawler.getVods("365524");
             expect(vods).toHaveLength(1);
             expect(vods[0]?.id).toBe("1001");
             expect(vods[0]?.name).toBe("1주차 1차시 영상");

@@ -40,8 +40,8 @@ export const downloadCommand = new Command("download")
         "after",
         `
 ${pc.bold("예시:")}
-  ${pc.green("kampus vod download 698813")}
-  ${pc.green("kampus vod download 698813 -o lecture1.mkv")}
+  ${pc.green("kampus vod download <vodId>")}
+  ${pc.green("kampus vod download <vodId> -o lecture1.mkv")}
 `
     )
     .action(async (vodId: string, options: { output?: string }) => {

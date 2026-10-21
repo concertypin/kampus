@@ -84,10 +84,10 @@ describe("courses list command", () => {
     it("should display courses", async () => {
         getCoursesMock.mockResolvedValue([
             {
-                id: "50541",
+                id: "348460",
                 name: "CS101",
                 type: "regular",
-                url: "/course/50541",
+                url: "/course/348460",
             },
         ]);
 

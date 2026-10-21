@@ -341,7 +341,7 @@ describe("requests of the crawler never leave the e-campus origin", () => {
             stubFetch(() => redirect(`${ORIGIN}/login/index.php`, 302));
 
             // getResourceDetail inspects redirects itself
-            await expect(crawler.getResourceDetail("700001")).rejects.toThrow(
+            await expect(crawler.getResourceDetail("479444")).rejects.toThrow(
                 "Session expired and no stored credentials"
             );
         });

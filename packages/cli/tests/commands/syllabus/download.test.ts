@@ -47,7 +47,7 @@ describe("syllabus download command", () => {
 
         const cmd = new Command();
         cmd.addCommand(downloadCommand);
-        await cmd.parseAsync(["node", "test", "download", "53472"]);
+        await cmd.parseAsync(["node", "test", "download", "374621"]);
 
         expect(process.exitCode).toBe(1);
         expect(console.error).toHaveBeenCalledWith(
@@ -59,17 +59,17 @@ describe("syllabus download command", () => {
     it("should download syllabus PDF with default path", async () => {
         getSessionMock.mockResolvedValue("MoodleSession=abc1234");
         downloadSyllabusPdfMock.mockResolvedValue(
-            "./downloads/53472_강의계획서.pdf"
+            "./downloads/374621_강의계획서.pdf"
         );
 
         const cmd = new Command();
         cmd.addCommand(downloadCommand);
-        await cmd.parseAsync(["node", "test", "download", "53472"]);
+        await cmd.parseAsync(["node", "test", "download", "374621"]);
 
         expect(process.exitCode).toBeUndefined();
         expect(downloadSyllabusPdfMock).toHaveBeenCalledWith(
-            "53472",
-            expect.stringContaining("53472_강의계획서.pdf")
+            "374621",
+            expect.stringContaining("374621_강의계획서.pdf")
         );
         expect(console.log).toHaveBeenCalledWith(
             expect.stringContaining("강의계획서 다운로드 완료")
@@ -86,14 +86,14 @@ describe("syllabus download command", () => {
             "node",
             "test",
             "download",
-            "53472",
+            "374621",
             "-o",
             "./custom/my_plan.pdf",
         ]);
 
         expect(process.exitCode).toBeUndefined();
         expect(downloadSyllabusPdfMock).toHaveBeenCalledWith(
-            "53472",
+            "374621",
             "./custom/my_plan.pdf"
         );
     });
@@ -117,17 +117,17 @@ describe("syllabus download command", () => {
     it("should execute download when syllabus root command is invoked with courseId", async () => {
         getSessionMock.mockResolvedValue("MoodleSession=abc1234");
         downloadSyllabusPdfMock.mockResolvedValue(
-            "./downloads/53472_강의계획서.pdf"
+            "./downloads/374621_강의계획서.pdf"
         );
 
         const cmd = new Command();
         cmd.addCommand(syllabusCommand);
-        await cmd.parseAsync(["node", "test", "syllabus", "53472"]);
+        await cmd.parseAsync(["node", "test", "syllabus", "374621"]);
 
         expect(process.exitCode).toBeUndefined();
         expect(downloadSyllabusPdfMock).toHaveBeenCalledWith(
-            "53472",
-            expect.stringContaining("53472_강의계획서.pdf")
+            "374621",
+            expect.stringContaining("374621_강의계획서.pdf")
         );
     });
 });

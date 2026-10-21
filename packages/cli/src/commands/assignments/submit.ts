@@ -49,9 +49,9 @@ ${pc.bold("경고 (Warning):")}
   제출 후 반드시 브라우저나 타 도구를 통해 제출 상태를 교차 검증해야 합니다.
 
 ${pc.bold("예시:")}
-  ${pc.green("kampus assignments submit 660941 ./HW03.hwp")}
-  ${pc.green("kampus assignments submit 660941 ./HW03.hwp --visible")}
-  ${pc.green("kampus assignments submit 660941 ./HW03.hwp --yes")}
+  ${pc.green("kampus assignments submit <assignmentId> ./HW03.hwp")}
+  ${pc.green("kampus assignments submit <assignmentId> ./HW03.hwp --visible")}
+  ${pc.green("kampus assignments submit <assignmentId> ./HW03.hwp --yes")}
 `
     )
     .action(

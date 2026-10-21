@@ -57,11 +57,11 @@ describe("resources list command", () => {
             .spyOn(process.stdout, "write")
             .mockImplementation(() => true);
 
-        await program.parseAsync(["resources", "list", "50541"], {
+        await program.parseAsync(["resources", "list", "348460"], {
             from: "user",
         });
 
-        expect(getResourcesMock).toHaveBeenCalledWith("50541");
+        expect(getResourcesMock).toHaveBeenCalledWith("348460");
 
         stdoutSpy.mockRestore();
     });
@@ -80,7 +80,7 @@ describe("resources list command", () => {
             .spyOn(process.stdout, "write")
             .mockImplementation(() => true);
 
-        await program.parseAsync(["resources", "list", "50541"], {
+        await program.parseAsync(["resources", "list", "348460"], {
             from: "user",
         });
 
@@ -105,11 +105,11 @@ describe("resources list command", () => {
             .spyOn(process.stdout, "write")
             .mockImplementation(() => true);
 
-        await program.parseAsync(["resources", "list", "50541"], {
+        await program.parseAsync(["resources", "list", "348460"], {
             from: "user",
         });
 
-        expect(getResourcesMock).toHaveBeenCalledWith("50541");
+        expect(getResourcesMock).toHaveBeenCalledWith("348460");
 
         stdoutSpy.mockRestore();
     });
@@ -231,7 +231,7 @@ describe("resources list command", () => {
             .spyOn(process.stdout, "write")
             .mockImplementation(() => true);
 
-        await program.parseAsync(["resources", "list", "50541"], {
+        await program.parseAsync(["resources", "list", "348460"], {
             from: "user",
         });
 

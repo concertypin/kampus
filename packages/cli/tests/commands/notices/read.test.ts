@@ -33,8 +33,8 @@ const mockCrawler = fragile<Crawler>({
 });
 
 const detail: NoticeDetail = {
-    id: "268544",
-    boardId: "690359",
+    id: "413476",
+    boardId: "442287",
     title: "[공지] 중간고사 안내",
     author: "Professor A",
     date: "2026-10-12 09:40",
@@ -46,7 +46,7 @@ const detail: NoticeDetail = {
             url: "https://ecampus.kangnam.ac.kr/pluginfile.php?file=/sample.pdf",
         },
     ],
-    url: "https://ecampus.kangnam.ac.kr/mod/ubboard/article.php?id=690359&bwid=268544",
+    url: "https://ecampus.kangnam.ac.kr/mod/ubboard/article.php?id=442287&bwid=413476",
 };
 
 async function run(args: string[]): Promise<void> {
@@ -95,9 +95,9 @@ describe("notices read command", () => {
     it("should print the post body and attachments", async () => {
         getNoticeDetailMock.mockResolvedValue(detail);
 
-        await run(["notices", "read", "52333", "268544"]);
+        await run(["notices", "read", "365529", "413476"]);
 
-        expect(getNoticeDetailMock).toHaveBeenCalledWith("52333", "268544");
+        expect(getNoticeDetailMock).toHaveBeenCalledWith("365529", "413476");
         const out = loggedText(logSpy);
         expect(out).toContain("[공지] 중간고사 안내");
         expect(out).toContain("2026-10-12 09:40");
@@ -109,7 +109,7 @@ describe("notices read command", () => {
     it("should print only parseable JSON with --json", async () => {
         getNoticeDetailMock.mockResolvedValue(detail);
 
-        await run(["notices", "read", "52333", "268544", "--json"]);
+        await run(["notices", "read", "365529", "413476", "--json"]);
 
         expect(logSpy).toHaveBeenCalledTimes(1);
         expect(JSON.parse(String(logSpy.mock.calls[0]?.[0]))).toEqual(detail);
@@ -120,7 +120,7 @@ describe("notices read command", () => {
             new Error("게시글을 불러올 수 없습니다.")
         );
 
-        await run(["notices", "read", "52333", "1"]);
+        await run(["notices", "read", "365529", "1"]);
 
         expect(loggedText(errorSpy)).toContain("게시글을 불러올 수 없습니다.");
         expect(process.exitCode).toBe(1);
@@ -144,7 +144,7 @@ describe("notices read command", () => {
         it("prints no control, escape or bidi characters in text mode", async () => {
             getNoticeDetailMock.mockResolvedValue(hostile);
 
-            await run(["notices", "read", "52333", "268544"]);
+            await run(["notices", "read", "365529", "413476"]);
 
             const out = loggedText(logSpy);
             for (const forbidden of [
@@ -167,7 +167,7 @@ describe("notices read command", () => {
         it("keeps the values intact, escaped, with --json", async () => {
             getNoticeDetailMock.mockResolvedValue(hostile);
 
-            await run(["notices", "read", "52333", "268544", "--json"]);
+            await run(["notices", "read", "365529", "413476", "--json"]);
 
             const printed = String(logSpy.mock.calls[0]?.[0]);
             expect(printed).not.toContain(ESC);

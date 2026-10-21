@@ -56,11 +56,11 @@ describe("assignments list command", () => {
             .spyOn(process.stdout, "write")
             .mockImplementation(() => true);
 
-        await program.parseAsync(["assignments", "list", "50541"], {
+        await program.parseAsync(["assignments", "list", "348460"], {
             from: "user",
         });
 
-        expect(getAssignmentsMock).toHaveBeenCalledWith("50541");
+        expect(getAssignmentsMock).toHaveBeenCalledWith("348460");
 
         stdoutSpy.mockRestore();
     });
@@ -80,7 +80,7 @@ describe("assignments list command", () => {
             .mockImplementation(() => true);
 
         try {
-            await program.parseAsync(["assignments", "list", "50541"], {
+            await program.parseAsync(["assignments", "list", "348460"], {
                 from: "user",
             });
         } catch {

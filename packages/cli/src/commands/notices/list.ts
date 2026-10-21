@@ -108,9 +108,9 @@ export const listCommand = new Command("list")
         "after",
         `
 ${pc.bold("예시:")}
-  ${pc.green("kampus notices list 52333")}
-  ${pc.green("kampus notices list 52333 --page 2")}
-  ${pc.green("kampus notices list 52333 --all --json")}
+  ${pc.green("kampus notices list <courseId>")}
+  ${pc.green("kampus notices list <courseId> --page 2")}
+  ${pc.green("kampus notices list <courseId> --all --json")}
 `
     )
     .action(

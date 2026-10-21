@@ -49,7 +49,7 @@ describe("assignments read command", () => {
     });
 
     const sampleAssignment: AssignmentDetail = {
-        id: "674989",
+        id: "426033",
         name: "11주차 활동보고서",
         description: "이것은 테스트 과제입니다.",
         submissionStatus: "No attempt",
@@ -74,16 +74,16 @@ describe("assignments read command", () => {
             .spyOn(process.stdout, "write")
             .mockImplementation(() => true);
 
-        await program.parseAsync(["assignments", "read", "674989"], {
+        await program.parseAsync(["assignments", "read", "426033"], {
             from: "user",
         });
 
-        expect(getAssignmentDetailMock).toHaveBeenCalledWith("674989");
+        expect(getAssignmentDetailMock).toHaveBeenCalledWith("426033");
         expect(consoleLogSpy).toHaveBeenCalledWith(
             expect.stringContaining("11주차 활동보고서")
         );
         expect(consoleLogSpy).toHaveBeenCalledWith(
-            expect.stringContaining("674989")
+            expect.stringContaining("426033")
         );
 
         consoleLogSpy.mockRestore();
@@ -104,7 +104,7 @@ describe("assignments read command", () => {
             .spyOn(process.stdout, "write")
             .mockImplementation(() => true);
 
-        await program.parseAsync(["assignments", "read", "674989"], {
+        await program.parseAsync(["assignments", "read", "426033"], {
             from: "user",
         });
 
@@ -133,7 +133,7 @@ describe("assignments read command", () => {
             .spyOn(process.stdout, "write")
             .mockImplementation(() => true);
 
-        await program.parseAsync(["assignments", "read", "674989"], {
+        await program.parseAsync(["assignments", "read", "426033"], {
             from: "user",
         });
 
@@ -163,7 +163,7 @@ describe("assignments read command", () => {
             .mockImplementation(() => true);
 
         try {
-            await program.parseAsync(["assignments", "read", "674989"], {
+            await program.parseAsync(["assignments", "read", "426033"], {
                 from: "user",
             });
         } catch {
@@ -191,7 +191,7 @@ describe("assignments read command", () => {
             .mockImplementation(() => true);
 
         try {
-            await program.parseAsync(["assignments", "read", "674989"], {
+            await program.parseAsync(["assignments", "read", "426033"], {
                 from: "user",
             });
         } catch {
@@ -223,7 +223,7 @@ describe("assignments read command", () => {
             .spyOn(process.stdout, "write")
             .mockImplementation(() => true);
 
-        await program.parseAsync(["assignments", "read", "674989"], {
+        await program.parseAsync(["assignments", "read", "426033"], {
             from: "user",
         });
 
@@ -252,7 +252,7 @@ describe("assignments read command", () => {
             .spyOn(process.stdout, "write")
             .mockImplementation(() => true);
 
-        await program.parseAsync(["assignments", "read", "674989"], {
+        await program.parseAsync(["assignments", "read", "426033"], {
             from: "user",
         });
 
@@ -288,7 +288,7 @@ describe("assignments read command", () => {
             .spyOn(process.stdout, "write")
             .mockImplementation(() => true);
 
-        await program.parseAsync(["assignments", "read", "658841"], {
+        await program.parseAsync(["assignments", "read", "421889"], {
             from: "user",
         });
 
