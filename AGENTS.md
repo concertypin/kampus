@@ -34,7 +34,7 @@ pnpm install
 # Build both packages in correct dependency order
 pnpm build
 
-# Run unit tests for @concertypin/ecampus-crawler (Vitest)
+# Build the library, then run the Vitest suites of both packages
 pnpm test
 
 # Format all files in workspace

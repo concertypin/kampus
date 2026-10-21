@@ -20,7 +20,7 @@
         "format": "prettier --write . --cache --list-different",
         "lint:check": "oxlint .",
         "lint": "oxlint . --fix",
-        "test": "pnpm --filter @concertypin/ecampus-crawler test",
+        "test": "pnpm --filter @concertypin/ecampus-crawler build && pnpm -r test",
         "check": "pnpm run format && pnpm run lint && pnpm run test && git add -u",
         "pre-commit": "pnpm run check",
         "postinstall": "pnpm exec simple-git-hooks"
