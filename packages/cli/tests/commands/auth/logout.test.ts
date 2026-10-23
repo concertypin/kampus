@@ -3,7 +3,8 @@ import { Command } from "commander";
 import { logoutCommand } from "@/commands/auth/logout";
 import { authCommand } from "@/commands/auth/index";
 import type { Crawler, LogLevel } from "@concertypin/ecampus-crawler";
-import { fragile } from "../../utils";
+import { KeychainDeleteError } from "@/credential-storage";
+import { captureOutput, fragile } from "../../utils";
 
 // Mock the crawler module
 vi.mock("@/crawler", () => ({
@@ -61,6 +62,46 @@ describe("auth logout command", () => {
         );
 
         consoleSpy.mockRestore();
+    });
+
+    it("should remove stored credentials and say the keychain entry goes too", async () => {
+        clearSessionMock.mockResolvedValue(undefined);
+        clearCredentialsMock.mockResolvedValue(undefined);
+
+        const program = new Command();
+        program.addCommand(authCommand);
+        program.exitOverride();
+
+        const consoleSpy = vi.spyOn(console, "log");
+        await program.parseAsync(["auth", "logout", "--force"], {
+            from: "user",
+        });
+
+        expect(clearCredentialsMock).toHaveBeenCalled();
+        expect(consoleSpy).toHaveBeenCalledWith(
+            expect.stringContaining("자격 증명 관리자")
+        );
+    });
+
+    it("should report a keychain removal failure and exit non-zero", async () => {
+        clearSessionMock.mockResolvedValue(undefined);
+        clearCredentialsMock.mockRejectedValue(new KeychainDeleteError());
+        const output = captureOutput();
+        const previousExitCode = process.exitCode;
+
+        const program = new Command();
+        program.addCommand(authCommand);
+        program.exitOverride();
+        await program.parseAsync(["auth", "logout", "--force"], {
+            from: "user",
+        });
+        const exitCode = process.exitCode;
+        process.exitCode = previousExitCode;
+
+        expect(exitCode).toBe(1);
+        expect(output.text()).toContain("키체인");
+        expect(output.text()).toContain("삭제하지 못했습니다");
+        expect(output.text()).not.toContain("삭제되었습니다");
     });
 
     it("should cancel without --force when not TTY", async () => {

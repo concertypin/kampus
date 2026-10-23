@@ -1,5 +1,5 @@
 import { describe, expect, it, beforeEach, afterEach } from "vitest";
-import { mkdtemp, rm, access } from "node:fs/promises";
+import { mkdtemp, rm, access, stat } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { FileStorage } from "@/storage/file";
@@ -66,4 +66,18 @@ describe("FileStorage", () => {
         const result = await nestedStorage.get("key");
         expect(result).toBe("value");
     });
+
+    // POSIX permission bits are not meaningful on Windows.
+    it.skipIf(process.platform === "win32")(
+        "should create the directory as 0700 and the file as 0600",
+        async () => {
+            const nestedPath = join(tempDir, "private", "session.json");
+            await new FileStorage(nestedPath).set("key", "value");
+
+            const dirMode = (await stat(join(tempDir, "private"))).mode;
+            const fileMode = (await stat(nestedPath)).mode;
+            expect(dirMode & 0o777).toBe(0o700);
+            expect(fileMode & 0o777).toBe(0o600);
+        }
+    );
 });

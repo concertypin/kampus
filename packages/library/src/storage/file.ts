@@ -38,7 +38,10 @@ export class FileStorage implements SessionStorage {
     private async writeData(data: Record<string, string>): Promise<void> {
         const fs = await import("node:fs/promises");
         const path = await import("node:path");
-        await fs.mkdir(path.dirname(this.filePath), { recursive: true });
+        await fs.mkdir(path.dirname(this.filePath), {
+            recursive: true,
+            mode: 0o700,
+        });
         await fs.writeFile(
             this.filePath,
             JSON.stringify(data, null, 2),

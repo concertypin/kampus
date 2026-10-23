@@ -9,6 +9,7 @@ import {
 } from "./url";
 import type { SessionStorage } from "./storage/storage";
 import { MemoryStorage } from "./storage/memory";
+import { STORAGE_KEYS } from "./storage/keys";
 import { login as authLogin } from "./auth";
 import { AuthError } from "./errors";
 import { getLogger, setLogLevel, type LogLevel } from "./logger";
@@ -1010,22 +1011,22 @@ export class Crawler {
     // ─── Session management ────────────────────────────────────────
 
     async getSession(): Promise<string | undefined> {
-        return this.storage.get("session");
+        return this.storage.get(STORAGE_KEYS.session);
     }
 
     async setSession(session: string): Promise<void> {
-        await this.storage.set("session", session);
+        await this.storage.set(STORAGE_KEYS.session, session);
     }
 
     async clearSession(): Promise<void> {
-        await this.storage.delete("session");
+        await this.storage.delete(STORAGE_KEYS.session);
     }
 
     // ─── Credential management ─────────────────────────────────────
-    // NOTE: Credentials are stored as plain-text JSON in the session
-    // file. The file resides in the user's private home directory with
-    // OS-level access controls (0700-equivalent on Unix, user-only on
-    // Windows). This matches the security model of tools like git-credential-store.
+    // NOTE: The crawler hands the credentials to its SessionStorage as a JSON
+    // string under STORAGE_KEYS.credentials. Where they end up is up to the
+    // storage: FileStorage writes plain text (file mode 0600), while the CLI
+    // routes this key to the Windows Credential Manager.
 
     /**
      * Persist login credentials so the session can be renewed
@@ -1033,7 +1034,7 @@ export class Crawler {
      */
     async saveCredentials(username: string, password: string): Promise<void> {
         await this.storage.set(
-            "credentials",
+            STORAGE_KEYS.credentials,
             JSON.stringify({ username, password })
         );
     }
@@ -1044,7 +1045,7 @@ export class Crawler {
     async getCredentials(): Promise<
         { username: string; password: string } | undefined
     > {
-        const raw = await this.storage.get("credentials");
+        const raw = await this.storage.get(STORAGE_KEYS.credentials);
         if (!raw) return undefined;
         try {
             return JSON.parse(raw) as {
@@ -1058,7 +1059,7 @@ export class Crawler {
 
     /** Remove stored credentials (e.g. on logout). */
     async clearCredentials(): Promise<void> {
-        await this.storage.delete("credentials");
+        await this.storage.delete(STORAGE_KEYS.credentials);
     }
 
     /** Returns true if credentials have been stored. */

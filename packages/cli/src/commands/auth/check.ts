@@ -1,5 +1,5 @@
 import { Command } from "commander";
-import { createCrawler } from "../../crawler.ts";
+import { createCrawler, getCredentialLocation } from "../../crawler.ts";
 import { getLogLevel } from "../../log-level.ts";
 import {
     cr,
@@ -38,6 +38,7 @@ ${pc.bold("예시:")}
                 );
                 process.exitCode = 1;
             }
+            await printCredentialLocation();
         } catch (err: unknown) {
             const message = errorText(err);
             console.error(
@@ -46,3 +47,21 @@ ${pc.bold("예시:")}
             process.exitCode = 1;
         }
     });
+
+const LOCATION_LABELS = {
+    keychain: "OS 키체인 (Windows 자격 증명 관리자)",
+    file: "세션 파일 (평문)",
+    none: "저장된 인증 정보 없음",
+} as const;
+
+/** Prints where the saved credentials live; a failure here never fails the check. */
+async function printCredentialLocation(): Promise<void> {
+    try {
+        const location = await getCredentialLocation();
+        console.log(
+            `${pc.dim("인증 정보 저장 위치:")} ${LOCATION_LABELS[location]}`
+        );
+    } catch {
+        // Informational only.
+    }
+}

@@ -37,6 +37,7 @@ export {
 export { type SessionStorage } from "./storage/storage";
 export { MemoryStorage } from "./storage/memory";
 export { FileStorage } from "./storage/file";
+export { STORAGE_KEYS } from "./storage/keys";
 export { login } from "./auth";
 export { fetchWithBase } from "./client";
 export {

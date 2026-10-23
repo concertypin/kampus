@@ -11,6 +11,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 #### CLI (`@concertypin/kampus`)
 
+- On Windows the saved login credentials are stored in the Windows Credential Manager instead of plain text in `session.json`. Credentials left in the file by earlier versions are moved to the Credential Manager automatically on first use (verified by a read-back before the file copy is removed). If the Credential Manager cannot be used, the CLI falls back to the file and prints one warning per process
+- Linux and macOS are unchanged: credentials stay in `session.json`, now in a directory created with mode 0700 (the file is 0600)
 - Text output no longer prints raw server-provided text: control and escape characters, invisible characters and bidirectional overrides are removed from every value of `assignments`, `quizzes`, `messages`, `courses`, `attendance`, `resources`, `vod` and `syllabus` output and from every printed error message (JSON output is unchanged)
 - `vod download` prints only the last 10 lines of ffmpeg's log on failure, sanitised
 
@@ -20,6 +22,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `getSyllabusParams` and `downloadSyllabusPdf` no longer put the course page's `onclick` text or the reporting server's response into the error message; both are logged at `debug`
 - The logger replaces control, escape, invisible and bidirectional-override characters with U+FFFD, so debug output cannot drive the terminal; the syllabus "incomplete parameters" error names the missing parameters instead of echoing their values
 - `downloadSyllabusPdf` percent-encodes the file id in the download URL
+
+### Changed
+
+#### CLI (`@concertypin/kampus`)
+
+- New dependency `@napi-rs/keyring` (native addon with prebuilt per-platform binaries, no install script); it is only loaded on Windows
+- `auth check` shows where the credentials are stored (OS keychain, session file or none); `auth logout` also removes the Credential Manager entry, and reports a failure (non-zero exit) if that entry cannot be removed
+- The keychain credential storage verifies each write by reading it back, prefers a newer file copy over a stale keychain entry, and serializes its operations within a process
+
+#### Library (`@concertypin/ecampus-crawler`)
+
+- New export `STORAGE_KEYS` (`session`, `credentials`): the keys the crawler uses in its `SessionStorage`; `FileStorage` creates the directory with mode 0700
 
 ### Fixed
 
