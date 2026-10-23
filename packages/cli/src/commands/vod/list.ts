@@ -12,6 +12,15 @@ import {
     stripEmoji,
 } from "../lib/format.ts";
 
+/**
+ * "N주차 (title)", or just "N주차" when the section title is empty or "-"
+ * (a placeholder some courses leave in unused weeks).
+ */
+function formatWeek(week: number, weekTitle: string): string {
+    const title = plainText(weekTitle).trim();
+    return title && title !== "-" ? `${week}주차 (${title})` : `${week}주차`;
+}
+
 export const listCommand = new Command("list")
     .description("특정 과목의 VOD 강의 목록과 출석/학습 인정기간을 조회합니다")
     .argument("<courseId>", "과목 ID (courses list 명령어로 확인)")
@@ -57,7 +66,9 @@ ${pc.bold("예시:")}
                 }
 
                 console.log(separator(40));
-                console.log(`${pc.bold("주차")}: ${plainText(v.weekTitle)}`);
+                console.log(
+                    `${pc.bold("주차")}: ${formatWeek(v.week, v.weekTitle)}`
+                );
                 console.log(`${pc.bold("강의명")}: ${plainText(v.name)}`);
                 console.log(`${pc.bold("ID")}: ${pc.dim(plainText(v.id))}`);
                 if (v.duration) {

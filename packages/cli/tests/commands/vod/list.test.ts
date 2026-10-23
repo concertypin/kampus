@@ -74,6 +74,65 @@ describe("vod list command", () => {
         stdoutSpy.mockRestore();
     });
 
+    describe("week line", () => {
+        function vod(week: number, weekTitle: string): VodItem {
+            return {
+                id: "456468",
+                week,
+                weekTitle,
+                name: "lecture",
+                duration: "26:19",
+                period: "",
+                status: "O",
+                watchedTime: "-",
+                requiredTime: "",
+                url: "",
+            };
+        }
+
+        async function weekLines(items: VodItem[]): Promise<string[]> {
+            getVodsMock.mockResolvedValue(items);
+            const logSpy = vi
+                .spyOn(console, "log")
+                .mockImplementation(() => {});
+            const program = new Command();
+            program.addCommand(vodCommand);
+            program.exitOverride();
+            await program.parseAsync(["vod", "list", "365524"], {
+                from: "user",
+            });
+            return logSpy.mock.calls
+                .map((call) => String(call[0]))
+                .filter((line) => line.includes("주차"));
+        }
+
+        it("prints the week number followed by the section title", async () => {
+            const lines = await weekLines([
+                vod(4, "4주차 (보충)"),
+                vod(1, "1Week [02 September - 08 September]"),
+            ]);
+
+            expect(lines).toHaveLength(2);
+            expect(lines[0]).toContain("4주차 (4주차 (보충))");
+            expect(lines[1]).toContain(
+                "1주차 (1Week [02 September - 08 September])"
+            );
+        });
+
+        it("omits the title when it is - or empty", async () => {
+            const lines = await weekLines([
+                vod(6, "-"),
+                vod(7, ""),
+                vod(8, "  "),
+            ]);
+
+            expect(lines).toHaveLength(3);
+            expect(lines[0]).toMatch(/6주차$/);
+            expect(lines[1]).toMatch(/7주차$/);
+            expect(lines[2]).toMatch(/8주차$/);
+        });
+    });
+
     it("should handle empty VOD list", async () => {
         getVodsMock.mockResolvedValue([]);
 

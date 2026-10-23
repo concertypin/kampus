@@ -39,6 +39,10 @@ export interface Course {
 }
 
 export interface AttendanceItem {
+    /**
+     * The week number from the first cell of the attendance table. It equals
+     * the course's section number, so it matches {@link VodItem.week}.
+     */
     week: number;
     title: string;
     requiredTime: string;
@@ -260,6 +264,11 @@ export interface SyllabusParams {
 
 export interface VodItem {
     id: string;
+    /**
+     * The week the VOD belongs to: the course section number (`section-N` is
+     * week N), not a number read from the title. Matches
+     * {@link AttendanceItem.week}.
+     */
     week: number;
     weekTitle: string;
     name: string;
@@ -381,6 +390,64 @@ function getCourseSections(doc: Document): Element[] {
         const id = section.getAttribute("id");
         return !id || lastIndexById.get(id) === index;
     });
+}
+
+/**
+ * The section number of a course-page section, read from its `section-N` id,
+ * or `undefined` when the id is missing or has another shape.
+ *
+ * In a weeks-format course the section number is the week number, whatever the
+ * section is titled: titles may be `-`, a date range ("1Week [02 September -
+ * 08 September]"), "midterm", and so on, and a session counter such as "3회차"
+ * only counts lectures inside the week.
+ */
+function sectionNumber(section: Element): number | undefined {
+    const match = (section.getAttribute("id") ?? "").match(/^section-(\d+)$/);
+    return match?.[1] ? parseInt(match[1], 10) : undefined;
+}
+
+/**
+ * Pairs the VODs of one week with that week's attendance rows (same order as
+ * `names`; `undefined` where a VOD has no row). The attendance table has no
+ * module id, so rows are matched by title: exact first, then one containing
+ * the other. Only when titles settle nothing and the week has as many rows as
+ * VODs are the rest paired by position. With different counts a VOD without a
+ * title match gets no row rather than a wrong one.
+ */
+function matchAttendance(
+    names: string[],
+    rows: AttendanceItem[]
+): (AttendanceItem | undefined)[] {
+    const titles = rows.map((row) => normalizeText(row.title));
+    const wanted = names.map((name) => normalizeText(name));
+    const result: (AttendanceItem | undefined)[] = wanted.map(() => undefined);
+    const used = new Set<number>();
+
+    const pair = (accepts: (title: string, name: string) => boolean): void => {
+        wanted.forEach((name, vodIndex) => {
+            if (result[vodIndex]) return;
+            const rowIndex = titles.findIndex(
+                (title, i) => !used.has(i) && title && accepts(title, name)
+            );
+            if (rowIndex < 0) return;
+            used.add(rowIndex);
+            result[vodIndex] = rows[rowIndex];
+        });
+    };
+
+    pair((title, name) => title === name);
+    pair(
+        (title, name) =>
+            name !== "" && (title.includes(name) || name.includes(title))
+    );
+
+    if (names.length === rows.length) {
+        const free = rows.filter((_, i) => !used.has(i));
+        for (let i = 0; i < result.length && free.length > 0; i++) {
+            if (!result[i]) result[i] = free.shift();
+        }
+    }
+    return result;
 }
 
 /**
@@ -1455,8 +1522,12 @@ export class Crawler {
             } else {
                 const td = tds.shift();
                 if (td) {
+                    // The first cell of a week's first row is the week number
+                    // (the course's `section-N`), repeated for every VOD of
+                    // the week through its rowspan. Weeks without a VOD still
+                    // get one row with empty cells.
                     const text = td.textContent || "";
-                    const match = text.match(/(\d+)/);
+                    const match = text.match(/^\s*(\d+)\s*$/);
                     currentWeek =
                         match && match[1] ? parseInt(match[1], 10) : 0;
 
@@ -2546,16 +2617,18 @@ export class Crawler {
 
         const vods: VodItem[] = [];
         const seenCmid = new Set<string>();
-        const vodCountByWeek = new Map<number, number>();
 
         for (const section of getCourseSections(doc)) {
             const sectionNameEl = section.querySelector(
                 ".sectionname, .section-title"
             );
             const weekTitle = normalizeText(sectionNameEl?.textContent);
+            // The section number is the week. Only a section without a usable
+            // id falls back to the first number in its title.
             const weekMatch = weekTitle.match(/(\d+)/);
             const weekNum =
-                weekMatch && weekMatch[1] ? parseInt(weekMatch[1], 10) : 0;
+                sectionNumber(section) ??
+                (weekMatch?.[1] ? parseInt(weekMatch[1], 10) : 0);
 
             const vodEls = section.querySelectorAll("li.activity.modtype_vod");
             for (const actEl of vodEls) {
@@ -2604,28 +2677,6 @@ export class Crawler {
                     }
                 }
 
-                // Match with attendance by week and index in week, fallback to title match
-                const weekIdx = vodCountByWeek.get(weekNum) || 0;
-                vodCountByWeek.set(weekNum, weekIdx + 1);
-
-                const weekAttList = attByWeek.get(weekNum) || [];
-                const att =
-                    weekAttList[weekIdx] ||
-                    weekAttList.find((a) => a.title === name);
-
-                // Respect original status as requested
-                const status = att?.status
-                    ? normalizeText(att.status)
-                    : att
-                      ? "X"
-                      : "-";
-                const watchedTime = att?.watchedTime
-                    ? normalizeText(att.watchedTime)
-                    : "-";
-                const requiredTime = att?.requiredTime
-                    ? normalizeText(att.requiredTime)
-                    : "";
-
                 vods.push({
                     id: cmid,
                     week: weekNum,
@@ -2634,12 +2685,34 @@ export class Crawler {
                     duration,
                     period,
                     latePeriod: latePeriod || undefined,
-                    status: status || "-",
-                    watchedTime,
-                    requiredTime,
+                    status: "-",
+                    watchedTime: "-",
+                    requiredTime: "",
                     url,
                 });
             }
+        }
+
+        // Join each week's VODs with that week's attendance rows.
+        const vodsByWeek = new Map<number, VodItem[]>();
+        for (const vod of vods) {
+            const list = vodsByWeek.get(vod.week) ?? [];
+            list.push(vod);
+            vodsByWeek.set(vod.week, list);
+        }
+        for (const [week, weekVods] of vodsByWeek) {
+            const matches = matchAttendance(
+                weekVods.map((v) => v.name),
+                attByWeek.get(week) ?? []
+            );
+            weekVods.forEach((vod, index) => {
+                const att = matches[index];
+                if (!att) return;
+                // Respect the original status (O/X/△) without recalculation
+                vod.status = normalizeText(att.status) || "X";
+                vod.watchedTime = normalizeText(att.watchedTime) || "-";
+                vod.requiredTime = normalizeText(att.requiredTime);
+            });
         }
 
         log.info(`Found ${vods.length} VOD items`);

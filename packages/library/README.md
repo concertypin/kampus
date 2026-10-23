@@ -64,6 +64,7 @@ for (const course of courses) {
 | `checkSession()`                      | `Promise<boolean>`                           | 현재 세션 유효성 확인                        |
 | `getCourses(type?)`                   | `Promise<Course[]>`                          | 수강 과목 목록 조회                          |
 | `getAttendance(courseId)`             | `Promise<AttendanceItem[]>`                  | 출석 현황 조회                               |
+| `getVods(courseId)`                   | `Promise<VodItem[]>`                         | VOD 강의 목록과 출석 상태 조회               |
 | `getMessages(page?)`                  | `Promise<MessageItem[]>`                     | 메시지 목록 조회                             |
 | `getAssignments(courseId)`            | `Promise<AssignmentItem[]>`                  | 과제 목록 조회                               |
 | `getAssignmentDetail(cmid)`           | `Promise<AssignmentDetail>`                  | 과제 상세 정보 조회 (다른 페이지면 예외)     |
@@ -100,12 +101,26 @@ interface Course {
 }
 
 interface AttendanceItem {
-    week: number;
+    week: number; // 주차 (출석 표 첫 칸의 번호 = 코스 섹션 번호, VodItem.week와 같음)
     title: string;
     requiredTime: string; // 필수 시청 시간
     watchedTime: string; // 시청한 시간
     status: string; // 제출 상태
     weekStatus: string; // 주차별 상태
+}
+
+interface VodItem {
+    id: string; // 강의(cmid)
+    week: number; // 주차 = 코스 섹션 번호 (section-N 은 N주차). 제목의 숫자나 "N회차"가 아님
+    weekTitle: string; // 섹션 제목 ("-" 이거나 비어 있을 수 있음)
+    name: string;
+    duration: string;
+    period: string;
+    latePeriod?: string;
+    status: string; // 출석 표의 O / X / ▲ (출석 행이 없으면 "-")
+    watchedTime: string;
+    requiredTime: string;
+    url: string;
 }
 
 interface AssignmentItem {

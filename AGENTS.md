@@ -80,7 +80,7 @@ pnpm run lint:check
 ## Testing Guidelines
 
 - **Mock tests**: Tests must not need an active login session. Mock `fetchWithBase` (library) or the crawler (CLI) and feed it either inline HTML built in the test or a pre-saved HTML fixture.
-- **Fixtures**: HTML fixtures live in `packages/library/tests/fixtures/<area>/` (currently `activities/`, `notices/`, `quiz/`) and are loaded with `readFileSync(join(import.meta.dirname, "..", "fixtures", "<area>", name), "utf8")`. Strip session data, sesskeys and personal data from live captures, and state in a comment at the top of the fixture whether it is a trimmed live capture or written from stock Moodle markup. The CLI tests use no HTML fixtures.
+- **Fixtures**: HTML fixtures live in `packages/library/tests/fixtures/<area>/` (currently `activities/`, `attendance/`, `notices/`, `quiz/`) and are loaded with `readFileSync(join(import.meta.dirname, "..", "fixtures", "<area>", name), "utf8")`. Strip session data, sesskeys and personal data from live captures, and state in a comment at the top of the fixture whether it is a trimmed live capture or written from stock Moodle markup. The CLI tests use no HTML fixtures.
 - **Integration tests**: The repository currently has no tests that need a live e-campus connection. If you add an exploratory one, mark it `.skip` so CI does not fail on expired session cookies, and never enable it in default test runs.
 - **CLI tests**: CLI tests are located in `packages/cli/tests/` and follow the same structure as the source commands directory.
 - **Test files**: Each subdirectory under `tests/commands/` mirrors the structure under `src/commands/` for easy mapping.

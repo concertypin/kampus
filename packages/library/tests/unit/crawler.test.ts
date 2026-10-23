@@ -581,7 +581,7 @@ describe("Crawler", () => {
                     buildAssignmentHtml({
                         fileRows: [
                             {
-                                name: "202500041.zip",
+                                name: "300123456.zip",
                                 url: "https://ecampus.kangnam.ac.kr/pluginfile.php?file=/submission.zip",
                             },
                         ],
@@ -592,7 +592,7 @@ describe("Crawler", () => {
 
             const assignment = await crawler.getAssignmentDetail("426033");
             expect(assignment.files).toHaveLength(1);
-            expect(assignment.files[0]?.name).toBe("202500041.zip");
+            expect(assignment.files[0]?.name).toBe("300123456.zip");
             expect(assignment.files[0]?.url).toContain("pluginfile.php");
         });
 
