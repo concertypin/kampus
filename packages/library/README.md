@@ -336,19 +336,24 @@ interface SessionStorage {
 
 ### 로깅
 
-`LogLevel` 타입을 지원하며 생성자 또는 `setLogLevel()`로 설정할 수 있습니다.
+`LogLevel` 타입을 지원하며 생성자의 `logLevel` 옵션 또는 `setLogLevel()`로 설정할 수 있습니다. 로그는 stderr로 출력되며, 기본 레벨은 `warn`입니다.
 
 ```typescript
-type LogLevel = "trace" | "debug" | "info";
+type LogLevel = "silent" | "error" | "warn" | "info" | "debug" | "trace";
 ```
 
-CLI 사용 시 `--verbose`(info), `--debug`(debug), `--trace`(trace) 플래그로 로깅 레벨을 지정할 수 있습니다.
+CLI는 플래그가 없으면 `warn`을 사용하고, `--verbose`(info), `--debug`(debug), `--trace`(trace) 플래그로 레벨을 올릴 수 있습니다.
 
-| 레벨    | CLI 플래그  | 설명                                               |
-| ------- | ----------- | -------------------------------------------------- |
-| `trace` | `--trace`   | 모든 HTTP 요청/응답 헤더까지 출력 (쿠키 값은 가림) |
-| `debug` | `--debug`   | 디버그 정보 출력                                   |
-| `info`  | `--verbose` | 일반 정보 출력                                     |
+| 레벨     | CLI 플래그  | 설명                                               |
+| -------- | ----------- | -------------------------------------------------- |
+| `silent` | -           | 출력 없음                                          |
+| `error`  | -           | 오류만 출력                                        |
+| `warn`   | (기본값)    | 오류와 경고 출력                                   |
+| `info`   | `--verbose` | 일반 진행 정보 출력                                |
+| `debug`  | `--debug`   | 디버그 정보와 오류 스택, 요청 실패 상세 출력       |
+| `trace`  | `--trace`   | 모든 HTTP 요청/응답 헤더까지 출력 (쿠키 값은 가림) |
+
+로그 인자는 각각 따로 포맷됩니다. 문자열은 그대로, `Error`는 `이름: 메시지`(`debug` 이상에서는 스택 포함), 그 외 값은 JSON으로 출력됩니다. 호출자에게 다시 던져지는 오류(요청 실패, 로그인 실패)는 중복 출력을 피하려고 `debug`에서만 기록합니다.
 
 ### 자동 세션 갱신
 

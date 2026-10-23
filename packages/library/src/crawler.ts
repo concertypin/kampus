@@ -1088,11 +1088,11 @@ export class Crawler {
             log.info("Auto-login succeeded");
             return true;
         } catch (error) {
-            log.error("Auto-login failed:", error);
             // Invalidate session only; preserve stored credentials so user doesn't lose credentials
             await this.clearSession();
             log.warn(
-                "Preserving stored credentials despite auto-login failure"
+                "Auto-login failed; stored credentials are preserved:",
+                error
             );
             return false;
         } finally {
@@ -1157,7 +1157,8 @@ export class Crawler {
                 baseUrl: this.baseUrl,
             });
         } catch (error) {
-            log.error(`✗ ${method} ${shown} - Request failed:`, error);
+            // The error is rethrown, so the caller reports it; avoid printing it twice.
+            log.debug(`✗ ${method} ${shown} - Request failed:`, error);
             throw error;
         } finally {
             clearTimeout(timeoutId);
@@ -1314,7 +1315,8 @@ export class Crawler {
 
             log.info("Login successful");
         } catch (error) {
-            log.error("Login failed:", error);
+            // Rethrown below, so the caller reports it.
+            log.debug("Login failed:", error);
             throw error;
         }
     }
@@ -2461,7 +2463,7 @@ export class Crawler {
                 ?.replace(/\.pdf$/, "") || "";
         const downloadUrl = `https://rpt.kangnam.ac.kr/ReportingServer/download?crownix-client=html5viewer&filename=${encodeURIComponent(filename)}&rdid=${rdid}&delete=true&attatchment=true`;
 
-        log.info(`Downloading PDF from ${downloadUrl}...`);
+        log.debug(`Downloading PDF from ${downloadUrl}...`);
         const pdfRes = await fetch(downloadUrl);
         if (!pdfRes.ok) {
             throw new Error(
@@ -2677,7 +2679,7 @@ export class Crawler {
             m3u8Url,
         };
 
-        log.info(`VOD detail: ${name} (${m3u8Url})`);
+        log.debug(`VOD detail: ${name} (${m3u8Url})`);
         log.debug("VOD detail:", detail);
         return detail;
     }

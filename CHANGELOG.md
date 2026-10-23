@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+
+#### CLI (`@concertypin/kampus`)
+
+- `--verbose` showed no info output, and warnings were hidden by default (log level mapping was off by one); warnings are now shown by default and `--verbose` shows info messages
+- Request and login errors were printed twice
+
+#### Library (`@concertypin/ecampus-crawler`)
+
+- Log levels now use consola's `LogLevels`; the default level is `warn`
+- Log arguments are formatted individually, so objects no longer print as `[object Object]`
+- Errors that are rethrown to the caller are logged at `debug` instead of `error`; download URLs are logged at `debug`
+
 ## [0.3.1] - 2026-10-21
 
 ### Added

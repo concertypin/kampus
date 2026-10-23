@@ -25,6 +25,5 @@ const SESSION_FILE = getSessionFilePath();
  */
 export function createCrawler(logLevel?: LogLevel): Crawler {
     const storage = new FileStorage(SESSION_FILE);
-    const options = logLevel ? { storage, logLevel } : { storage };
-    return new Crawler(options);
+    return new Crawler(logLevel ? { storage, logLevel } : { storage });
 }

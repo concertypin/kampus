@@ -52,7 +52,7 @@ ${pc.bold("사용 예시:")}
   ${pc.green("kampus resources download <resourceId>")}   강의자료 첨부파일 다운로드
   ${pc.green("kampus syllabus download <courseId>")}      특정 과목 강의계획서 PDF 다운로드
 
-${pc.bold("로깅 옵션:")}
+${pc.bold("로깅 옵션:")} (기본값: 경고 이상만 출력)
   ${pc.green("--verbose")}    info 레벨 (일반 정보)
   ${pc.green("--debug")}      debug 레벨 (상세 정보)
   ${pc.green("--trace")}      trace 레벨 (fetch 상세 포함)

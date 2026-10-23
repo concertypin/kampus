@@ -1,14 +1,9 @@
-// oxlint-disable unicorn/no-empty-file
 // Keep it light for test setups,
 // Since all tests will slow down if this file is heavy.
+import { beforeEach } from "vitest";
+import { setLogLevel } from "@/logger";
 
-/*
-// Demo code
-import { beforeEach, vi } from "vitest";
+// The library logs to stderr; keep test output quiet unless a test opts in.
 beforeEach(() => {
-    const superDuperMockingLibrary = vi.fn(() => {
-        throw new Error("Do cool stuff!");
-    });
-    superDuperMockingLibrary.mockClear();
+    setLogLevel("silent");
 });
-*/
