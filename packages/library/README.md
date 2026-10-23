@@ -54,6 +54,8 @@ for (const course of courses) {
 
 `baseUrl`은 요청을 보낼 사이트의 origin입니다 (모의 서버를 가리킬 때 사용). 모든 요청과 로그인, 그리고 크롤러가 돌려주는 모든 URL이 이 origin을 쓰며, 세션 쿠키와 저장된 자격증명은 이 origin에만 전송됩니다. `https`여야 하고(`http`는 `localhost`만 허용) 경로를 포함할 수 없습니다. 그렇지 않으면 생성자가 예외를 던집니다.
 
+`crawler.siteOrigin`은 정규화된 사이트 origin(끝의 `/` 없음)이고, `parseSiteUrl(baseUrl?)`은 같은 검증을 거쳐 origin `URL`을 돌려주며, `isSiteUrl(url, site)`는 URL이 그 사이트(스킴·호스트·포트 동일)에 속하는지 판단합니다. `isLoginUrl(url, site)`, `isPluginfileUrl(url, site)`는 두 번째 인자로 사이트를 받습니다. 세션 쿠키를 붙이기 전에는 `isSiteUrl`로 확인하세요.
+
 제공 메서드:
 
 | 메서드                                | 반환 타입                                    | 설명                                         |

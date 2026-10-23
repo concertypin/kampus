@@ -998,6 +998,14 @@ export class Crawler {
      * detects session expiry). */
     private _autoLoginInProgress = false;
 
+    /**
+     * The origin of the site this crawler talks to (`CrawlerOptions.baseUrl`,
+     * normalized: scheme, host and port, no trailing slash).
+     */
+    get siteOrigin(): string {
+        return this.baseUrl;
+    }
+
     constructor(options: CrawlerOptions = {}) {
         this.storage = options.storage || new MemoryStorage();
         this.site = parseSiteUrl(options.baseUrl || undefined);

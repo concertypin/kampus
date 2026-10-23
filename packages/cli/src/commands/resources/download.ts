@@ -231,6 +231,7 @@ ${pc.bold("예시:")}
                 // which may legitimately be outside the working directory.
                 await downloadFile(file.url, destPath, sessionCookie, {
                     allowedDir: outputDir,
+                    siteOrigin: crawler.siteOrigin,
                 });
 
                 // Get file size

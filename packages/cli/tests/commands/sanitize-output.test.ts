@@ -60,10 +60,16 @@ vi.mock("node:child_process", () => ({
 }));
 
 // The browser (assignments submit)
-const mockState = { launchError: undefined as Error | undefined };
+const mockState = {
+    launchError: undefined as Error | undefined,
+    pageUrl: "https://ecampus.kangnam.ac.kr/login/index.php",
+    filled: 0,
+    formAction: "/login/index.php" as string | null,
+};
 function fakePage() {
     const locator = (selector: string) => ({
         first: () => locator(selector),
+        getAttribute: () => Promise.resolve(mockState.formAction),
         textContent: () =>
             Promise.resolve(
                 selector === ".submissionstatustable" ? HOSTILE : null
@@ -75,7 +81,11 @@ function fakePage() {
     };
     return {
         goto: () => Promise.resolve(),
-        fill: () => Promise.resolve(),
+        url: () => mockState.pageUrl,
+        fill: () => {
+            mockState.filled++;
+            return Promise.resolve();
+        },
         click: () => Promise.resolve(),
         waitForLoadState: () => Promise.resolve(),
         waitForTimeout: () => Promise.resolve(),
@@ -120,6 +130,7 @@ const downloadSyllabusPdfMock =
     vi.fn<(courseId: string, outputPath: string) => Promise<string>>();
 
 const mockCrawler = fragile<Crawler>({
+    siteOrigin: "https://ecampus.kangnam.ac.kr",
     getAssignmentDetail: getAssignmentDetailMock,
     getAssignments: getAssignmentsMock,
     getQuizDetail: getQuizDetailMock,
@@ -155,6 +166,8 @@ describe("text output of server-provided values", () => {
         vi.clearAllMocks();
         process.exitCode = undefined;
         mockState.launchError = undefined;
+        mockState.pageUrl = "https://ecampus.kangnam.ac.kr/login/index.php";
+        mockState.formAction = "/login/index.php";
         output = captureOutput();
     });
 
@@ -240,6 +253,27 @@ describe("text output of server-provided values", () => {
 
             expectClean(output.text(), HOSTILE_HEAD);
             expect(process.exitCode).toBeUndefined();
+        });
+
+        it("types no credentials when the login page is not on the site", async () => {
+            mockState.pageUrl = "https://evil.example/login/index.php";
+            mockState.filled = 0;
+
+            await run(assignmentsCommand, args);
+
+            expect(mockState.filled).toBe(0);
+            expect(output.text()).not.toContain("evil.example");
+            expect(process.exitCode).toBe(1);
+        });
+
+        it("types no credentials when the login form posts to another host", async () => {
+            mockState.formAction = "https://evil.example/collect";
+            mockState.filled = 0;
+
+            await run(assignmentsCommand, args);
+
+            expect(mockState.filled).toBe(0);
+            expect(process.exitCode).toBe(1);
         });
 
         it("prints a failure cleanly", async () => {
