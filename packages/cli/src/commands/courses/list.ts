@@ -3,8 +3,10 @@ import { createCrawler } from "../../crawler.ts";
 import { getLogLevel } from "../../log-level.ts";
 import {
     cr,
+    errorText,
     pad,
     pc,
+    plainText,
     separator,
     spinnerStart,
     stripEmoji,
@@ -47,13 +49,13 @@ ${pc.bold("예시:")}
             for (const course of courses) {
                 const typeLabel = course.type === "regular" ? "일반" : "비교과";
                 console.log(separator(40));
-                console.log(`${pc.bold("과목명")}: ${course.name}`);
-                console.log(`${pc.bold("ID")}: ${course.id}`);
+                console.log(`${pc.bold("과목명")}: ${plainText(course.name)}`);
+                console.log(`${pc.bold("ID")}: ${plainText(course.id)}`);
                 console.log(`${pc.bold("유형")}: ${typeLabel}`);
             }
             console.log(separator(40));
         } catch (err: unknown) {
-            const message = err instanceof Error ? err.message : String(err);
+            const message = errorText(err);
             console.error(
                 `${cr}${pc.red(stripEmoji(`❌ 오류: ${message}`))}${pad}`
             );

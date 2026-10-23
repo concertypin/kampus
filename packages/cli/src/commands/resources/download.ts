@@ -9,7 +9,14 @@ import { mkdir, stat } from "node:fs/promises";
 import { join } from "node:path";
 import { createCrawler } from "../../crawler.ts";
 import { getLogLevel } from "../../log-level.ts";
-import { cr, pc, plainText, separator, stripEmoji } from "../lib/format.ts";
+import {
+    cr,
+    errorText,
+    pc,
+    plainText,
+    separator,
+    stripEmoji,
+} from "../lib/format.ts";
 import { spinner } from "../lib/cli-utils.ts";
 import { downloadFile, extractMoodleSession } from "../lib/download-utils.ts";
 import { claimFilename, sanitizeFilename } from "../lib/filename.ts";
@@ -143,10 +150,8 @@ ${pc.bold("예시:")}
             resource = await crawler.getResourceDetail(resourceId, type);
             spin.stop();
         } catch (err: unknown) {
-            const message = err instanceof Error ? err.message : String(err);
-            console.error(
-                `${cr}${pc.red(stripEmoji(`❌ 오류: ${plainText(message)}`))}`
-            );
+            const message = errorText(err);
+            console.error(`${cr}${pc.red(stripEmoji(`❌ 오류: ${message}`))}`);
             process.exitCode = 1;
             return;
         }
@@ -172,7 +177,7 @@ ${pc.bold("예시:")}
         try {
             await mkdir(outputDir, { recursive: true });
         } catch (err: unknown) {
-            const message = err instanceof Error ? err.message : String(err);
+            const message = errorText(err);
             console.error(
                 pc.red(
                     stripEmoji(
@@ -243,10 +248,9 @@ ${pc.bold("예시:")}
                 );
                 successCount++;
             } catch (err: unknown) {
-                const message =
-                    err instanceof Error ? err.message : String(err);
+                const message = errorText(err);
                 process.stdout.write(
-                    `${cr}${pc.red(stripEmoji("  ✗"))} ${safeName} ${pc.dim(`- ${plainText(message)}`)}\n`
+                    `${cr}${pc.red(stripEmoji("  ✗"))} ${safeName} ${pc.dim(`- ${message}`)}\n`
                 );
                 failCount++;
             }

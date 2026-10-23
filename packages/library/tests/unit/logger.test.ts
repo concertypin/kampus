@@ -106,6 +106,11 @@ describe("message formatting", () => {
         expect(stderr).toHaveBeenLastCalledWith("fetch:error Error: boom");
     });
 
+    it("replaces control and bidi characters but keeps newlines and tabs", () => {
+        getLogger().info("a\u001b[2Jb‮c\u0000d\ne\tf");
+        expect(stderr).toHaveBeenCalledWith("info a�[2Jb�c�d\ne\tf");
+    });
+
     it("falls back to String() for circular objects", () => {
         const circular: Record<string, unknown> = {};
         circular["self"] = circular;

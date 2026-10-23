@@ -40,12 +40,3 @@ export function spinner(
         },
     };
 }
-
-/**
- * Format an unknown error into a consistent CLI error message.
- * Used as a fallback when structured error handling isn't available.
- */
-export function formatCliError(err: unknown): string {
-    const message = err instanceof Error ? err.message : String(err);
-    return pc.red(`❌ 오류: ${message}`);
-}

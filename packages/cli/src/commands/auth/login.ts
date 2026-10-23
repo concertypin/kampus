@@ -2,7 +2,14 @@ import { createInterface } from "node:readline";
 import { Command } from "commander";
 import { createCrawler } from "../../crawler.ts";
 import { getLogLevel } from "../../log-level.ts";
-import { cr, pad, pc, spinnerStart, stripEmoji } from "../lib/format.ts";
+import {
+    cr,
+    errorText,
+    pad,
+    pc,
+    spinnerStart,
+    stripEmoji,
+} from "../lib/format.ts";
 import { readPasswordInteractive } from "../lib/password-input.ts";
 
 async function readInputInteractive(prompt: string): Promise<string> {
@@ -111,7 +118,7 @@ ${pc.bold("예시:")}
                 `${cr}${pc.green(stripEmoji("✅ 로그인 성공! 세션이 저장되었습니다."))}${pad}`
             );
         } catch (err: unknown) {
-            const message = err instanceof Error ? err.message : String(err);
+            const message = errorText(err);
             console.error(
                 `${cr}${pc.red(stripEmoji(`❌ 로그인 실패: ${message}`))}`
             );

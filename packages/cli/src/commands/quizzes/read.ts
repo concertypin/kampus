@@ -1,7 +1,15 @@
 import { Command } from "commander";
 import { createCrawler } from "../../crawler.ts";
 import { getLogLevel } from "../../log-level.ts";
-import { cr, pc, separator, stripEmoji } from "../lib/format.ts";
+import {
+    cr,
+    errorText,
+    pc,
+    plainBlock,
+    plainText,
+    separator,
+    stripEmoji,
+} from "../lib/format.ts";
 import { spinner } from "../lib/cli-utils.ts";
 import { formatQuizStatus } from "../lib/quiz-status.ts";
 
@@ -27,28 +35,30 @@ ${pc.bold("예시:")}
             console.log(pc.bold(pc.cyan(stripEmoji(`🧩 퀴즈 상세 정보`))));
             console.log(separator(50));
 
-            console.log(`${pc.bold("퀴즈명")}: ${pc.green(quiz.name)}`);
-            console.log(`${pc.bold("ID")}: ${pc.dim(quiz.id)}`);
+            console.log(
+                `${pc.bold("퀴즈명")}: ${pc.green(plainText(quiz.name))}`
+            );
+            console.log(`${pc.bold("ID")}: ${pc.dim(plainText(quiz.id))}`);
 
             if (quiz.description) {
                 console.log();
                 console.log(pc.bold("설명:"));
-                console.log(pc.dim(quiz.description));
+                console.log(pc.dim(plainBlock(quiz.description)));
             }
 
             console.log();
             console.log(separator(50));
             console.log(
-                `${pc.bold("응시 가능 횟수")}: ${pc.yellow(quiz.attemptsAllowed || "-")}`
+                `${pc.bold("응시 가능 횟수")}: ${pc.yellow(plainText(quiz.attemptsAllowed) || "-")}`
             );
             console.log(
-                `${pc.bold("오픈 일시")}: ${pc.yellow(quiz.openedAt || "-")}`
+                `${pc.bold("오픈 일시")}: ${pc.yellow(plainText(quiz.openedAt) || "-")}`
             );
             console.log(
-                `${pc.bold("마감 일시")}: ${pc.yellow(quiz.closedAt || "-")}`
+                `${pc.bold("마감 일시")}: ${pc.yellow(plainText(quiz.closedAt) || "-")}`
             );
             console.log(
-                `${pc.bold("시간 제한")}: ${pc.yellow(quiz.timeLimit || "-")}`
+                `${pc.bold("시간 제한")}: ${pc.yellow(plainText(quiz.timeLimit) || "-")}`
             );
 
             console.log(
@@ -56,12 +66,12 @@ ${pc.bold("예시:")}
             );
             if (quiz.availabilityInfo) {
                 console.log(
-                    `${pc.bold("이용 제한")}: ${pc.dim(quiz.availabilityInfo)}`
+                    `${pc.bold("이용 제한")}: ${pc.dim(plainText(quiz.availabilityInfo))}`
                 );
             }
             console.log(separator(50));
         } catch (err: unknown) {
-            const message = err instanceof Error ? err.message : String(err);
+            const message = errorText(err);
             console.error(`${cr}${pc.red(stripEmoji(`❌ 오류: ${message}`))}`);
             process.exitCode = 1;
         }

@@ -64,7 +64,7 @@ for (const course of courses) {
 | `getAttendance(courseId)`             | `Promise<AttendanceItem[]>`                  | 출석 현황 조회                               |
 | `getMessages(page?)`                  | `Promise<MessageItem[]>`                     | 메시지 목록 조회                             |
 | `getAssignments(courseId)`            | `Promise<AssignmentItem[]>`                  | 과제 목록 조회                               |
-| `getAssignmentDetail(cmid)`           | `Promise<AssignmentDetail>`                  | 과제 상세 정보 조회                          |
+| `getAssignmentDetail(cmid)`           | `Promise<AssignmentDetail>`                  | 과제 상세 정보 조회 (다른 페이지면 예외)     |
 | `getQuizzes(courseId)`                | `Promise<QuizItem[]>`                        | 퀴즈 목록 조회                               |
 | `getQuizDetail(cmid)`                 | `Promise<QuizDetail>`                        | 퀴즈 상세 정보 조회 (다른 페이지면 예외)     |
 | `getResources(courseId)`              | `Promise<ResourceItem[]>`                    | 강의자료 목록 조회                           |

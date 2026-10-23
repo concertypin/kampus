@@ -3,8 +3,10 @@ import { createCrawler } from "../../crawler.ts";
 import { getLogLevel } from "../../log-level.ts";
 import {
     cr,
+    errorText,
     pad,
     pc,
+    plainText,
     separator,
     spinnerStart,
     stripEmoji,
@@ -45,26 +47,32 @@ ${pc.bold("예시:")}
 
             for (const q of quizzes) {
                 console.log(separator(40));
-                console.log(`${pc.bold("ID")}: ${pc.dim(q.id)}`);
-                console.log(`${pc.bold("주차")}: ${q.week}`);
-                console.log(`${pc.bold("퀴즈명")}: ${q.name}`);
+                console.log(`${pc.bold("ID")}: ${pc.dim(plainText(q.id))}`);
+                console.log(`${pc.bold("주차")}: ${plainText(q.week)}`);
+                console.log(`${pc.bold("퀴즈명")}: ${plainText(q.name)}`);
                 if (q.opensAt) {
-                    console.log(`${pc.bold("오픈일시")}: ${q.opensAt}`);
+                    console.log(
+                        `${pc.bold("오픈일시")}: ${plainText(q.opensAt)}`
+                    );
                 }
-                console.log(`${pc.bold("마감일시")}: ${q.closesAt || "-"}`);
-                console.log(`${pc.bold("학점")}: ${pc.yellow(q.grade || "-")}`);
+                console.log(
+                    `${pc.bold("마감일시")}: ${plainText(q.closesAt) || "-"}`
+                );
+                console.log(
+                    `${pc.bold("학점")}: ${pc.yellow(plainText(q.grade) || "-")}`
+                );
                 console.log(
                     `${pc.bold("응시 상태")}: ${formatQuizStatus(q.attemptStatus, q.availability)}`
                 );
                 if (q.availabilityInfo) {
                     console.log(
-                        `${pc.bold("이용 제한")}: ${pc.dim(q.availabilityInfo)}`
+                        `${pc.bold("이용 제한")}: ${pc.dim(plainText(q.availabilityInfo))}`
                     );
                 }
             }
             console.log(separator(40));
         } catch (err: unknown) {
-            const message = err instanceof Error ? err.message : String(err);
+            const message = errorText(err);
             console.error(
                 `${cr}${pc.red(stripEmoji(`❌ 오류: ${message}`))}${pad}`
             );

@@ -116,7 +116,7 @@ describe("file URLs stay on the e-campus origin", () => {
     describe("getAssignmentDetail", () => {
         it("leaves out off-origin links in the intro and the submission row", async () => {
             const html = `
-                <html><body>
+                <html><body id="page-mod-assign-view" class="path-mod cmid-600001">
                     <div role="main"><h2>과제</h2></div>
                     <div id="intro">
                         <a href="${FOREIGN_FILE}">foreign.pdf</a>
@@ -153,7 +153,7 @@ describe("file URLs stay on the e-campus origin", () => {
     describe("getAssignmentDetail relative links", () => {
         it("returns absolute URLs for relative file links", async () => {
             const html = `
-                <html><body>
+                <html><body id="page-mod-assign-view" class="path-mod cmid-600002">
                     <div role="main"><h2>과제</h2></div>
                     <div id="intro">
                         <a href="/pluginfile.php/10/mod_assign/intro/guide.pdf">guide.pdf</a>

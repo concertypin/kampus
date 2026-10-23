@@ -1,5 +1,5 @@
 import { Command } from "commander";
-import { pc } from "./commands/lib/format.ts";
+import { errorText, pc } from "./commands/lib/format.ts";
 import { setProgramOptsFn } from "./log-level.ts";
 import { authCommand } from "./commands/auth/index.ts";
 import { coursesCommand } from "./commands/courses/index.ts";
@@ -71,7 +71,7 @@ program.addCommand(syllabusCommand);
 program.addCommand(noticesCommand);
 
 program.parseAsync(process.argv).catch((err: unknown) => {
-    const message = err instanceof Error ? err.message : String(err);
+    const message = errorText(err);
     console.error(pc.red(`오류: ${message}`));
     process.exitCode = 1;
 });

@@ -462,6 +462,18 @@ function isModulePage(doc: Document, pageId: string, cmid: string): boolean {
 }
 
 /**
+ * The short error for a page that is not the activity page asked for: the
+ * text of Moodle's `.errormessage` (e.g. "Invalid course module ID"), else
+ * the HTTP status. Never the page itself, which is server-controlled.
+ */
+function pageLoadError(doc: Document, status: number): string {
+    return (
+        normalizeText(doc.querySelector(".errormessage")?.textContent) ||
+        `HTTP ${status}`
+    );
+}
+
+/**
  * Where a redirect page sends the browser: the target of its
  * `<meta http-equiv="refresh">`, or of the "Continue" link of Moodle's
  * redirect notice (`.continuebutton a`). Returns "" when no target is named.
@@ -1595,6 +1607,12 @@ export class Crawler {
         const html = await response.text();
         const doc = this.parseHtml(html);
 
+        if (!isModulePage(doc, "page-mod-assign-view", cmid)) {
+            throw new Error(
+                `Failed to load assignment ${cmid}: ${pageLoadError(doc, response.status)}`
+            );
+        }
+
         // Assignment name from the <h2> inside the main content area
         const name =
             normalizeText(doc.querySelector('[role="main"] h2')?.textContent) ||
@@ -1865,14 +1883,9 @@ export class Crawler {
 
         if (!isQuizPage) {
             // Moodle error page, e.g. "Invalid course module ID" (HTTP 404).
-            const errorMessage = normalizeText(
-                doc.querySelector(".errormessage")?.textContent
-            );
-            if (errorMessage || response.status >= 400) {
+            if (doc.querySelector(".errormessage") || response.status >= 400) {
                 throw new Error(
-                    `Failed to load quiz ${cmid}: ${
-                        errorMessage || `HTTP ${response.status}`
-                    }`
+                    `Failed to load quiz ${cmid}: ${pageLoadError(doc, response.status)}`
                 );
             }
 
@@ -2273,11 +2286,8 @@ export class Crawler {
         const doc = this.parseHtml(await response.text());
 
         // Moodle error page, e.g. "Invalid course module ID" (HTTP 404)
-        const errorMessage = normalizeText(
-            doc.querySelector(".errormessage")?.textContent
-        );
-        if (errorMessage || response.status >= 400) {
-            throw fail(errorMessage || `HTTP ${response.status}`);
+        if (doc.querySelector(".errormessage") || response.status >= 400) {
+            throw fail(pageLoadError(doc, response.status));
         }
 
         const page = pageIdentity(doc);
@@ -2373,8 +2383,9 @@ export class Crawler {
         const onclick = syllabusLink.getAttribute("onclick") || "";
         const match = onclick.match(/syllabus\d*\.jsp\?([^'"]+)/);
         if (!match || !match[1]) {
+            log.debug(`Unrecognised syllabus link onclick: ${onclick}`);
             throw new Error(
-                `강의계획서 링크 형식을 분석할 수 없습니다: ${onclick}`
+                `강의계획서 링크 형식을 분석할 수 없습니다. (과목 ID: ${courseId})`
             );
         }
 
@@ -2386,8 +2397,18 @@ export class Crawler {
         const emplNumb = queryParams.get("empl_numb") || "";
 
         if (!year || !smst || !subjNumb || !lctrClas || !emplNumb) {
+            const missing = Object.entries({
+                schl_year: year,
+                schl_smst: smst,
+                subj_numb: subjNumb,
+                lctr_clas: lctrClas,
+                empl_numb: emplNumb,
+            })
+                .filter(([, value]) => !value)
+                .map(([name]) => name);
+            log.debug(`Incomplete syllabus parameters: ${match[1]}`);
             throw new Error(
-                `강의계획서 파라미터가 불완전합니다 (year=${year}, smst=${smst}, subj=${subjNumb}, class=${lctrClas}, empl=${emplNumb})`
+                `강의계획서 파라미터가 불완전합니다 (누락: ${missing.join(", ")})`
             );
         }
 
@@ -2451,8 +2472,9 @@ export class Crawler {
         const parts = text.trim().split("|");
         const filename = parts.length > 1 ? parts[1] : parts[0];
         if (!filename || !filename.endsWith(".pdf")) {
+            log.debug(`Unexpected reporting server response: ${text}`);
             throw new Error(
-                `리포팅 서버에서 유효한 PDF 파일명을 반환하지 않았습니다: ${text}`
+                "리포팅 서버에서 유효한 PDF 파일명을 반환하지 않았습니다."
             );
         }
 
@@ -2461,7 +2483,7 @@ export class Crawler {
                 .split("/")
                 .pop()
                 ?.replace(/\.pdf$/, "") || "";
-        const downloadUrl = `https://rpt.kangnam.ac.kr/ReportingServer/download?crownix-client=html5viewer&filename=${encodeURIComponent(filename)}&rdid=${rdid}&delete=true&attatchment=true`;
+        const downloadUrl = `https://rpt.kangnam.ac.kr/ReportingServer/download?crownix-client=html5viewer&filename=${encodeURIComponent(filename)}&rdid=${encodeURIComponent(rdid)}&delete=true&attatchment=true`;
 
         log.debug(`Downloading PDF from ${downloadUrl}...`);
         const pdfRes = await fetch(downloadUrl);
@@ -2627,6 +2649,11 @@ export class Crawler {
         const viewResponse = await this.fetch(`/mod/vod/view.php?id=${cmid}`);
         const viewHtml = await viewResponse.text();
         const viewDoc = this.parseHtml(viewHtml);
+        if (!isModulePage(viewDoc, "page-mod-vod-view", cmid)) {
+            throw new Error(
+                `Failed to load VOD ${cmid}: ${pageLoadError(viewDoc, viewResponse.status)}`
+            );
+        }
         const description =
             normalizeText(viewDoc.querySelector("#intro")?.textContent) ||
             normalizeText(

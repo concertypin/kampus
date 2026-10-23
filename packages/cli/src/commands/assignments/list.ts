@@ -3,8 +3,10 @@ import { createCrawler } from "../../crawler.ts";
 import { getLogLevel } from "../../log-level.ts";
 import {
     cr,
+    errorText,
     pad,
     pc,
+    plainText,
     separator,
     spinnerStart,
     stripEmoji,
@@ -47,19 +49,21 @@ ${pc.bold("예시:")}
                     a.submissionStatus.toLowerCase().includes("제출") ||
                     a.submissionStatus.toLowerCase().includes("submitted");
                 const statusStr = submitted
-                    ? pc.green(a.submissionStatus)
-                    : pc.red(a.submissionStatus);
+                    ? pc.green(plainText(a.submissionStatus))
+                    : pc.red(plainText(a.submissionStatus));
                 console.log(separator(40));
-                console.log(`${pc.bold("주차")}: ${a.week}`);
-                console.log(`${pc.bold("과제명")}: ${a.name}`);
-                console.log(`${pc.bold("ID")}: ${pc.dim(a.id)}`);
-                console.log(`${pc.bold("마감일시")}: ${a.dueDate}`);
+                console.log(`${pc.bold("주차")}: ${plainText(a.week)}`);
+                console.log(`${pc.bold("과제명")}: ${plainText(a.name)}`);
+                console.log(`${pc.bold("ID")}: ${pc.dim(plainText(a.id))}`);
+                console.log(`${pc.bold("마감일시")}: ${plainText(a.dueDate)}`);
                 console.log(`${pc.bold("제출 상태")}: ${statusStr}`);
-                console.log(`${pc.bold("학점")}: ${pc.yellow(a.grade)}`);
+                console.log(
+                    `${pc.bold("학점")}: ${pc.yellow(plainText(a.grade))}`
+                );
             }
             console.log(separator(40));
         } catch (err: unknown) {
-            const message = err instanceof Error ? err.message : String(err);
+            const message = errorText(err);
             console.error(
                 `${cr}${pc.red(stripEmoji(`❌ 오류: ${message}`))}${pad}`
             );

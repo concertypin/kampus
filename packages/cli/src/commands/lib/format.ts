@@ -81,6 +81,15 @@ export function plainBlock(text: string | null | undefined): string {
         .join("\n");
 }
 
+/**
+ * The message of a caught error, for printing: an `Error`'s message or the
+ * stringified value, made safe with {@link plainBlock}. Errors can carry
+ * server-controlled text, so every caught error is printed through this.
+ */
+export function errorText(err: unknown): string {
+    return plainBlock(err instanceof Error ? err.message : String(err));
+}
+
 // ── Spinner helpers ──────────────────────────────────────────────
 
 /**

@@ -3,8 +3,10 @@ import { createCrawler } from "../../crawler.ts";
 import { getLogLevel } from "../../log-level.ts";
 import {
     cr,
+    errorText,
     pad,
     pc,
+    plainText,
     separator,
     spinnerStart,
     stripEmoji,
@@ -46,14 +48,20 @@ ${pc.bold("예시:")}
                 const statusColor = item.status === "O" ? pc.green : pc.red;
                 console.log(separator(40));
                 console.log(`${pc.bold("주차")}: ${item.week}`);
-                console.log(`${pc.bold("제목")}: ${item.title}`);
-                console.log(`${pc.bold("필요시간")}: ${item.requiredTime}`);
-                console.log(`${pc.bold("시청시간")}: ${item.watchedTime}`);
-                console.log(`${pc.bold("상태")}: ${statusColor(item.status)}`);
+                console.log(`${pc.bold("제목")}: ${plainText(item.title)}`);
+                console.log(
+                    `${pc.bold("필요시간")}: ${plainText(item.requiredTime)}`
+                );
+                console.log(
+                    `${pc.bold("시청시간")}: ${plainText(item.watchedTime)}`
+                );
+                console.log(
+                    `${pc.bold("상태")}: ${statusColor(plainText(item.status))}`
+                );
             }
             console.log(separator(40));
         } catch (err: unknown) {
-            const message = err instanceof Error ? err.message : String(err);
+            const message = errorText(err);
             console.error(
                 `${cr}${pc.red(stripEmoji(`❌ 오류: ${message}`))}${pad}`
             );

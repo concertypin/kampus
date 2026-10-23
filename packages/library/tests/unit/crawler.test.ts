@@ -379,7 +379,7 @@ describe("Crawler", () => {
                 : "";
 
             return `
-                <html><body id="page-mod-quiz-view" class="path-mod path-mod-quiz cmid-433393">
+                <html><body id="page-mod-assign-view" class="path-mod path-mod-assign cmid-426033">
                     <div role="main">
                         <h2>${name}</h2>
                     </div>
@@ -458,7 +458,7 @@ describe("Crawler", () => {
                 )
             );
 
-            const assignment = await crawler.getAssignmentDetail("421889");
+            const assignment = await crawler.getAssignmentDetail("426033");
 
             expect(assignment.submissionStatus).toBe("Submitted for grading");
             expect(assignment.gradingStatus).toBe("Graded");
@@ -476,9 +476,54 @@ describe("Crawler", () => {
             expect(assignment.description).toBe("");
         });
 
+        it("should refuse a page that is not the assignment's view page without echoing it", async () => {
+            const hostile = "\u001b[2JHOSTILE-BODY\u202e";
+            mockFetch.mockResolvedValueOnce(
+                new Response(
+                    `<html><body id="page-course-view-ubsweeks"><p>${hostile}</p></body></html>`,
+                    { status: 200 }
+                )
+            );
+
+            const error = await crawler
+                .getAssignmentDetail("426033")
+                .catch((err: unknown) => err);
+
+            expect(error).toBeInstanceOf(Error);
+            expect(String(error)).toBe(
+                "Error: Failed to load assignment 426033: HTTP 200"
+            );
+        });
+
+        it("should report the site's error message for an error page", async () => {
+            mockFetch.mockResolvedValueOnce(
+                new Response(
+                    `<html><body id="page-site-index"><p class="errormessage">Invalid course module ID</p><p>secret raw text</p></body></html>`,
+                    { status: 404 }
+                )
+            );
+
+            await expect(crawler.getAssignmentDetail("426033")).rejects.toThrow(
+                /^Failed to load assignment 426033: Invalid course module ID$/
+            );
+        });
+
+        it("should refuse the view page of another module", async () => {
+            mockFetch.mockResolvedValueOnce(
+                new Response(
+                    '<html><body id="page-mod-assign-view" class="cmid-999"><div role="main"><h2>x</h2></div></body></html>',
+                    { status: 200 }
+                )
+            );
+
+            await expect(crawler.getAssignmentDetail("426033")).rejects.toThrow(
+                "Failed to load assignment 426033"
+            );
+        });
+
         it("should handle missing status table", async () => {
             const html = `
-                <html><body>
+                <html><body id="page-mod-assign-view" class="path-mod cmid-426033">
                     <div role="main">
                         <h2>Empty Assignment</h2>
                     </div>
@@ -497,7 +542,7 @@ describe("Crawler", () => {
 
         it("should use fallback h2 selector when [role='main'] h2 is missing", async () => {
             const html = `
-                <html><body>
+                <html><body id="page-mod-assign-view" class="path-mod cmid-426033">
                     <h2>Fallback Assignment</h2>
                     <div id="intro">desc</div>
                     <div class="submissionstatustable">
@@ -545,7 +590,7 @@ describe("Crawler", () => {
                 )
             );
 
-            const assignment = await crawler.getAssignmentDetail("421889");
+            const assignment = await crawler.getAssignmentDetail("426033");
             expect(assignment.files).toHaveLength(1);
             expect(assignment.files[0]?.name).toBe("202500041.zip");
             expect(assignment.files[0]?.url).toContain("pluginfile.php");
@@ -1056,6 +1101,47 @@ describe("Crawler", () => {
                     crawler.getSyllabusParams("374621")
                 ).rejects.toThrow("강의계획서 파라미터가 불완전합니다");
             });
+
+            it("names the missing parameters without echoing the server values", async () => {
+                const brokenHtml = `
+                    <html><body>
+                        <a class="submenu-syllabus" onclick="window.open('https://app.kangnam.ac.kr/knumis/sbr/syllabus2026.jsp?schl_year=EVIL%1B%5B2J')">Syllabus</a>
+                    </body></html>
+                `;
+                mockFetch.mockResolvedValueOnce(
+                    new Response(brokenHtml, { status: 200 })
+                );
+
+                const error = await crawler
+                    .getSyllabusParams("374621")
+                    .catch((e: unknown) => e);
+                expect(error).toBeInstanceOf(Error);
+                const message = error instanceof Error ? error.message : "";
+                expect(message).toContain("schl_smst");
+                expect(message).not.toContain("EVIL");
+                expect(message).not.toContain("");
+            });
+        });
+
+        describe("getSyllabusParams hostile onclick", () => {
+            it("keeps the onclick text out of the error", async () => {
+                const hostile = "\u001b[31mEVIL\u202e";
+                mockFetch.mockResolvedValueOnce(
+                    new Response(
+                        `<html><body><a class="submenu-syllabus" onclick="${hostile}">S</a></body></html>`,
+                        { status: 200 }
+                    )
+                );
+
+                const error = await crawler
+                    .getSyllabusParams("374621")
+                    .catch((err: unknown) => err);
+
+                expect(error).toBeInstanceOf(Error);
+                expect(String(error)).toContain("강의계획서 링크 형식");
+                expect(String(error)).not.toContain("EVIL");
+                expect(String(error)).not.toContain("\u001b");
+            });
         });
 
         describe("downloadSyllabusPdf", () => {
@@ -1087,6 +1173,59 @@ describe("Crawler", () => {
                     expect(saved).toContain("test_download.pdf");
                 } finally {
                     globalThis.fetch = originalGlobalFetch;
+                }
+            });
+
+            it("keeps an unexpected service response out of the error", async () => {
+                mockFetch.mockResolvedValueOnce(
+                    new Response(sampleCourseHtml, { status: 200 })
+                );
+                const globalFetchMock = vi.fn<typeof fetch>();
+                globalFetchMock.mockResolvedValueOnce(
+                    new Response("\u001b[31mEVIL-BODY\u202e", { status: 200 })
+                );
+                vi.stubGlobal("fetch", globalFetchMock);
+
+                try {
+                    const error = await crawler
+                        .downloadSyllabusPdf("374621", ".tmp/never.pdf")
+                        .catch((err: unknown) => err);
+
+                    expect(error).toBeInstanceOf(Error);
+                    expect(String(error)).toContain("유효한 PDF 파일명");
+                    expect(String(error)).not.toContain("EVIL-BODY");
+                    expect(String(error)).not.toContain("\u001b");
+                } finally {
+                    vi.unstubAllGlobals();
+                }
+            });
+
+            it("percent-encodes the rdid in the download URL", async () => {
+                mockFetch.mockResolvedValueOnce(
+                    new Response(sampleCourseHtml, { status: 200 })
+                );
+                const globalFetchMock = vi.fn<typeof fetch>();
+                globalFetchMock.mockResolvedValueOnce(
+                    new Response("1|2026/09/05/a&delete=false.pdf", {
+                        status: 200,
+                    })
+                );
+                globalFetchMock.mockResolvedValueOnce(
+                    new Response("no", { status: 500 })
+                );
+                vi.stubGlobal("fetch", globalFetchMock);
+
+                try {
+                    await crawler
+                        .downloadSyllabusPdf("374621", ".tmp/never.pdf")
+                        .catch(() => undefined);
+
+                    const downloadUrl = globalFetchMock.mock.calls[1]?.[0];
+                    expect(downloadUrl).toEqual(
+                        expect.stringContaining("&rdid=a%26delete%3Dfalse&")
+                    );
+                } finally {
+                    vi.unstubAllGlobals();
                 }
             });
         });
@@ -1165,7 +1304,7 @@ describe("Crawler", () => {
 
         it("should parse VOD detail with m3u8 streaming url", async () => {
             const viewHtml = `
-                <html><body>
+                <html><body id="page-mod-vod-view" class="path-mod cmid-1001">
                     <h2>테스트 강의</h2>
                     <div id="intro"><div class="no-overflow">강의 설명입니다.</div></div>
                     <div class="well">학습 인정기간 : 2026-09-01 00:00:00 ~ 2026-09-08 23:59:59</div>
@@ -1202,11 +1341,35 @@ describe("Crawler", () => {
             );
         });
 
-        it("should throw error if VOD conversion is not completed", async () => {
+        it("should refuse a VOD page that is not the view page without echoing it", async () => {
             mockFetch.mockResolvedValueOnce(
-                new Response("<html><body><h2>미변환 강의</h2></body></html>", {
+                new Response(
+                    '<html><body id="page-site-index"><p class="errormessage">Invalid course module ID</p><p>raw page text</p></body></html>',
+                    { status: 404 }
+                )
+            );
+
+            await expect(crawler.getVodDetail("1002")).rejects.toThrow(
+                /^Failed to load VOD 1002: Invalid course module ID$/
+            );
+
+            mockFetch.mockResolvedValueOnce(
+                new Response("<html><body><p>raw page text</p></body></html>", {
                     status: 200,
                 })
+            );
+            await expect(crawler.getVodDetail("1002")).rejects.toThrow(
+                /^Failed to load VOD 1002: HTTP 200$/
+            );
+            expect(mockFetch).toHaveBeenCalledTimes(2);
+        });
+
+        it("should throw error if VOD conversion is not completed", async () => {
+            mockFetch.mockResolvedValueOnce(
+                new Response(
+                    '<html><body id="page-mod-vod-view" class="path-mod cmid-1002"><h2>미변환 강의</h2></body></html>',
+                    { status: 200 }
+                )
             );
             mockFetch.mockResolvedValueOnce(
                 new Response(

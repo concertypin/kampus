@@ -27,6 +27,15 @@ const LOG_LEVEL_MAP = {
     trace: LogLevels.trace,
 } satisfies Record<LogLevel, number>;
 
+/**
+ * Strip control, format (bidi, zero-width) and line/paragraph separator
+ * characters so server-controlled text cannot drive the terminal.
+ * Newline and tab are kept.
+ */
+function stripControls(text: string): string {
+    return text.replace(/[^\P{Cc}\n\t]|[\p{Cf}\p{Zl}\p{Zp}]/gu, "�");
+}
+
 /** Format one log argument without relying on node:util (Deno compatible). */
 function formatArg(arg: unknown, includeStack: boolean): string {
     if (typeof arg === "string") return arg;
@@ -53,7 +62,7 @@ const stderrReporter = {
         const type = logObj.type;
         const includeStack = ctx.options.level >= LogLevels.debug;
         const message = logObj.args
-            .map((arg) => formatArg(arg, includeStack))
+            .map((arg) => stripControls(formatArg(arg, includeStack)))
             .join(" ");
         // oxlint-disable-next-line no-console
         console.error(`${tag}${type} ${message}`);
