@@ -53,6 +53,11 @@ function courseWith(
     return `<html><body><ul class="weeks">${items}</ul></body></html>`;
 }
 
+/** An attendance table with the given raw `<tr>` rows. */
+function table(rowsHtml: string): string {
+    return `<html><body><table class="user_progress_table"><tbody>${rowsHtml}</tbody></table></body></html>`;
+}
+
 /** An attendance table; each row is [week cell, title, required, watched, status]. */
 function attendanceWith(
     rows: [number | string, string, string, string, string][]
@@ -116,6 +121,59 @@ describe("Crawler VOD and attendance weeks", () => {
             const items = await crawler.getAttendance("340001");
 
             expect(items[0]?.week).toBe(3);
+        });
+
+        it("keeps a week cell with rowspan=0 for the rest of the table", async () => {
+            respondWith(
+                table(
+                    '<tr><td rowspan="0">4</td><td>Lecture 4-1</td><td>10:00</td><td>10:00</td><td>O</td><td>O</td></tr>' +
+                        "<tr><td>Lecture 4-2</td><td>10:00</td><td>00:00</td><td>X</td><td>X</td></tr>"
+                )
+            );
+
+            const items = await crawler.getAttendance("340001");
+
+            expect(items.map((i) => [i.week, i.title, i.status])).toEqual([
+                [4, "Lecture 4-1", "O"],
+                [4, "Lecture 4-2", "X"],
+            ]);
+        });
+
+        it("lets an empty row use up the spans that cross it", async () => {
+            respondWith(
+                table(
+                    '<tr><td rowspan="3">4</td><td>Lecture 4-1</td><td>10:00</td><td>10:00</td><td>O</td><td rowspan="3">O</td></tr>' +
+                        "<tr></tr>" +
+                        "<tr><td>Lecture 4-2</td><td>10:00</td><td>10:00</td><td>O</td></tr>" +
+                        "<tr><td>5</td><td>Lecture 5-1</td><td>11:00</td><td>00:00</td><td>X</td><td>X</td></tr>"
+                )
+            );
+
+            const items = await crawler.getAttendance("340001");
+
+            expect(items.map((i) => [i.week, i.title, i.status])).toEqual([
+                [4, "Lecture 4-1", "O"],
+                [4, "Lecture 4-2", "O"],
+                [5, "Lecture 5-1", "X"],
+            ]);
+        });
+
+        it("gives a lecture the status cell that spans down to it", async () => {
+            respondWith(
+                table(
+                    '<tr><td rowspan="2">4</td><td>A</td><td>10:00</td><td>10:00</td><td rowspan="2">O</td><td>X</td></tr>' +
+                        "<tr><td>B</td><td>10:00</td><td>10:00</td><td>X</td></tr>"
+                )
+            );
+
+            const items = await crawler.getAttendance("340001");
+
+            expect(items.map((i) => [i.title, i.status, i.weekStatus])).toEqual(
+                [
+                    ["A", "O", "X"],
+                    ["B", "O", "X"],
+                ]
+            );
         });
 
         it("gives week 0 to a week cell without exactly one number", async () => {
@@ -467,11 +525,33 @@ describe("Crawler VOD and attendance weeks", () => {
         it("leaves VODs without status when containment cannot tell them apart", async () => {
             expect(
                 await statuses(
-                    ["Part", "Part"],
+                    ["Part", "Part", "Other"],
                     [
                         ["Part A", "O"],
                         ["Part B", "X"],
+                        ["Something else", "O"],
                     ]
+                )
+            ).toEqual(["-", "-", "-"]);
+        });
+
+        it("keeps repeated titles apart when the rows follow the VOD order", async () => {
+            expect(
+                await statuses(
+                    ["Lecture", "Lecture"],
+                    [
+                        ["Lecture (VOD)", "X"],
+                        ["Lecture", "O"],
+                    ]
+                )
+            ).toEqual(["X", "O"]);
+        });
+
+        it("does not take a number prefix for the same lecture", async () => {
+            expect(
+                await statuses(
+                    ["Lecture 1", "Untracked"],
+                    [["Lecture 10 (VOD)", "O"]]
                 )
             ).toEqual(["-", "-"]);
         });
