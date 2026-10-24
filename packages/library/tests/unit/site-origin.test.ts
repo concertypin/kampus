@@ -22,9 +22,10 @@ describe("Crawler.siteOrigin", () => {
 
     it("cannot be reassigned", () => {
         const crawler = new Crawler({ baseUrl: "https://mock.example" });
-        expect(() => {
-            Reflect.set(crawler, "siteOrigin", "https://evil.example");
-        }).not.toThrow();
+        // A getter without a setter: the assignment is refused.
+        expect(Reflect.set(crawler, "siteOrigin", "https://evil.example")).toBe(
+            false
+        );
         expect(crawler.siteOrigin).toBe("https://mock.example");
     });
 });

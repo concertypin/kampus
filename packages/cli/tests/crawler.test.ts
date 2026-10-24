@@ -1,10 +1,16 @@
-import { join } from "node:path";
+import { sep } from "node:path";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const created = vi.hoisted(() => ({
-    files: [] as string[],
-    keychainAccounts: [] as Array<{ service: string; account: string }>,
-    crawlerOptions: [] as object[],
+interface Created {
+    files: string[];
+    keychainAccounts: Array<{ service: string; account: string }>;
+    crawlerOptions: object[];
+}
+
+const created = vi.hoisted((): Created => ({
+    files: [],
+    keychainAccounts: [],
+    crawlerOptions: [],
 }));
 
 // Nothing here may reach the real session file or the Credential Manager.
@@ -87,14 +93,17 @@ describe("sessionFileName", () => {
     });
 });
 
+/** The last two segments of a path, joined with "/". */
+function lastTwo(path: string | undefined): string {
+    return (path ?? "").split(sep).slice(-2).join("/");
+}
+
 describe("createCrawler", () => {
     it("uses session.json and the e-campus keychain account by default", () => {
-        createCrawler();
+        createCrawler("warn");
 
         expect(created.files).toHaveLength(1);
-        expect(
-            created.files[0]?.endsWith(join("ecampus", "session.json"))
-        ).toBe(true);
+        expect(lastTwo(created.files[0])).toBe("ecampus/session.json");
         expect(created.keychainAccounts).toEqual([
             { service: "kampus", account: DEFAULT_ORIGIN },
         ]);
@@ -103,25 +112,18 @@ describe("createCrawler", () => {
     });
 
     it("treats an explicit default origin as the default", () => {
-        createCrawler(undefined, { baseUrl: `${DEFAULT_ORIGIN}/` });
+        createCrawler("warn", { baseUrl: `${DEFAULT_ORIGIN}/` });
 
-        expect(
-            created.files[0]?.endsWith(join("ecampus", "session.json"))
-        ).toBe(true);
+        expect(lastTwo(created.files[0])).toBe("ecampus/session.json");
         expect(created.keychainAccounts[0]?.account).toBe(DEFAULT_ORIGIN);
     });
 
     it("uses its own session file and keychain account for another origin", () => {
         createCrawler("warn", { baseUrl: "http://localhost:8080" });
 
-        expect(
-            created.files[0]?.endsWith(
-                join(
-                    "ecampus",
-                    sessionFileName(new URL("http://localhost:8080"))
-                )
-            )
-        ).toBe(true);
+        expect(lastTwo(created.files[0])).toBe(
+            `ecampus/${sessionFileName(new URL("http://localhost:8080"))}`
+        );
         expect(created.keychainAccounts).toEqual([
             { service: "kampus", account: "http://localhost:8080" },
         ]);
@@ -133,7 +135,7 @@ describe("createCrawler", () => {
 
     it("rejects an insecure origin before touching storage", () => {
         expect(() =>
-            createCrawler(undefined, { baseUrl: "http://example.com" })
+            createCrawler("warn", { baseUrl: "http://example.com" })
         ).toThrow("Invalid baseUrl");
         expect(created.files).toHaveLength(0);
     });

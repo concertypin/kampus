@@ -52,13 +52,14 @@ export function fragile<const T extends object>(
 /**
  * A string as a hostile server could send it: ANSI/OSC escape sequences,
  * BEL, a carriage return, NUL, a C1 control, a zero-width space and
- * bidirectional override/isolate characters around plain text.
+ * bidirectional override/isolate characters, a line separator and a
+ * Unicode tag character around plain text.
  */
 export const HOSTILE =
-    "a\u001b[2Jb\u001b]0;owned\u0007c\rd\u0000e\u202Ef\u200Bg\u2066h\u009Bi";
+    "a\u001b[2Jb\u001b]0;owned\u0007c\rd\u0000e\u202Ef\u200Bg\u2066h\u009Bi\u2028j\u{E0041}k";
 
 /** What is left of {@link HOSTILE} on one line of text output. */
-export const HOSTILE_CLEAN = "a[2Jb]0;ownedc defghi";
+export const HOSTILE_CLEAN = "a[2Jb]0;ownedc defghi jk";
 
 /** Part of {@link HOSTILE} that survives in text and in block output alike. */
 export const HOSTILE_HEAD = "a[2Jb]0;ownedc";

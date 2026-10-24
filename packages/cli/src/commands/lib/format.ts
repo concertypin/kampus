@@ -61,7 +61,7 @@ export function stripEmoji(text: string): string {
 export function plainText(text: string | null | undefined): string {
     let out = "";
     for (const ch of text ?? "") {
-        if (/[\t\n\v\f\r]/.test(ch)) out += " ";
+        if (/[\t\n\v\f\r\u2028\u2029]/.test(ch)) out += " ";
         else if (!isInvisibleChar(ch)) out += ch;
     }
     return out;

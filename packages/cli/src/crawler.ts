@@ -69,14 +69,14 @@ function createStorage(site: URL): KeychainCredentialStorage {
  * the saved credentials live in the Credential Manager instead of the file.
  */
 export function createCrawler(
-    logLevel?: LogLevel,
+    logLevel: LogLevel,
     options: CreateCrawlerOptions = {}
 ): Crawler {
     const site = parseSiteUrl(options.baseUrl);
     const storage = createStorage(site);
     return new Crawler({
         storage,
-        ...(logLevel ? { logLevel } : {}),
+        logLevel,
         ...(site.origin === DEFAULT_ORIGIN ? {} : { baseUrl: site.origin }),
     });
 }

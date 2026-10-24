@@ -178,12 +178,18 @@ ${pc.bold("예시:")}
                 // The credentials are typed only into a page of the site,
                 // and only into a form that posts back to it.
                 assertOnSite(page.url(), crawler.siteOrigin);
-                // `action` may be relative: resolve it against the page.
+                // `action` may be relative: resolve it against the page. A
+                // form without one posts to the page itself. No login form
+                // at all stops here rather than typing into another page.
                 const rawAction = await page
                     .locator("form:has(#input-password)")
                     .first()
                     .getAttribute("action", { timeout: 2000 })
-                    .catch(() => null);
+                    .catch(() => {
+                        throw new Error(
+                            "The login form was not found; stopped"
+                        );
+                    });
                 if (rawAction) {
                     assertOnSite(
                         new URL(rawAction, page.url()).href,
