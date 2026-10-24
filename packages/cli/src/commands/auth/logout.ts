@@ -2,6 +2,7 @@ import { createInterface } from "node:readline";
 import { Command } from "commander";
 import { createCrawler } from "../../crawler.ts";
 import { getLogLevel } from "../../log-level.ts";
+import { KeychainDeleteError } from "../../credential-storage.ts";
 import { errorText, pc, stripEmoji } from "../lib/format.ts";
 
 export const logoutCommand = new Command("logout")
@@ -32,13 +33,19 @@ ${pc.bold("예시:")}
             await crawler.clearSession();
             await crawler.clearCredentials();
             console.log(
-                `${pc.green(stripEmoji("✅ 세션과 저장된 인증 정보가 삭제되었습니다."))}`
+                `${pc.green(stripEmoji("✅ 세션과 저장된 인증 정보가 삭제되었습니다. (Windows에서는 자격 증명 관리자 항목 포함)"))}`
             );
         } catch (err: unknown) {
-            const message = errorText(err);
-            console.error(
-                `${pc.red(stripEmoji(`❌ 세션 삭제 실패: ${message}`))}`
-            );
+            if (err instanceof KeychainDeleteError) {
+                console.error(
+                    `${pc.red(stripEmoji("❌ OS 키체인(Windows 자격 증명 관리자)의 인증 정보를 삭제하지 못했습니다. 세션 파일은 정리되었습니다. 자격 증명 관리자에 'kampus' 항목이 남아 있다면 직접 삭제해 주세요."))}`
+                );
+            } else {
+                const message = errorText(err);
+                console.error(
+                    `${pc.red(stripEmoji(`❌ 세션 삭제 실패: ${message}`))}`
+                );
+            }
             process.exitCode = 1;
         }
     });

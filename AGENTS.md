@@ -58,7 +58,12 @@ pnpm run lint:check
 4. **Session storage**:
     - CLI saves session data in OS-specific directories (`%LOCALAPPDATA%/ecampus/session.json` on Windows, or `$XDG_DATA_HOME/ecampus/session.json` / `~/.local/share/ecampus/session.json` on Unix).
     - Never write credentials directly to the repository.
-    - Credentials are stored as plain-text JSON in the session file and can be cleared with `clearCredentials()`.
+    - The session cookie (`STORAGE_KEYS.session`) is always stored in the session file.
+    - On Windows the login credentials (`STORAGE_KEYS.credentials`) live in the Windows Credential Manager (service `kampus`, account = site origin) through `@napi-rs/keyring`, wrapped by `KeychainCredentialStorage` in `packages/cli/src/credential-storage.ts`. Plain-text credentials left in the file by older versions are migrated the next time the credentials are read (`get` or `location()`, so also by `auth check`). If the keychain cannot be used, the CLI falls back to the file and prints one warning per process.
+    - On Linux and macOS the credentials stay in the session file as plain-text JSON; a directory that `FileStorage` creates gets mode 0700 (an existing one keeps its mode) and the file 0600. The keyring module is never imported there.
+    - Credentials can be cleared with `clearCredentials()`, which removes the keychain entry too. If the keychain entry cannot be removed, the file copy is still removed and `KeychainDeleteError` is thrown, so `auth logout` reports the failure and exits non-zero.
+    - `KeychainCredentialStorage` runs all of its operations one at a time (promise-chain queue), because the file storage read-modify-write is not atomic. If both stores hold different credentials, the file copy is the newer one and wins: a file copy only exists after a failed keychain write, and when `set` cannot remove the old plain-text copy after a keychain write it overwrites that copy with the new value instead (an identical copy is removed on the next read).
+    - Tests must never touch the real keychain: `packages/cli/tests/setup.ts` mocks `@napi-rs/keyring`, and storage tests inject a fake keyring.
 5. **Vite Configurations**:
     - Library uses `vite-plugin-dts` to bundle declaration files. Ensure `include` in `vite.config.ts` matches all `.ts` files to prevent type errors.
     - CLI is bundled in `ssr` target mode for Node execution.

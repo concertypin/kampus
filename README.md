@@ -35,7 +35,7 @@ npx @concertypin/kampus --help
 # 로그인 (세션 저장)
 npx @concertypin/kampus auth login <학번>
 
-# 세션 확인 / 로그아웃
+# 세션 확인 (인증 정보 저장 위치 표시) / 로그아웃
 npx @concertypin/kampus auth check
 npx @concertypin/kampus auth logout
 

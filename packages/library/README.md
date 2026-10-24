@@ -325,16 +325,29 @@ interface ActivityItem {
 | `MemoryStorage` | 인메모리 `Map` 기반 (휘발성, 기본값)           |
 | `FileStorage`   | JSON 파일로 세션 저장 (비휘발성, CLI에서 사용) |
 
+`FileStorage`는 없는 디렉터리를 0700, 파일을 0600 권한으로 만듭니다 (POSIX, 이미 있는 디렉터리의 권한은 바꾸지 않음). 파일에는 평문 JSON이 들어갑니다.
+
 두 어댑터 모두 `SessionStorage` 인터페이스를 구현합니다:
 
 ```typescript
 interface SessionStorage {
-    get(key: string): Promise<string | null>;
+    get(key: string): Promise<string | undefined>;
     set(key: string, value: string): Promise<void>;
     delete(key: string): Promise<void>;
     clear(): Promise<void>;
 }
 ```
+
+`Crawler`는 저장소에 두 개의 키를 씁니다. 이름은 `STORAGE_KEYS`로 내보내므로, 저장소를 감싸는 쪽에서 키별로 저장 위치를 나눌 수 있습니다:
+
+```typescript
+import { STORAGE_KEYS } from "@concertypin/ecampus-crawler";
+
+STORAGE_KEYS.session; // "session": 세션 쿠키
+STORAGE_KEYS.credentials; // "credentials": JSON 문자열 {"username": "...", "password": "..."}
+```
+
+`saveCredentials()`는 인증 정보를 `STORAGE_KEYS.credentials` 키에 JSON 문자열로 넘길 뿐이며, 어디에 저장할지는 `SessionStorage` 구현이 정합니다. `FileStorage`는 평문으로 쓰고, CLI는 Windows에서 이 키를 Windows 자격 증명 관리자로 보냅니다.
 
 ### 로깅
 

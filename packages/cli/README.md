@@ -22,9 +22,17 @@ pnpm add --global @concertypin/kampus
 npx @concertypin/kampus auth login <학번>
 # 비밀번호 입력 후 세션 저장됨
 
-npx @concertypin/kampus auth check    # 세션 확인
-npx @concertypin/kampus auth logout   # 로그아웃
+npx @concertypin/kampus auth check    # 세션 확인 (인증 정보 저장 위치도 표시)
+npx @concertypin/kampus auth logout   # 로그아웃 (세션과 저장된 인증 정보 삭제)
 ```
+
+**저장 위치**
+
+- 세션 쿠키는 항상 세션 파일에 저장됩니다 (Windows: `%LOCALAPPDATA%\ecampus\session.json`, 그 외: `$XDG_DATA_HOME/ecampus/session.json` 또는 `~/.local/share/ecampus/session.json`).
+- 로그인 인증 정보(학번/비밀번호)는 Windows에서는 **Windows 자격 증명 관리자**(서비스 `kampus`)에 저장됩니다. 이전 버전이 세션 파일에 평문으로 저장해 둔 인증 정보는 다음에 읽힐 때(`kampus auth check`, 세션 만료 후 자동 로그인, `assignments submit`) 자동으로 옮겨지고 파일에서 지워집니다.
+- Linux와 macOS에서는 인증 정보도 세션 파일에 저장됩니다 (파일 권한 0600, 새로 만드는 디렉터리는 0700).
+- Windows에서 자격 증명 관리자를 쓸 수 없으면 경고를 한 번 출력하고 세션 파일을 대신 사용합니다.
+- `auth logout`이 자격 증명 관리자 항목을 지우지 못하면 세션 파일은 정리하되 실패 메시지를 출력하고 0이 아닌 종료 코드로 끝납니다. 이 경우 자격 증명 관리자에서 `kampus` 항목을 직접 삭제하세요.
 
 ### 수강 과목
 

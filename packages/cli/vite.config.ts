@@ -65,6 +65,11 @@ export default defineConfig({
     define: {
         "import.meta.env.VITE_VERSION": JSON.stringify(packageJson.version),
     },
+    ssr: {
+        // Native addon with per-platform prebuilt binaries: must stay a bare
+        // import resolved from node_modules at run time, never bundled.
+        external: ["@napi-rs/keyring"],
+    },
     clearScreen: false,
     plugins: [shebangPlugin()],
     resolve,

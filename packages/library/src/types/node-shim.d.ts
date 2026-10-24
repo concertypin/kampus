@@ -13,7 +13,7 @@ declare module "node:fs/promises" {
     ): Promise<void>;
     export function mkdir(
         path: string,
-        options?: { recursive?: boolean }
+        options?: { recursive?: boolean; mode?: number }
     ): Promise<void>;
     export function unlink(path: string): Promise<void>;
     export function chmod(path: string, mode: number): Promise<void>;
