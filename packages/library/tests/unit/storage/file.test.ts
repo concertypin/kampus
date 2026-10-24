@@ -1,8 +1,21 @@
-import { describe, expect, it, beforeEach, afterEach } from "vitest";
-import { mkdtemp, rm, access, stat } from "node:fs/promises";
+import { describe, expect, it, beforeEach, afterEach, vi } from "vitest";
+import { mkdtemp, rm, access, stat, readdir } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { FileStorage } from "@/storage/file";
+
+/** Makes the final rename fail, as if the process died before it. */
+const renameFault = vi.hoisted(() => ({ on: false }));
+vi.mock("node:fs/promises", async (importOriginal) => {
+    const fs = await importOriginal<typeof import("node:fs/promises")>();
+    return {
+        ...fs,
+        rename: (from: string, to: string) =>
+            renameFault.on
+                ? Promise.reject(new Error("rename failed"))
+                : fs.rename(from, to),
+    };
+});
 
 describe("FileStorage", () => {
     let tempDir: string;
@@ -16,6 +29,7 @@ describe("FileStorage", () => {
     });
 
     afterEach(async () => {
+        renameFault.on = false;
         await rm(tempDir, { recursive: true, force: true });
     });
 
@@ -56,6 +70,22 @@ describe("FileStorage", () => {
 
         // File should be deleted
         await expect(access(storagePath)).rejects.toThrow(Error);
+    });
+
+    it("keeps the old file intact when a write does not complete", async () => {
+        await storage.set("credentials", "old");
+        renameFault.on = true;
+
+        await expect(storage.set("credentials", "new")).rejects.toThrow(
+            "rename failed"
+        );
+
+        renameFault.on = false;
+        expect(await new FileStorage(storagePath).get("credentials")).toBe(
+            "old"
+        );
+        // The temporary file is removed again.
+        expect(await readdir(tempDir)).toEqual(["session.json"]);
     });
 
     it("should create nested directories", async () => {

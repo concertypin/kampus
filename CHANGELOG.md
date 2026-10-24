@@ -40,12 +40,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Internal: `createCrawler` accepts a `baseUrl` so the code can target another e-campus origin (a local mock server). There is no flag or environment variable for it, so the real site cannot be redirected by configuration. Another origin gets its own session file (`session-<host>-<hash>.json`, the host with characters other than `a-z0-9.-` replaced and the first 12 hex digits of the origin's SHA-256) and its own keychain account; the default `session.json` and account are unchanged. Downloads, `assignments submit` and the cookie scope follow the crawler's origin; the private/loopback host refusal stays, except for URLs inside a loopback site
 - New dependency `@napi-rs/keyring` (native addon with prebuilt per-platform binaries, no install script); it is only loaded on Windows
 - `auth check` shows where the credentials are stored (OS keychain, session file or none); `auth logout` also removes the Credential Manager entry, and reports a failure (non-zero exit) if that entry cannot be removed
-- The keychain credential storage verifies each write by reading it back, prefers a newer file copy over a stale keychain entry, and serializes its operations within a process
+- The keychain credential storage verifies each write by reading it back, prefers a newer file copy over a stale keychain entry, and serializes its operations across every storage instance in a process
 
 #### Library (`@concertypin/ecampus-crawler`)
 
 - `VodItem.week` is now the course section number (section N is week N) instead of the first number found in the section title, so a title with another number (e.g. a date) can no longer change the week. `getAttendance` reads the week from the first cell of the attendance table, which is the same number (a cell without exactly one number gives week 0, and such rows are never paired with a VOD). `getVods` now pairs the VODs and attendance rows of a week by title first (exact, then one containing the other, only where that is unambiguous) and by position only when the week has equally many of both and no ambiguous title is left; a VOD without a match has no status (`-`) instead of the status of a neighbouring row
 - `FileStorage` creates a missing directory with mode 0700
+- `FileStorage` writes the session file through a temporary file and a rename, so a crash during a write leaves the previous file (and any credentials in it) intact
 
 ### Fixed
 
@@ -59,7 +60,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 #### Library (`@concertypin/ecampus-crawler`)
 
 - Log levels now use consola's `LogLevels`; the default level is `warn`
-- Log arguments are formatted individually, so plain objects print as JSON instead of `[object Object]` (an Error inside an object prints as `name: message`), and an Error's `cause` chain is printed. Formatting never throws: a value whose `toString` throws or is missing (e.g. a circular object without a prototype) prints as `[object Object]`
+- Log arguments are formatted individually, so plain objects print as JSON instead of `[object Object]` (an Error inside an object prints as `name: message`), and an Error's `cause` chain is printed. Formatting never throws: a value whose `toString` throws or is missing (e.g. a circular object without a prototype) prints as `[object Object]`, and a value that cannot be formatted at all (e.g. a revoked Proxy) as `[unprintable]`
 - Errors that are rethrown to the caller are logged at `debug` instead of `error`; download URLs are logged at `debug`
 
 ## [0.3.1] - 2026-10-21

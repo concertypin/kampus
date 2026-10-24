@@ -42,12 +42,21 @@ export class FileStorage implements SessionStorage {
             recursive: true,
             mode: 0o700,
         });
-        await fs.writeFile(
-            this.filePath,
-            JSON.stringify(data, null, 2),
-            "utf-8"
-        );
-        await fs.chmod(this.filePath, 0o600);
+        // Write a temporary file next to the target and rename it over the
+        // target, so a crash mid-write leaves the old file intact instead of
+        // a truncated one (which would lose the stored credentials).
+        const tmpPath = `${this.filePath}.${Math.random().toString(36).slice(2)}.tmp`;
+        try {
+            await fs.writeFile(tmpPath, JSON.stringify(data, null, 2), {
+                encoding: "utf-8",
+                mode: 0o600,
+            });
+            await fs.chmod(tmpPath, 0o600);
+            await fs.rename(tmpPath, this.filePath);
+        } catch (err: unknown) {
+            await fs.unlink(tmpPath).catch(() => undefined);
+            throw err;
+        }
     }
 
     async get(key: string): Promise<string | undefined> {

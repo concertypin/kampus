@@ -549,6 +549,24 @@ describe("KeychainCredentialStorage", () => {
                 expect(slow.data[STORAGE_KEYS.credentials]).toBeUndefined();
             });
 
+            it("serializes across instances, so a migration cannot undo another instance's set()", async () => {
+                const slow = new SlowFile();
+                slow.data[STORAGE_KEYS.credentials] = "old plain text";
+                const migrating = createOn(slow);
+                const writing = createOn(slow);
+
+                await Promise.all([
+                    migrating.get(STORAGE_KEYS.credentials),
+                    writing.set(STORAGE_KEYS.credentials, SECRET),
+                ]);
+
+                expect(keyring.stored).toBe(SECRET);
+                expect(slow.data[STORAGE_KEYS.credentials]).toBeUndefined();
+                expect(await migrating.get(STORAGE_KEYS.credentials)).toBe(
+                    SECRET
+                );
+            });
+
             it("keeps working after a failed operation", async () => {
                 const storage = create();
                 keyring.failDelete = true;

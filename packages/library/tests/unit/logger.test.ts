@@ -138,6 +138,13 @@ describe("message formatting", () => {
         );
     });
 
+    it("prints a value it cannot format at all as [unprintable]", () => {
+        const { proxy, revoke } = Proxy.revocable({}, {});
+        revoke();
+        expect(() => getLogger().info("x", proxy)).not.toThrow();
+        expect(stderr).toHaveBeenCalledWith("info x [unprintable]");
+    });
+
     it("falls back to String() for circular objects", () => {
         const circular: Record<string, unknown> = {};
         circular["self"] = circular;

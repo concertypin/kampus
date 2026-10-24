@@ -57,6 +57,15 @@ export class KeychainDeleteError extends Error {
 const KEYCHAIN_FAILED = Symbol("keychain failed");
 
 /** The outcome of a keychain call, with the error when it failed. */
+/**
+ * One queue for every instance in the process. The CLI creates more than one
+ * storage over the same session file and keychain entry (the crawler, and
+ * `getCredentialLocation`), so a per-instance queue would let a migration in
+ * one interleave with a set() or delete() in another and bring back the old
+ * value.
+ */
+let sharedQueue: Promise<void> = Promise.resolve();
+
 type KeychainResult<T> = { ok: true; value: T } | { ok: false; error: unknown };
 
 /**
@@ -74,7 +83,6 @@ export class KeychainCredentialStorage implements SessionStorage {
     private readonly useKeychain: boolean;
     private readonly loadKeyring: () => Promise<KeyringModule>;
     private entry: KeyringEntry | undefined;
-    private queue: Promise<void> = Promise.resolve();
 
     constructor(file: SessionStorage, opts: KeychainCredentialStorageOptions) {
         this.file = file;
@@ -146,12 +154,13 @@ export class KeychainCredentialStorage implements SessionStorage {
     }
 
     /**
-     * Serializes every operation, so a migration cannot interleave with another
-     * call (including the file's read-modify-write of other keys).
+     * Serializes every operation of every instance in the process, so a
+     * migration cannot interleave with another call (including the file's
+     * read-modify-write of other keys).
      */
     private enqueue<T>(fn: () => Promise<T>): Promise<T> {
-        const result = this.queue.then(fn);
-        this.queue = result.then(
+        const result = sharedQueue.then(fn);
+        sharedQueue = result.then(
             () => undefined,
             () => undefined
         );

@@ -71,6 +71,19 @@ function safeString(arg: unknown): string {
     }
 }
 
+/**
+ * {@link formatArg} that never throws. Even the last fallbacks can throw on a
+ * hostile value (a revoked Proxy, a throwing `Symbol.toStringTag` getter), and
+ * a log call must not turn into an exception for its caller.
+ */
+function formatArgSafely(arg: unknown, includeStack: boolean): string {
+    try {
+        return formatArg(arg, includeStack);
+    } catch {
+        return "[unprintable]";
+    }
+}
+
 /** Format one log argument without relying on node:util (Deno compatible). */
 function formatArg(arg: unknown, includeStack: boolean): string {
     if (typeof arg === "string") return arg;
@@ -99,7 +112,7 @@ const stderrReporter = {
         const type = logObj.type;
         const includeStack = ctx.options.level >= LogLevels.debug;
         const message = logObj.args
-            .map((arg) => stripControls(formatArg(arg, includeStack)))
+            .map((arg) => stripControls(formatArgSafely(arg, includeStack)))
             .join(" ");
         // oxlint-disable-next-line no-console
         console.error(`${tag}${type} ${message}`);
