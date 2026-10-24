@@ -107,6 +107,19 @@ describe("FileStorage", () => {
         expect(await readdir(tempDir)).toEqual([]);
     });
 
+    it("delete() removes a temporary file left by a crash, even without the key", async () => {
+        await storage.set("session", "cookie");
+        await writeFile(
+            `${storagePath}.tmp`,
+            JSON.stringify({ credentials: "old" })
+        );
+
+        await storage.delete("credentials");
+
+        expect(await readdir(tempDir)).toEqual(["session.json"]);
+        expect(await storage.get("session")).toBe("cookie");
+    });
+
     it("should create nested directories", async () => {
         const nestedPath = join(tempDir, "nested", "dir", "session.json");
         const nestedStorage = new FileStorage(nestedPath);
