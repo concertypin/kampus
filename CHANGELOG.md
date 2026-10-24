@@ -11,8 +11,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 #### CLI (`@concertypin/kampus`)
 
-- On Windows the saved login credentials are stored in the Windows Credential Manager instead of plain text in `session.json`. Credentials left in the file by earlier versions are moved to the Credential Manager automatically on first use (verified by a read-back before the file copy is removed). If the Credential Manager cannot be used, the CLI falls back to the file and prints one warning per process
-- Linux and macOS are unchanged: credentials stay in `session.json`, now in a directory created with mode 0700 (the file is 0600)
+- On Windows the saved login credentials are stored in the Windows Credential Manager instead of plain text in `session.json`. Credentials left in the file by earlier versions are moved to the Credential Manager automatically the next time they are read: by `auth check`, an auto-login after the session expired, or `assignments submit` (verified by a read-back before the file copy is removed). If the Credential Manager cannot be used, the CLI falls back to the file and prints one warning per process
+- On Linux and macOS credentials stay in `session.json` (mode 0600); a newly created data directory now gets mode 0700 (an existing one keeps its mode)
 - Text output no longer prints raw server-provided text: control and escape characters, invisible characters and bidirectional overrides are removed from every value of `assignments`, `quizzes`, `messages`, `courses`, `attendance`, `resources`, `vod` and `syllabus` output and from every printed error message (JSON output is unchanged)
 - `vod download` prints only the last 10 lines of ffmpeg's log on failure, sanitised
 
@@ -33,19 +33,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 #### Library (`@concertypin/ecampus-crawler`)
 
-- New export `STORAGE_KEYS` (`session`, `credentials`): the keys the crawler uses in its `SessionStorage`; `FileStorage` creates the directory with mode 0700
+- New export `STORAGE_KEYS` (`session`, `credentials`): the keys the crawler uses in its `SessionStorage`; `FileStorage` creates a missing directory with mode 0700
 
 ### Fixed
 
 #### CLI (`@concertypin/kampus`)
 
-- `--verbose` showed no info output, and warnings were hidden by default (log level mapping was off by one); warnings are now shown by default and `--verbose` shows info messages
-- Request and login errors were printed twice
+- Warnings were hidden by default (without a flag the library stayed silent), and the log level mapping was off by one, so `--verbose` showed no info output, `--debug` no debug output and `--trace` no request/response headers; warnings are now shown by default and each flag shows its own level
+- With `--verbose` or a more verbose flag, request and login errors were printed twice
+- An auto-login failure is now one warning that carries the error (it was an `error` line plus a `warn` line), so it is shown by default
 
 #### Library (`@concertypin/ecampus-crawler`)
 
 - Log levels now use consola's `LogLevels`; the default level is `warn`
-- Log arguments are formatted individually, so objects no longer print as `[object Object]`
+- Log arguments are formatted individually, so plain objects print as JSON instead of `[object Object]` (an Error inside an object prints as `name: message`), and an Error's `cause` chain is printed
 - Errors that are rethrown to the caller are logged at `debug` instead of `error`; download URLs are logged at `debug`
 
 ## [0.3.1] - 2026-10-21

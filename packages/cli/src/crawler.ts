@@ -38,9 +38,9 @@ function createStorage(): KeychainCredentialStorage {
  * Returns a Crawler instance backed by the user's session file. On Windows
  * the saved credentials live in the Credential Manager instead of the file.
  */
-export function createCrawler(logLevel?: LogLevel): Crawler {
+export function createCrawler(logLevel: LogLevel): Crawler {
     const storage = createStorage();
-    return new Crawler(logLevel ? { storage, logLevel } : { storage });
+    return new Crawler({ storage, logLevel });
 }
 
 /** Where the saved credentials currently live: OS keychain, session file or nowhere. */

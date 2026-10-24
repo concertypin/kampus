@@ -220,9 +220,22 @@ describe("KeychainCredentialStorage", () => {
                 expect(errors).toHaveLength(1);
             });
 
-            it("returns the keychain value when the file holds the same one", async () => {
+            it("returns the keychain value and drops the duplicate file copy", async () => {
                 keyring.seed(SECRET);
                 await file.set(STORAGE_KEYS.credentials, SECRET);
+
+                expect(await create().get(STORAGE_KEYS.credentials)).toBe(
+                    SECRET
+                );
+                expect(
+                    await file.get(STORAGE_KEYS.credentials)
+                ).toBeUndefined();
+            });
+
+            it("still returns the value when dropping the duplicate fails", async () => {
+                keyring.seed(SECRET);
+                await file.set(STORAGE_KEYS.credentials, SECRET);
+                vi.spyOn(file, "delete").mockRejectedValue(new Error("EPERM"));
 
                 expect(await create().get(STORAGE_KEYS.credentials)).toBe(
                     SECRET
@@ -261,6 +274,52 @@ describe("KeychainCredentialStorage", () => {
 
             expect(keyring.stored).toBe(SECRET);
             expect(await file.get(STORAGE_KEYS.credentials)).toBeUndefined();
+        });
+
+        describe("set() when removing the plain-text copy fails", () => {
+            it("overwrites the file copy with the new value", async () => {
+                await file.set(STORAGE_KEYS.credentials, "old plain text");
+                vi.spyOn(file, "delete").mockRejectedValueOnce(
+                    new Error("EPERM")
+                );
+                const storage = create();
+
+                await storage.set(STORAGE_KEYS.credentials, SECRET);
+
+                expect(keyring.stored).toBe(SECRET);
+                expect(await file.get(STORAGE_KEYS.credentials)).toBe(SECRET);
+                // The old value cannot win over the new one later, and the
+                // duplicate goes on the next read.
+                expect(await storage.get(STORAGE_KEYS.credentials)).toBe(
+                    SECRET
+                );
+                expect(
+                    await file.get(STORAGE_KEYS.credentials)
+                ).toBeUndefined();
+            });
+
+            it("rejects with the delete error when the overwrite fails too", async () => {
+                await file.set(STORAGE_KEYS.credentials, "old plain text");
+                vi.spyOn(file, "delete").mockRejectedValueOnce(
+                    new Error("EPERM delete")
+                );
+                vi.spyOn(file, "set").mockRejectedValueOnce(
+                    new Error("EPERM set")
+                );
+
+                await expect(
+                    create().set(STORAGE_KEYS.credentials, SECRET)
+                ).rejects.toThrow("EPERM delete");
+            });
+
+            it("does not touch the file when it holds no credentials", async () => {
+                const del = vi.spyOn(file, "delete");
+
+                await create().set(STORAGE_KEYS.credentials, SECRET);
+
+                expect(del).not.toHaveBeenCalled();
+                expect(keyring.stored).toBe(SECRET);
+            });
         });
 
         it("deletes the credentials from both stores", async () => {
@@ -475,7 +534,7 @@ describe("KeychainCredentialStorage", () => {
 
                 expect(await file.get(STORAGE_KEYS.credentials)).toBe(SECRET);
                 expect(errors).toHaveLength(1);
-                expect(errors[0]).toContain("keychain");
+                expect(errors[0]).toContain("키체인");
             });
 
             it("warns once per process even across storage instances", async () => {
@@ -516,8 +575,9 @@ describe("KeychainCredentialStorage", () => {
                 expect(await create().location()).toBe("keychain");
             });
 
-            it("reports the file for plain-text credentials", async () => {
+            it("reports the file when the migration fails", async () => {
                 await file.set(STORAGE_KEYS.credentials, SECRET);
+                keyring.failOn = "set";
                 expect(await create().location()).toBe("file");
             });
 
@@ -533,12 +593,14 @@ describe("KeychainCredentialStorage", () => {
                 expect(errors).toHaveLength(1);
             });
 
-            it("does not migrate", async () => {
+            it("migrates plain-text credentials first, then reports the keychain", async () => {
                 await file.set(STORAGE_KEYS.credentials, SECRET);
-                await create().location();
 
-                expect(keyring.stored).toBeUndefined();
-                expect(await file.get(STORAGE_KEYS.credentials)).toBe(SECRET);
+                expect(await create().location()).toBe("keychain");
+                expect(keyring.stored).toBe(SECRET);
+                expect(
+                    await file.get(STORAGE_KEYS.credentials)
+                ).toBeUndefined();
             });
         });
     });

@@ -1884,7 +1884,12 @@ export class Crawler {
 
         if (!isQuizPage) {
             // Moodle error page, e.g. "Invalid course module ID" (HTTP 404).
-            if (doc.querySelector(".errormessage") || response.status >= 400) {
+            if (
+                normalizeText(
+                    doc.querySelector(".errormessage")?.textContent
+                ) ||
+                response.status >= 400
+            ) {
                 throw new Error(
                     `Failed to load quiz ${cmid}: ${pageLoadError(doc, response.status)}`
                 );
@@ -2287,7 +2292,10 @@ export class Crawler {
         const doc = this.parseHtml(await response.text());
 
         // Moodle error page, e.g. "Invalid course module ID" (HTTP 404)
-        if (doc.querySelector(".errormessage") || response.status >= 400) {
+        if (
+            normalizeText(doc.querySelector(".errormessage")?.textContent) ||
+            response.status >= 400
+        ) {
             throw fail(pageLoadError(doc, response.status));
         }
 
@@ -2707,7 +2715,6 @@ export class Crawler {
             m3u8Url,
         };
 
-        log.debug(`VOD detail: ${name} (${m3u8Url})`);
         log.debug("VOD detail:", detail);
         return detail;
     }

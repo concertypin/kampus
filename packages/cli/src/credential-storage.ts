@@ -37,7 +37,7 @@ function warnKeychainUnavailable(): void {
     warned = true;
     console.error(
         pc.yellow(
-            "Warning: OS keychain unavailable; credentials are stored in the session file instead."
+            "⚠️ OS 키체인(Windows 자격 증명 관리자)을 사용할 수 없어 인증 정보를 세션 파일에 저장합니다."
         )
     );
 }
@@ -156,7 +156,7 @@ export class KeychainCredentialStorage implements SessionStorage {
         return this.enqueue(() => this.clearNow());
     }
 
-    /** Where the credentials currently live. */
+    /** Where the credentials currently live (after a migration, if one was due). */
     location(): Promise<CredentialLocation> {
         return this.enqueue(() => this.locationNow());
     }
@@ -169,7 +169,13 @@ export class KeychainCredentialStorage implements SessionStorage {
 
         const fromFile = await this.file.get(key);
         if (fromFile === undefined) return stored ?? undefined;
-        if (fromFile === stored) return stored;
+        if (fromFile === stored) {
+            // A plain-text duplicate left by a set() whose file cleanup
+            // failed. Removing it is best effort: the value is safe in the
+            // keychain, and the next call tries again.
+            await this.file.delete(key).catch(() => undefined);
+            return stored;
+        }
 
         // A file copy next to a different keychain value only exists after a
         // failed keychain write, so it is the newer one. Plain-text copies from
@@ -185,7 +191,7 @@ export class KeychainCredentialStorage implements SessionStorage {
             KeychainCredentialStorage.writeVerified(entry, value)
         );
         if (written !== KEYCHAIN_FAILED) {
-            await this.file.delete(key);
+            await this.dropFileCopy(key, value);
             return;
         }
 
@@ -193,6 +199,24 @@ export class KeychainCredentialStorage implements SessionStorage {
         // Best effort: a stale entry must not shadow this value once the
         // keychain works again.
         await this.withEntry((entry) => entry.deletePassword());
+    }
+
+    /**
+     * Removes the plain-text copy after `value` reached the keychain. If that
+     * fails, the copy is overwritten with `value` instead, so an older value
+     * cannot be taken for the newer one and migrated over the keychain later
+     * (get() removes the duplicate). Only when both fail does the error
+     * reach the caller.
+     */
+    private async dropFileCopy(key: string, value: string): Promise<void> {
+        if ((await this.file.get(key)) === undefined) return;
+        try {
+            await this.file.delete(key);
+        } catch (err: unknown) {
+            await this.file.set(key, value).catch(() => {
+                throw err;
+            });
+        }
     }
 
     private async deleteNow(key: string): Promise<void> {
@@ -213,12 +237,14 @@ export class KeychainCredentialStorage implements SessionStorage {
             throw new KeychainDeleteError();
     }
 
+    /**
+     * Reads the credentials like get() first, so plain-text credentials from
+     * an older version are moved into the keychain by `auth check` as well.
+     */
     private async locationNow(): Promise<CredentialLocation> {
-        if (this.useKeychain) {
-            const stored = await this.withEntry((entry) => entry.getPassword());
-            if (stored !== KEYCHAIN_FAILED && stored) return "keychain";
-        }
-        const fromFile = await this.file.get(STORAGE_KEYS.credentials);
-        return fromFile === undefined ? "none" : "file";
+        const value = await this.getNow(STORAGE_KEYS.credentials);
+        if (value === undefined) return "none";
+        const inFile = await this.file.get(STORAGE_KEYS.credentials);
+        return inFile === undefined ? "keychain" : "file";
     }
 }

@@ -1119,7 +1119,7 @@ describe("Crawler", () => {
                 const message = error instanceof Error ? error.message : "";
                 expect(message).toContain("schl_smst");
                 expect(message).not.toContain("EVIL");
-                expect(message).not.toContain("");
+                expect(message).not.toContain("\u001b");
             });
         });
 

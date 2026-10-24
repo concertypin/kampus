@@ -45,7 +45,7 @@ ${pc.bold("예시:")}
             }
 
             for (const v of vods) {
-                let statusStr = plainText(v.status);
+                let statusStr: string;
                 if (v.status === "O") {
                     statusStr = pc.green("O (출석)");
                 } else if (v.status === "X") {
