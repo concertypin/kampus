@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Security
+
+#### CLI (`@concertypin/kampus`)
+
+- Text output no longer prints raw server-provided text: control and escape characters, invisible characters and bidirectional overrides are removed from every value of `assignments`, `quizzes`, `messages`, `courses`, `attendance`, `resources`, `vod` and `syllabus` output and from every printed error message (JSON output is unchanged)
+- `vod download` prints only the last 10 lines of ffmpeg's log on failure, sanitised
+
+#### Library (`@concertypin/ecampus-crawler`)
+
+- `getAssignmentDetail` and `getVodDetail` throw a short error (the site's error message or the HTTP status) when the response is not the view page of that module, instead of parsing whatever page came back
+- `getSyllabusParams` and `downloadSyllabusPdf` no longer put the course page's `onclick` text or the reporting server's response into the error message; both are logged at `debug`
+- The logger replaces control, escape, invisible and bidirectional-override characters with U+FFFD, so debug output cannot drive the terminal; the syllabus "incomplete parameters" error names the missing parameters instead of echoing their values
+- `downloadSyllabusPdf` percent-encodes the file id in the download URL
+
 ### Fixed
 
 #### CLI (`@concertypin/kampus`)

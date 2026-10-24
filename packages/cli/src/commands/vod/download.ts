@@ -6,8 +6,11 @@ import { createCrawler } from "../../crawler.ts";
 import { getLogLevel } from "../../log-level.ts";
 import {
     cr,
+    errorText,
     pad,
     pc,
+    plainBlock,
+    plainText,
     spinnerStart,
     spinnerStop,
     stripEmoji,
@@ -88,7 +91,7 @@ ${pc.bold("예시:")}
             console.log(
                 `${pc.bold(pc.cyan(stripEmoji("🎬 VOD 다운로드 시작")))}`
             );
-            console.log(`${pc.bold("강의명")}: ${vod.name}`);
+            console.log(`${pc.bold("강의명")}: ${plainText(vod.name)}`);
             console.log(`${pc.bold("저장 위치")}: ${destPath}`);
 
             spinnerStart("ffmpeg 스트림 다운로드 및 변환 중 (mkv)...");
@@ -114,6 +117,17 @@ ${pc.bold("예시:")}
                 proc.stderr?.on("data", (chunk: Buffer) => {
                     stderr += chunk.toString();
                 });
+                // The last lines of ffmpeg's log name the failure. They can
+                // echo server-controlled text (stream URL, metadata), so
+                // they are sanitised before they reach the terminal.
+                const stderrTail = () =>
+                    plainBlock(
+                        stderr
+                            .split(/\r\n?|\n/)
+                            .filter((line: string) => line.trim() !== "")
+                            .slice(-10)
+                            .join("\n")
+                    );
 
                 proc.on("close", (code) => {
                     spinnerStop();
@@ -122,7 +136,7 @@ ${pc.bold("예시:")}
                     } else {
                         rejectPromise(
                             new Error(
-                                `ffmpeg이 종료 코드 ${code}로 실패했습니다:\n${stderr.slice(-500)}`
+                                `ffmpeg이 종료 코드 ${code}로 실패했습니다:\n${stderrTail()}`
                             )
                         );
                     }
@@ -141,7 +155,7 @@ ${pc.bold("예시:")}
             );
         } catch (err: unknown) {
             spinnerStop();
-            const message = err instanceof Error ? err.message : String(err);
+            const message = errorText(err);
             console.error(
                 `${cr}${pc.red(stripEmoji(`❌ 오류: ${message}`))}${pad}`
             );

@@ -2,7 +2,7 @@ import { createInterface } from "node:readline";
 import { Command } from "commander";
 import { createCrawler } from "../../crawler.ts";
 import { getLogLevel } from "../../log-level.ts";
-import { pc, stripEmoji } from "../lib/format.ts";
+import { errorText, pc, stripEmoji } from "../lib/format.ts";
 
 export const logoutCommand = new Command("logout")
     .description("저장된 세션을 삭제합니다")
@@ -35,7 +35,7 @@ ${pc.bold("예시:")}
                 `${pc.green(stripEmoji("✅ 세션과 저장된 인증 정보가 삭제되었습니다."))}`
             );
         } catch (err: unknown) {
-            const message = err instanceof Error ? err.message : String(err);
+            const message = errorText(err);
             console.error(
                 `${pc.red(stripEmoji(`❌ 세션 삭제 실패: ${message}`))}`
             );

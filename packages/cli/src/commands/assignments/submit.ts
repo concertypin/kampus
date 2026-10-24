@@ -7,8 +7,10 @@ import { createCrawler } from "../../crawler.ts";
 import { getLogLevel } from "../../log-level.ts";
 import {
     cr,
+    errorText,
     pad,
     pc,
+    plainBlock,
     spinnerStart,
     spinnerStop,
     stripEmoji,
@@ -226,12 +228,11 @@ ${pc.bold("예시:")}
                     console.log(
                         `${cr}${pc.yellow(stripEmoji(`⚠️ 변경사항 저장 후 제출 상태 확인 필요 (테이블 텍스트):`))}`
                     );
-                    console.log(submissionStatusText);
+                    console.log(plainBlock(submissionStatusText));
                 }
             } catch (err: unknown) {
                 spinnerStop();
-                const message =
-                    err instanceof Error ? err.message : String(err);
+                const message = errorText(err);
                 console.error(
                     `${cr}${pc.red(stripEmoji(`❌ 오류: 과제 제출 실패 - ${message}`))}${pad}`
                 );

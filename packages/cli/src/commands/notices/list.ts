@@ -3,6 +3,7 @@ import { createCrawler } from "../../crawler.ts";
 import { getLogLevel } from "../../log-level.ts";
 import {
     cr,
+    errorText,
     pad,
     pc,
     plainText,
@@ -90,9 +91,9 @@ export async function executeList(
         console.log(separator(40));
     } catch (err: unknown) {
         spinnerStop();
-        const message = err instanceof Error ? err.message : String(err);
+        const message = errorText(err);
         console.error(
-            `${cr}${pc.red(stripEmoji(`❌ 오류: ${plainText(message)}`))}${pad}`
+            `${cr}${pc.red(stripEmoji(`❌ 오류: ${message}`))}${pad}`
         );
         process.exitCode = 1;
     }

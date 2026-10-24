@@ -61,7 +61,7 @@ export function stripEmoji(text: string): string {
 export function plainText(text: string | null | undefined): string {
     let out = "";
     for (const ch of text ?? "") {
-        if (/[\t\n\v\f\r]/.test(ch)) out += " ";
+        if (/[\t\n\v\f\r\u2028\u2029]/.test(ch)) out += " ";
         else if (!isInvisibleChar(ch)) out += ch;
     }
     return out;
@@ -79,6 +79,15 @@ export function plainBlock(text: string | null | undefined): string {
                 .join("\t")
         )
         .join("\n");
+}
+
+/**
+ * The message of a caught error, for printing: an `Error`'s message or the
+ * stringified value, made safe with {@link plainBlock}. Errors can carry
+ * server-controlled text, so every caught error is printed through this.
+ */
+export function errorText(err: unknown): string {
+    return plainBlock(err instanceof Error ? err.message : String(err));
 }
 
 // ── Spinner helpers ──────────────────────────────────────────────

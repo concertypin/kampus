@@ -626,7 +626,7 @@ describe("CrawlerOptions.baseUrl", () => {
                     },
                 });
             }
-            return html(`<html><body>
+            return html(`<html><body id="page-mod-assign-view" class="path-mod cmid-6">
                 <div role="main"><h2>과제</h2></div>
                 <div id="intro">
                     <a href="/pluginfile.php/10/mod_assign/intro/guide.pdf">guide.pdf</a>

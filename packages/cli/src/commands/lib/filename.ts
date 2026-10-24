@@ -27,25 +27,16 @@ const MAX_EXTENSION_BYTES = 32;
 
 /**
  * Characters that are not shown, or that change how the text around them is
- * shown: C0 and C1 control characters, soft hyphen, zero-width characters
- * and the bidirectional controls. `report<U+202E>fdp.exe` is displayed as
+ * shown: control characters (`Cc`), format characters (`Cf`: soft hyphen,
+ * zero-width characters, bidirectional controls, tag characters) and the
+ * line and paragraph separators. `report<U+202E>fdp.exe` is displayed as
  * `reportexe.pdf`, and an escape character starts a terminal control
- * sequence.
+ * sequence. The library logger strips the same set.
  */
+const INVISIBLE_CHAR = /^[\p{Cc}\p{Cf}\p{Zl}\p{Zp}]$/u;
+
 export function isInvisibleChar(ch: string): boolean {
-    const code = ch.codePointAt(0) ?? 0;
-    return (
-        code < 0x20 || // C0 controls
-        (code >= 0x7f && code <= 0x9f) || // DEL, C1 controls
-        code === 0xad || // soft hyphen
-        code === 0x61c || // Arabic letter mark
-        code === 0x180e || // Mongolian vowel separator
-        (code >= 0x200b && code <= 0x200f) || // zero-width, LRM, RLM
-        (code >= 0x202a && code <= 0x202e) || // bidi embeddings, overrides
-        (code >= 0x2060 && code <= 0x206f) || // word joiner, bidi isolates
-        code === 0xfeff || // zero-width no-break space (BOM)
-        (code >= 0xfff9 && code <= 0xfffb) // interlinear annotation
-    );
+    return INVISIBLE_CHAR.test(ch);
 }
 
 function byteLength(text: string): number {
@@ -102,9 +93,10 @@ export function sanitizeFilename(name: string): string {
     let safe = "";
     for (const ch of name) {
         if (FORBIDDEN_CHARS.has(ch)) safe += "_";
-        // Tab and line breaks are C0 controls, the BOM counts as a space:
-        // decide "whitespace" first for the former only.
-        else if (/[\t\n\v\f\r]/.test(ch)) safe += " ";
+        // Tab and line breaks (C0 controls, U+2028/U+2029) are invisible
+        // characters too, but become a space: test them first. Other
+        // invisible characters, the BOM included, are dropped.
+        else if (/[\t\n\v\f\r\u2028\u2029]/.test(ch)) safe += " ";
         else if (isInvisibleChar(ch)) continue;
         else if (/\s/.test(ch)) safe += " ";
         else safe += ch;

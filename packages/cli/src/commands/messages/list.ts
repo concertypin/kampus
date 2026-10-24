@@ -3,8 +3,11 @@ import { createCrawler } from "../../crawler.ts";
 import { getLogLevel } from "../../log-level.ts";
 import {
     cr,
+    errorText,
     pad,
     pc,
+    plainBlock,
+    plainText,
     separator,
     spinnerStart,
     stripEmoji,
@@ -46,15 +49,17 @@ ${pc.bold("예시:")}
                 const newBadge = msg.isNew ? pc.yellow(" [NEW]") : "";
                 console.log(separator(40));
                 console.log(
-                    `${pc.bold("보낸이")}: ${msg.senderName}${newBadge}`
+                    `${pc.bold("보낸이")}: ${plainText(msg.senderName)}${newBadge}`
                 );
-                console.log(`${pc.bold("보낸이 ID")}: ${msg.senderId}`);
-                console.log(`${pc.bold("시간")}: ${msg.time}`);
-                console.log(`${pc.bold("내용")}: ${msg.content}`);
+                console.log(
+                    `${pc.bold("보낸이 ID")}: ${plainText(msg.senderId)}`
+                );
+                console.log(`${pc.bold("시간")}: ${plainText(msg.time)}`);
+                console.log(`${pc.bold("내용")}: ${plainBlock(msg.content)}`);
             }
             console.log(separator(40));
         } catch (err: unknown) {
-            const message = err instanceof Error ? err.message : String(err);
+            const message = errorText(err);
             console.error(
                 `${cr}${pc.red(stripEmoji(`❌ 오류: ${message}`))}${pad}`
             );

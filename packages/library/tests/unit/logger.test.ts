@@ -107,6 +107,13 @@ describe("message formatting", () => {
         expect(stderr).toHaveBeenLastCalledWith("fetch:error Error: boom");
     });
 
+    it("replaces control and bidi characters but keeps newlines and tabs", () => {
+        getLogger().info("a\u001b[2Jb\u202ec\u0000d\ne\tf");
+        expect(stderr).toHaveBeenCalledWith(
+            "info a\ufffd[2Jb\ufffdc\ufffdd\ne\tf"
+        );
+    });
+
     it("prints the cause chain of an Error", () => {
         const err = new Error("outer", {
             cause: new TypeError("inner", { cause: "root" }),
