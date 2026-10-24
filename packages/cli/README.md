@@ -106,7 +106,7 @@ npx @concertypin/kampus notices read <courseId> <postId>
 
 과목 페이지에서 공지사항 게시판(ubboard)을 찾아 게시글 ID·제목·작성자·작성일·조회수·고정 여부·URL을 출력합니다. 공지사항 게시판이 없는 과목은 오류 없이 빈 결과를 반환합니다 (`--json`에서는 `board: null`).
 
-텍스트 출력에서는 제목·작성자·본문·첨부파일 이름의 제어 문자(터미널 이스케이프 시퀀스 등)와 보이지 않는 문자를 지우고 출력합니다. `--json`은 값을 그대로 두며, 제어 문자는 JSON 이스케이프(`\u001b`)로 나옵니다. 첨부파일은 e-campus의 `pluginfile.php` 링크만 나옵니다.
+첨부파일은 e-campus의 `pluginfile.php` 링크만 나옵니다.
 
 ### 교수님 메시지
 
@@ -114,6 +114,10 @@ npx @concertypin/kampus notices read <courseId> <postId>
 npx @concertypin/kampus messages list
 npx @concertypin/kampus messages list --page 2
 ```
+
+### 출력 형식
+
+모든 명령의 텍스트 출력과 오류 메시지는 서버에서 받은 값(제목·작성자·본문·파일 이름 등)의 제어 문자(터미널 이스케이프 시퀀스 등)와 보이지 않는 문자를 지우고 출력합니다. `--json`은 값을 그대로 두며, 제어 문자는 JSON 이스케이프(`\u001b`)로 나옵니다.
 
 ## 라이브러리
 

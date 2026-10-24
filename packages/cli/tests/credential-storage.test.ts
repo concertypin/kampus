@@ -242,6 +242,30 @@ describe("KeychainCredentialStorage", () => {
                 );
             });
 
+            it("still returns the value when removing the migrated file copy fails", async () => {
+                await file.set(STORAGE_KEYS.credentials, SECRET);
+                const del = vi
+                    .spyOn(file, "delete")
+                    .mockRejectedValueOnce(new Error("EPERM"));
+                const storage = create();
+
+                expect(await storage.get(STORAGE_KEYS.credentials)).toBe(
+                    SECRET
+                );
+                expect(keyring.stored).toBe(SECRET);
+                expect(await file.get(STORAGE_KEYS.credentials)).toBe(SECRET);
+
+                // The next read finds an identical copy and removes it.
+                expect(await storage.get(STORAGE_KEYS.credentials)).toBe(
+                    SECRET
+                );
+                expect(del).toHaveBeenCalledTimes(2);
+                expect(
+                    await file.get(STORAGE_KEYS.credentials)
+                ).toBeUndefined();
+                expect(errors).toEqual([]);
+            });
+
             it("keeps the file copy and warns when the read-back differs", async () => {
                 await file.set(STORAGE_KEYS.credentials, SECRET);
                 keyring.readBack = "something else";
@@ -307,9 +331,22 @@ describe("KeychainCredentialStorage", () => {
                     new Error("EPERM set")
                 );
 
+                const storage = create();
                 await expect(
-                    create().set(STORAGE_KEYS.credentials, SECRET)
+                    storage.set(STORAGE_KEYS.credentials, SECRET)
                 ).rejects.toThrow("EPERM delete");
+
+                // The one case where a stale file copy wins: the new value
+                // is in the keychain, the old one is still in the file, and
+                // the next read takes the file copy for the newer one.
+                expect(keyring.stored).toBe(SECRET);
+                expect(await file.get(STORAGE_KEYS.credentials)).toBe(
+                    "old plain text"
+                );
+                expect(await storage.get(STORAGE_KEYS.credentials)).toBe(
+                    "old plain text"
+                );
+                expect(keyring.stored).toBe("old plain text");
             });
 
             it("does not touch the file when it holds no credentials", async () => {
@@ -358,6 +395,11 @@ describe("KeychainCredentialStorage", () => {
 
                 expect(error).toBeInstanceOf(KeychainDeleteError);
                 expect(String(error)).not.toContain(SECRET);
+                // The keyring's own error is kept as the cause.
+                expect(error).toHaveProperty(
+                    "cause",
+                    expect.objectContaining({ message: "delete failed" })
+                );
                 expect(
                     await file.get(STORAGE_KEYS.credentials)
                 ).toBeUndefined();
@@ -378,11 +420,15 @@ describe("KeychainCredentialStorage", () => {
             });
 
             it("throws when the keyring cannot be loaded", async () => {
-                loadKeyring.mockRejectedValue(new Error("no native binary"));
+                const loadError = new Error("no native binary");
+                loadKeyring.mockRejectedValue(loadError);
 
-                await expect(
-                    create().delete(STORAGE_KEYS.credentials)
-                ).rejects.toBeInstanceOf(KeychainDeleteError);
+                const error: unknown = await create()
+                    .delete(STORAGE_KEYS.credentials)
+                    .catch((err: unknown) => err);
+
+                expect(error).toBeInstanceOf(KeychainDeleteError);
+                expect(error).toHaveProperty("cause", loadError);
             });
 
             it("does not throw when there is no entry", async () => {

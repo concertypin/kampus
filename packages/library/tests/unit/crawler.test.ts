@@ -491,7 +491,7 @@ describe("Crawler", () => {
 
             expect(error).toBeInstanceOf(Error);
             expect(String(error)).toBe(
-                "Error: Failed to load assignment 426033: HTTP 200"
+                "Error: Failed to load assignment 426033: not the assignment page (HTTP 200)"
             );
         });
 
@@ -1359,7 +1359,7 @@ describe("Crawler", () => {
                 })
             );
             await expect(crawler.getVodDetail("1002")).rejects.toThrow(
-                /^Failed to load VOD 1002: HTTP 200$/
+                /^Failed to load VOD 1002: not the VOD page \(HTTP 200\)$/
             );
             expect(mockFetch).toHaveBeenCalledTimes(2);
         });

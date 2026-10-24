@@ -59,6 +59,18 @@ function formatError(
     return `${head}\nCaused by: ${causeText}`;
 }
 
+/**
+ * `String(arg)` that never throws: a null-prototype object has no
+ * `toString`, and a custom `toString` may throw.
+ */
+function safeString(arg: unknown): string {
+    try {
+        return String(arg);
+    } catch {
+        return Object.prototype.toString.call(arg);
+    }
+}
+
 /** Format one log argument without relying on node:util (Deno compatible). */
 function formatArg(arg: unknown, includeStack: boolean): string {
     if (typeof arg === "string") return arg;
@@ -70,10 +82,10 @@ function formatArg(arg: unknown, includeStack: boolean): string {
         const json = JSON.stringify(arg, (_key, value: unknown) =>
             value instanceof Error ? `${value.name}: ${value.message}` : value
         );
-        return json ?? String(arg);
+        return json ?? safeString(arg);
     } catch {
         // Circular structures, BigInt, ...
-        return String(arg);
+        return safeString(arg);
     }
 }
 

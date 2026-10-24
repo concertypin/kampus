@@ -11,6 +11,7 @@ import { createCrawler } from "../../crawler.ts";
 import { getLogLevel } from "../../log-level.ts";
 import {
     cr,
+    errorLine,
     errorText,
     pc,
     plainText,
@@ -249,7 +250,8 @@ ${pc.bold("예시:")}
                 );
                 successCount++;
             } catch (err: unknown) {
-                const message = errorText(err);
+                // One line: a multi-line message must not break the list
+                const message = errorLine(err);
                 process.stdout.write(
                     `${cr}${pc.red(stripEmoji("  ✗"))} ${safeName} ${pc.dim(`- ${message}`)}\n`
                 );

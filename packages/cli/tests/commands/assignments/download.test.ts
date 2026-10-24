@@ -343,6 +343,26 @@ describe("assignments download command", () => {
         expect(logs.some((l) => l.includes("1개 성공, 1개 실패"))).toBe(true);
     });
 
+    it("should print a multi-line download error on the file's own line", async () => {
+        getSessionMock.mockResolvedValue("MoodleSession=abc123; path=/");
+        getAssignmentDetailMock.mockResolvedValue(sampleAssignment);
+        vi.stubGlobal(
+            "fetch",
+            vi.fn<typeof fetch>(() =>
+                Promise.reject(new Error("first line\nsecond\r\nthird\tend"))
+            )
+        );
+
+        const { stdout } = await run(["421889", "-o", out]);
+
+        const failLine = stdout
+            .split("\n")
+            .find((line) => line.includes("report.zip"));
+        expect(failLine).toContain("report.zip - first line");
+        expect(failLine).toContain("first line second  third end");
+        expect(stdout).not.toMatch(/^second/m);
+    });
+
     it("should download into an --output folder outside the working directory", async () => {
         getSessionMock.mockResolvedValue("MoodleSession=abc123; path=/");
         getAssignmentDetailMock.mockResolvedValue(sampleAssignment);

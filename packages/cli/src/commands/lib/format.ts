@@ -90,6 +90,14 @@ export function errorText(err: unknown): string {
     return plainBlock(err instanceof Error ? err.message : String(err));
 }
 
+/**
+ * {@link errorText} on a single line: line breaks and tabs become spaces
+ * ({@link plainText}), for an error printed inside a line of other output.
+ */
+export function errorLine(err: unknown): string {
+    return plainText(err instanceof Error ? err.message : String(err));
+}
+
 // ── Spinner helpers ──────────────────────────────────────────────
 
 /**

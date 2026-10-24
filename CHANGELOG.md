@@ -7,21 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+#### Library (`@concertypin/ecampus-crawler`)
+
+- New `Crawler.siteOrigin` getter and exports `isSiteUrl` and `parseSiteUrl`, so callers can apply the same origin checks as the crawler to the configured site
+- New export `STORAGE_KEYS` (`session`, `credentials`): the keys the crawler uses in its `SessionStorage`
+
 ### Security
 
 #### CLI (`@concertypin/kampus`)
 
-- On Windows the saved login credentials are stored in the Windows Credential Manager instead of plain text in `session.json`. Credentials left in the file by earlier versions are moved to the Credential Manager automatically the next time they are read: by `auth check`, an auto-login after the session expired, or `assignments submit` (verified by a read-back before the file copy is removed). If the Credential Manager cannot be used, the CLI falls back to the file and prints one warning per process
+- On Windows the saved login credentials are stored in the Windows Credential Manager instead of plain text in `session.json`. Credentials left in the file by earlier versions are moved to the Credential Manager automatically the next time they are read: by `auth check`, an auto-login after the session expired, or `assignments submit` (verified by a read-back before the file copy is removed; if removing the file copy fails, the read still succeeds and the next read removes it). If the Credential Manager cannot be used, the CLI falls back to the file and prints one warning per process
 - On Linux and macOS credentials stay in `session.json` (mode 0600); a newly created data directory now gets mode 0700 (an existing one keeps its mode)
-- Text output no longer prints raw server-provided text: control and escape characters, invisible characters and bidirectional overrides are removed from every value of `assignments`, `quizzes`, `messages`, `courses`, `attendance`, `resources`, `vod` and `syllabus` output and from every printed error message (JSON output is unchanged)
+- Text output no longer prints raw server-provided text: control and escape characters, invisible characters and bidirectional overrides are removed from every value of `assignments`, `quizzes`, `messages`, `courses`, `attendance`, `resources`, `vod` and `syllabus` output and from every printed error message (JSON output is unchanged); the per-file failure line of `assignments download` and `resources download` prints the error on one line
 - `vod download` prints only the last 10 lines of ffmpeg's log on failure, sanitised
-- `assignments submit` checks that the browser is still on the e-campus origin, and that the login form posts to it, before typing or submitting the saved credentials, and stops otherwise; it also rejects an assignment id that is not a number before doing anything else
+- `assignments submit` checks that the browser is still on the e-campus origin, and checks the action of the login form, before typing or submitting the saved credentials, and stops otherwise; it also rejects an assignment id that is not a number before doing anything else
 
 #### Library (`@concertypin/ecampus-crawler`)
 
-- `getAssignmentDetail` and `getVodDetail` throw a short error (the site's error message or the HTTP status) when the response is not the view page of that module, instead of parsing whatever page came back
-- `getSyllabusParams` and `downloadSyllabusPdf` no longer put the course page's `onclick` text or the reporting server's response into the error message; both are logged at `debug`
-- The logger replaces control, escape, invisible and bidirectional-override characters with U+FFFD, so debug output cannot drive the terminal; the syllabus "incomplete parameters" error names the missing parameters instead of echoing their values
+- `getAssignmentDetail` and `getVodDetail` throw a short error when the response is not the view page of that module, instead of parsing whatever page came back: the site's error message, or else that the page is not the module's page, with the HTTP status (e.g. `Failed to load assignment 123: not the assignment page (HTTP 200)`)
+- `getSyllabusParams` and `downloadSyllabusPdf` no longer put the course page's `onclick` text or the reporting server's response into the error message; both are logged at `debug`. The syllabus "incomplete parameters" error names the missing parameters instead of echoing their values
+- The logger replaces control, escape, invisible and bidirectional-override characters with U+FFFD, so debug output cannot drive the terminal
 - `downloadSyllabusPdf` percent-encodes the file id in the download URL
 
 ### Changed
@@ -38,8 +45,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 #### Library (`@concertypin/ecampus-crawler`)
 
 - `VodItem.week` is now the course section number (section N is week N) instead of the first number found in the section title, so a title with another number (e.g. a date) can no longer change the week. `getAttendance` reads the week from the first cell of the attendance table, which is the same number (a cell without exactly one number gives week 0, and such rows are never paired with a VOD). `getVods` now pairs the VODs and attendance rows of a week by title first (exact, then one containing the other, only where that is unambiguous) and by position only when the week has equally many of both and no ambiguous title is left; a VOD without a match has no status (`-`) instead of the status of a neighbouring row
-- New `Crawler.siteOrigin` getter and exports `isSiteUrl` and `parseSiteUrl`, so callers can apply the same origin checks as the crawler to the configured site
-- New export `STORAGE_KEYS` (`session`, `credentials`): the keys the crawler uses in its `SessionStorage`; `FileStorage` creates a missing directory with mode 0700
+- `FileStorage` creates a missing directory with mode 0700
 
 ### Fixed
 
@@ -53,7 +59,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 #### Library (`@concertypin/ecampus-crawler`)
 
 - Log levels now use consola's `LogLevels`; the default level is `warn`
-- Log arguments are formatted individually, so plain objects print as JSON instead of `[object Object]` (an Error inside an object prints as `name: message`), and an Error's `cause` chain is printed
+- Log arguments are formatted individually, so plain objects print as JSON instead of `[object Object]` (an Error inside an object prints as `name: message`), and an Error's `cause` chain is printed. Formatting never throws: a value whose `toString` throws or is missing (e.g. a circular object without a prototype) prints as `[object Object]`
 - Errors that are rethrown to the caller are logged at `debug` instead of `error`; download URLs are logged at `debug`
 
 ## [0.3.1] - 2026-10-21
