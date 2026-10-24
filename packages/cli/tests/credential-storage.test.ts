@@ -549,6 +549,24 @@ describe("KeychainCredentialStorage", () => {
                 expect(slow.data[STORAGE_KEYS.credentials]).toBeUndefined();
             });
 
+            it("serializes across instances, so a migration cannot undo another instance's set()", async () => {
+                const slow = new SlowFile();
+                slow.data[STORAGE_KEYS.credentials] = "old plain text";
+                const migrating = createOn(slow);
+                const writing = createOn(slow);
+
+                await Promise.all([
+                    migrating.get(STORAGE_KEYS.credentials),
+                    writing.set(STORAGE_KEYS.credentials, SECRET),
+                ]);
+
+                expect(keyring.stored).toBe(SECRET);
+                expect(slow.data[STORAGE_KEYS.credentials]).toBeUndefined();
+                expect(await migrating.get(STORAGE_KEYS.credentials)).toBe(
+                    SECRET
+                );
+            });
+
             it("keeps working after a failed operation", async () => {
                 const storage = create();
                 keyring.failDelete = true;
@@ -581,6 +599,18 @@ describe("KeychainCredentialStorage", () => {
                 expect(await file.get(STORAGE_KEYS.credentials)).toBe(SECRET);
                 expect(errors).toHaveLength(1);
                 expect(errors[0]).toContain("키체인");
+            });
+
+            it("refuses to wrap another instance (they share one queue)", () => {
+                expect(
+                    () =>
+                        new Storage(create(), {
+                            service: SERVICE,
+                            account: ACCOUNT,
+                            platform: "win32",
+                            loadKeyring,
+                        })
+                ).toThrow("cannot wrap another");
             });
 
             it("warns once per process even across storage instances", async () => {

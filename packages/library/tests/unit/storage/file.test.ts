@@ -1,8 +1,28 @@
-import { describe, expect, it, beforeEach, afterEach } from "vitest";
-import { mkdtemp, rm, access, stat } from "node:fs/promises";
+import { describe, expect, it, beforeEach, afterEach, vi } from "vitest";
+import {
+    mkdtemp,
+    rm,
+    access,
+    stat,
+    readdir,
+    writeFile,
+} from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { FileStorage } from "@/storage/file";
+
+/** Makes the final rename fail, as if the process died before it. */
+const renameFault = vi.hoisted(() => ({ on: false }));
+vi.mock("node:fs/promises", async (importOriginal) => {
+    const fs = await importOriginal<typeof import("node:fs/promises")>();
+    return {
+        ...fs,
+        rename: (from: string, to: string) =>
+            renameFault.on
+                ? Promise.reject(new Error("rename failed"))
+                : fs.rename(from, to),
+    };
+});
 
 describe("FileStorage", () => {
     let tempDir: string;
@@ -16,6 +36,7 @@ describe("FileStorage", () => {
     });
 
     afterEach(async () => {
+        renameFault.on = false;
         await rm(tempDir, { recursive: true, force: true });
     });
 
@@ -56,6 +77,47 @@ describe("FileStorage", () => {
 
         // File should be deleted
         await expect(access(storagePath)).rejects.toThrow(Error);
+    });
+
+    it("keeps the old file intact when a write does not complete", async () => {
+        await storage.set("credentials", "old");
+        renameFault.on = true;
+
+        await expect(storage.set("credentials", "new")).rejects.toThrow(
+            "rename failed"
+        );
+
+        renameFault.on = false;
+        expect(await new FileStorage(storagePath).get("credentials")).toBe(
+            "old"
+        );
+        // The temporary file is removed again.
+        expect(await readdir(tempDir)).toEqual(["session.json"]);
+    });
+
+    it("overwrites a temporary file left by a crash, and clear() removes one", async () => {
+        const leftover = `${storagePath}.tmp`;
+        await writeFile(leftover, JSON.stringify({ credentials: "old" }));
+
+        await storage.set("session", "cookie");
+        expect(await readdir(tempDir)).toEqual(["session.json"]);
+
+        await writeFile(leftover, JSON.stringify({ credentials: "old" }));
+        await storage.clear();
+        expect(await readdir(tempDir)).toEqual([]);
+    });
+
+    it("delete() removes a temporary file left by a crash, even without the key", async () => {
+        await storage.set("session", "cookie");
+        await writeFile(
+            `${storagePath}.tmp`,
+            JSON.stringify({ credentials: "old" })
+        );
+
+        await storage.delete("credentials");
+
+        expect(await readdir(tempDir)).toEqual(["session.json"]);
+        expect(await storage.get("session")).toBe("cookie");
     });
 
     it("should create nested directories", async () => {

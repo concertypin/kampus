@@ -47,7 +47,9 @@ function formatError(
 ): string {
     seen.add(err);
     const head =
-        includeStack && err.stack ? err.stack : `${err.name}: ${err.message}`;
+        includeStack && typeof err.stack === "string"
+            ? err.stack
+            : `${err.name}: ${err.message}`;
     const { cause } = err;
     if (cause === undefined || (cause instanceof Error && seen.has(cause))) {
         return head;
@@ -68,6 +70,19 @@ function safeString(arg: unknown): string {
         return String(arg);
     } catch {
         return Object.prototype.toString.call(arg);
+    }
+}
+
+/**
+ * {@link formatArg} that never throws. Even the last fallbacks can throw on a
+ * hostile value (a revoked Proxy, a throwing `Symbol.toStringTag` getter), and
+ * a log call must not turn into an exception for its caller.
+ */
+function formatArgSafely(arg: unknown, includeStack: boolean): string {
+    try {
+        return stripControls(formatArg(arg, includeStack));
+    } catch {
+        return "[unprintable]";
     }
 }
 
@@ -99,7 +114,7 @@ const stderrReporter = {
         const type = logObj.type;
         const includeStack = ctx.options.level >= LogLevels.debug;
         const message = logObj.args
-            .map((arg) => stripControls(formatArg(arg, includeStack)))
+            .map((arg) => formatArgSafely(arg, includeStack))
             .join(" ");
         // oxlint-disable-next-line no-console
         console.error(`${tag}${type} ${message}`);
