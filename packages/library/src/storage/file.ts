@@ -44,8 +44,10 @@ export class FileStorage implements SessionStorage {
         });
         // Write a temporary file next to the target and rename it over the
         // target, so a crash mid-write leaves the old file intact instead of
-        // a truncated one (which would lose the stored credentials).
-        const tmpPath = `${this.filePath}.${Math.random().toString(36).slice(2)}.tmp`;
+        // a truncated one (which would lose the stored credentials). The
+        // name is fixed, so a temporary file left by a crash is overwritten by
+        // the next write and removed by clear().
+        const tmpPath = this.tmpPath();
         try {
             await fs.writeFile(tmpPath, JSON.stringify(data, null, 2), {
                 encoding: "utf-8",
@@ -80,12 +82,19 @@ export class FileStorage implements SessionStorage {
 
     async clear(): Promise<void> {
         const fs = await import("node:fs/promises");
-        try {
-            await fs.unlink(this.filePath);
-        } catch (err: unknown) {
-            if ((err as { code?: string }).code !== "ENOENT") {
-                throw err;
+        for (const path of [this.filePath, this.tmpPath()]) {
+            try {
+                await fs.unlink(path);
+            } catch (err: unknown) {
+                if ((err as { code?: string }).code !== "ENOENT") {
+                    throw err;
+                }
             }
         }
+    }
+
+    /** Where a write is staged before it replaces the file. */
+    private tmpPath(): string {
+        return `${this.filePath}.tmp`;
     }
 }

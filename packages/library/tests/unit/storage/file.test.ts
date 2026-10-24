@@ -1,5 +1,12 @@
 import { describe, expect, it, beforeEach, afterEach, vi } from "vitest";
-import { mkdtemp, rm, access, stat, readdir } from "node:fs/promises";
+import {
+    mkdtemp,
+    rm,
+    access,
+    stat,
+    readdir,
+    writeFile,
+} from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { FileStorage } from "@/storage/file";
@@ -86,6 +93,18 @@ describe("FileStorage", () => {
         );
         // The temporary file is removed again.
         expect(await readdir(tempDir)).toEqual(["session.json"]);
+    });
+
+    it("overwrites a temporary file left by a crash, and clear() removes one", async () => {
+        const leftover = `${storagePath}.tmp`;
+        await writeFile(leftover, JSON.stringify({ credentials: "old" }));
+
+        await storage.set("session", "cookie");
+        expect(await readdir(tempDir)).toEqual(["session.json"]);
+
+        await writeFile(leftover, JSON.stringify({ credentials: "old" }));
+        await storage.clear();
+        expect(await readdir(tempDir)).toEqual([]);
     });
 
     it("should create nested directories", async () => {

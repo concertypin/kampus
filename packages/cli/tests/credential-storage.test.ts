@@ -601,6 +601,18 @@ describe("KeychainCredentialStorage", () => {
                 expect(errors[0]).toContain("키체인");
             });
 
+            it("refuses to wrap another instance (they share one queue)", () => {
+                expect(
+                    () =>
+                        new Storage(create(), {
+                            service: SERVICE,
+                            account: ACCOUNT,
+                            platform: "win32",
+                            loadKeyring,
+                        })
+                ).toThrow("cannot wrap another");
+            });
+
             it("warns once per process even across storage instances", async () => {
                 await create().get(STORAGE_KEYS.credentials);
                 await create().get(STORAGE_KEYS.credentials);

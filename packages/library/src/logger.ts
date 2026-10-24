@@ -47,7 +47,9 @@ function formatError(
 ): string {
     seen.add(err);
     const head =
-        includeStack && err.stack ? err.stack : `${err.name}: ${err.message}`;
+        includeStack && typeof err.stack === "string"
+            ? err.stack
+            : `${err.name}: ${err.message}`;
     const { cause } = err;
     if (cause === undefined || (cause instanceof Error && seen.has(cause))) {
         return head;
@@ -78,7 +80,7 @@ function safeString(arg: unknown): string {
  */
 function formatArgSafely(arg: unknown, includeStack: boolean): string {
     try {
-        return formatArg(arg, includeStack);
+        return stripControls(formatArg(arg, includeStack));
     } catch {
         return "[unprintable]";
     }
@@ -112,7 +114,7 @@ const stderrReporter = {
         const type = logObj.type;
         const includeStack = ctx.options.level >= LogLevels.debug;
         const message = logObj.args
-            .map((arg) => stripControls(formatArgSafely(arg, includeStack)))
+            .map((arg) => formatArgSafely(arg, includeStack))
             .join(" ");
         // oxlint-disable-next-line no-console
         console.error(`${tag}${type} ${message}`);

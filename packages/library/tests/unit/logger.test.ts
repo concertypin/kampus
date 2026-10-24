@@ -138,6 +138,14 @@ describe("message formatting", () => {
         );
     });
 
+    it("prints an Error whose stack is not a string by name and message", () => {
+        setLogLevel("debug");
+        const err = new Error("boom");
+        Object.defineProperty(err, "stack", { value: {} });
+        expect(() => getLogger().debug("x", err)).not.toThrow();
+        expect(stderr).toHaveBeenCalledWith("debug x Error: boom");
+    });
+
     it("prints a value it cannot format at all as [unprintable]", () => {
         const { proxy, revoke } = Proxy.revocable({}, {});
         revoke();
