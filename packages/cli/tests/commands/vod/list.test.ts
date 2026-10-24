@@ -43,7 +43,7 @@ describe("vod list command", () => {
     it("should call getVods with courseId", async () => {
         getVodsMock.mockResolvedValue([
             {
-                id: "456468",
+                id: "350468",
                 week: 2,
                 weekTitle: "2주차",
                 name: "2주차 강의1",
@@ -53,7 +53,7 @@ describe("vod list command", () => {
                 status: "O",
                 watchedTime: "26:20 View: 3 time(s)",
                 requiredTime: "23:00",
-                url: "https://ecampus.kangnam.ac.kr/mod/vod/view.php?id=456468",
+                url: "https://ecampus.kangnam.ac.kr/mod/vod/view.php?id=350468",
             },
         ]);
 
@@ -65,13 +65,111 @@ describe("vod list command", () => {
             .spyOn(process.stdout, "write")
             .mockImplementation(() => true);
 
-        await program.parseAsync(["vod", "list", "365524"], {
+        await program.parseAsync(["vod", "list", "340524"], {
             from: "user",
         });
 
-        expect(getVodsMock).toHaveBeenCalledWith("365524");
+        expect(getVodsMock).toHaveBeenCalledWith("340524");
 
         stdoutSpy.mockRestore();
+    });
+
+    it.each(["▲", "△"])("labels the late mark %s as late", async (mark) => {
+        getVodsMock.mockResolvedValue([
+            {
+                id: "350468",
+                week: 1,
+                weekTitle: "-",
+                name: "lecture",
+                duration: "",
+                period: "",
+                status: mark,
+                watchedTime: "",
+                requiredTime: "",
+                url: "",
+            },
+        ]);
+        const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+        const program = new Command();
+        program.addCommand(vodCommand);
+        program.exitOverride();
+        await program.parseAsync(["vod", "list", "340524"], {
+            from: "user",
+        });
+
+        const text = logSpy.mock.calls.map((c) => String(c[0])).join("\n");
+        expect(text).toContain("▲ (지각)");
+    });
+
+    describe("week line", () => {
+        function vod(week: number, weekTitle: string): VodItem {
+            return {
+                id: "350468",
+                week,
+                weekTitle,
+                name: "lecture",
+                duration: "26:19",
+                period: "",
+                status: "O",
+                watchedTime: "-",
+                requiredTime: "",
+                url: "",
+            };
+        }
+
+        async function weekLines(items: VodItem[]): Promise<string[]> {
+            getVodsMock.mockResolvedValue(items);
+            const logSpy = vi
+                .spyOn(console, "log")
+                .mockImplementation(() => {});
+            const program = new Command();
+            program.addCommand(vodCommand);
+            program.exitOverride();
+            await program.parseAsync(["vod", "list", "340524"], {
+                from: "user",
+            });
+            return logSpy.mock.calls
+                .map((call) => String(call[0]))
+                .filter((line) => line.includes("주차"));
+        }
+
+        it("prints the week number followed by the section title", async () => {
+            const lines = await weekLines([
+                vod(4, "4주차 (보충)"),
+                vod(1, "1Week [02 September - 08 September]"),
+            ]);
+
+            expect(lines).toHaveLength(2);
+            expect(lines[0]).toContain("4주차 (4주차 (보충))");
+            expect(lines[1]).toContain(
+                "1주차 (1Week [02 September - 08 September])"
+            );
+        });
+
+        it("omits the title when it is - or empty", async () => {
+            const lines = await weekLines([
+                vod(6, "-"),
+                vod(7, ""),
+                vod(8, "  "),
+            ]);
+
+            expect(lines).toHaveLength(3);
+            expect(lines[0]).toMatch(/6주차$/);
+            expect(lines[1]).toMatch(/7주차$/);
+            expect(lines[2]).toMatch(/8주차$/);
+        });
+
+        it("prints only the section title for section 0", async () => {
+            const lines = await weekLines([
+                vod(0, "Course Summary"),
+                vod(0, "-"),
+            ]);
+
+            expect(lines).toHaveLength(2);
+            expect(lines[0]).toMatch(/: Course Summary$/);
+            expect(lines[0]).not.toContain("0주차");
+            expect(lines[1]).toMatch(/: -$/);
+        });
     });
 
     it("should handle empty VOD list", async () => {
@@ -85,11 +183,11 @@ describe("vod list command", () => {
             .spyOn(process.stdout, "write")
             .mockImplementation(() => true);
 
-        await program.parseAsync(["vod", "list", "365524"], {
+        await program.parseAsync(["vod", "list", "340524"], {
             from: "user",
         });
 
-        expect(getVodsMock).toHaveBeenCalledWith("365524");
+        expect(getVodsMock).toHaveBeenCalledWith("340524");
         stdoutSpy.mockRestore();
     });
 
@@ -108,7 +206,7 @@ describe("vod list command", () => {
             .mockImplementation(() => true);
 
         try {
-            await program.parseAsync(["vod", "list", "365524"], {
+            await program.parseAsync(["vod", "list", "340524"], {
                 from: "user",
             });
         } catch {

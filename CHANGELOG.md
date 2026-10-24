@@ -28,6 +28,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 #### CLI (`@concertypin/kampus`)
 
+- `attendance list` shows week 0 for a row whose week cell does not hold exactly one number (it used to take the first number)
+- `vod list` prints `N주차 (title)` for the week of each lecture, and only `N주차` when the section title is `-` or empty; a VOD in section 0 (the course intro) shows only the section title, or `-` without one
 - Internal: `createCrawler` accepts a `baseUrl` so the code can target another e-campus origin (a local mock server). There is no flag or environment variable for it, so the real site cannot be redirected by configuration. Another origin gets its own session file (`session-<host>-<hash>.json`, the host with characters other than `a-z0-9.-` replaced and the first 12 hex digits of the origin's SHA-256) and its own keychain account; the default `session.json` and account are unchanged. Downloads, `assignments submit` and the cookie scope follow the crawler's origin; the private/loopback host refusal stays, except for URLs inside a loopback site
 - New dependency `@napi-rs/keyring` (native addon with prebuilt per-platform binaries, no install script); it is only loaded on Windows
 - `auth check` shows where the credentials are stored (OS keychain, session file or none); `auth logout` also removes the Credential Manager entry, and reports a failure (non-zero exit) if that entry cannot be removed
@@ -35,6 +37,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 #### Library (`@concertypin/ecampus-crawler`)
 
+- `VodItem.week` is now the course section number (section N is week N) instead of the first number found in the section title, so a title with another number (e.g. a date) can no longer change the week. `getAttendance` reads the week from the first cell of the attendance table, which is the same number (a cell without exactly one number gives week 0, and such rows are never paired with a VOD). `getVods` now pairs the VODs and attendance rows of a week by title first (exact, then one containing the other, only where that is unambiguous) and by position only when the week has equally many of both and no ambiguous title is left; a VOD without a match has no status (`-`) instead of the status of a neighbouring row
 - New `Crawler.siteOrigin` getter and exports `isSiteUrl` and `parseSiteUrl`, so callers can apply the same origin checks as the crawler to the configured site
 - New export `STORAGE_KEYS` (`session`, `credentials`): the keys the crawler uses in its `SessionStorage`; `FileStorage` creates a missing directory with mode 0700
 
@@ -44,6 +47,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Warnings were hidden by default (without a flag the library stayed silent), and the log level mapping was off by one, so `--verbose` showed no info output, `--debug` no debug output and `--trace` no request/response headers; warnings are now shown by default and each flag shows its own level
 - With `--verbose` or a more verbose flag, request and login errors were printed twice
+- `vod list` showed a late view as an unknown status: the site marks it with `▲`, but only `△` was recognised; both are now labelled `▲ (지각)`
 - An auto-login failure is now one warning that carries the error (it was an `error` line plus a `warn` line), so it is shown by default
 
 #### Library (`@concertypin/ecampus-crawler`)

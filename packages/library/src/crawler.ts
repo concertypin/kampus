@@ -39,6 +39,10 @@ export interface Course {
 }
 
 export interface AttendanceItem {
+    /**
+     * The week number from the first cell of the attendance table. It equals
+     * the course's section number, so it matches {@link VodItem.week}.
+     */
     week: number;
     title: string;
     requiredTime: string;
@@ -260,6 +264,11 @@ export interface SyllabusParams {
 
 export interface VodItem {
     id: string;
+    /**
+     * The week the VOD belongs to: the course section number (`section-N` is
+     * week N), not a number read from the title. Matches
+     * {@link AttendanceItem.week}.
+     */
     week: number;
     weekTitle: string;
     name: string;
@@ -381,6 +390,91 @@ function getCourseSections(doc: Document): Element[] {
         const id = section.getAttribute("id");
         return !id || lastIndexById.get(id) === index;
     });
+}
+
+/**
+ * The section number of a course-page section, read from its `section-N` id,
+ * or `undefined` when the id is missing or has another shape.
+ *
+ * In a weeks-format course the section number is the week number, whatever the
+ * section is titled: titles may be `-`, a date range ("1Week [02 September -
+ * 08 September]"), "midterm", and so on, and a session counter such as "3회차"
+ * only counts lectures inside the week.
+ */
+function sectionNumber(section: Element): number | undefined {
+    const match = (section.getAttribute("id") ?? "").match(/^section-(\d+)$/);
+    return match?.[1] ? parseInt(match[1], 10) : undefined;
+}
+
+/**
+ * Pairs the VODs of one week with that week's attendance rows (same order as
+ * `names`; `undefined` where a VOD has no row). The attendance table has no
+ * module id, so rows are matched by title: exact first, then one containing
+ * the other. Containment is ambiguous when titles share a prefix ("Lecture 1"
+ * is in "Lecture 10 (VOD)"), so a VOD takes a row by containment only while
+ * that row is its single remaining candidate and no other VOD has it as its
+ * single candidate; each pairing narrows the others, so the step repeats.
+ * Only when no unpaired VOD has a containment candidate left and the week has
+ * as many rows as VODs are the rest paired by position. Otherwise a VOD
+ * without a title match gets no row rather than a wrong one.
+ */
+function matchAttendance(
+    names: string[],
+    rows: AttendanceItem[]
+): (AttendanceItem | undefined)[] {
+    const titles = rows.map((row) => normalizeText(row.title));
+    const wanted = names.map((name) => normalizeText(name));
+    const result: (AttendanceItem | undefined)[] = wanted.map(() => undefined);
+    const used = new Set<number>();
+    const take = (vodIndex: number, rowIndex: number): void => {
+        used.add(rowIndex);
+        result[vodIndex] = rows[rowIndex];
+    };
+
+    wanted.forEach((name, vodIndex) => {
+        const rowIndex = titles.findIndex(
+            (title, i) => !used.has(i) && title !== "" && title === name
+        );
+        if (rowIndex >= 0) take(vodIndex, rowIndex);
+    });
+
+    const contains = (title: string, name: string): boolean =>
+        title !== "" &&
+        name !== "" &&
+        (title.includes(name) || name.includes(title));
+    const candidates = (): number[][] =>
+        wanted.map((name, vodIndex) =>
+            result[vodIndex]
+                ? []
+                : titles.flatMap((title, i) =>
+                      !used.has(i) && contains(title, name) ? [i] : []
+                  )
+        );
+
+    let progressed = true;
+    while (progressed) {
+        progressed = false;
+        const current = candidates();
+        const single = current.map((list) =>
+            list.length === 1 ? list[0] : undefined
+        );
+        single.forEach((rowIndex, vodIndex) => {
+            if (rowIndex === undefined || used.has(rowIndex)) return;
+            const rivals = single.filter((other) => other === rowIndex);
+            if (rivals.length !== 1) return;
+            take(vodIndex, rowIndex);
+            progressed = true;
+        });
+    }
+
+    const ambiguous = candidates().some((list) => list.length > 0);
+    if (names.length === rows.length && !ambiguous) {
+        const free = rows.filter((_, i) => !used.has(i));
+        for (let i = 0; i < result.length && free.length > 0; i++) {
+            if (!result[i]) result[i] = free.shift();
+        }
+    }
+    return result;
 }
 
 /**
@@ -1455,10 +1549,21 @@ export class Crawler {
             } else {
                 const td = tds.shift();
                 if (td) {
+                    // The first cell of a week's first row is the week number
+                    // (the course's `section-N`), repeated for every VOD of
+                    // the week through its rowspan. Weeks without a VOD still
+                    // get one row with empty cells. Text around the number
+                    // ("1주차") is allowed; a cell with no number or with more
+                    // than one is not a week.
                     const text = td.textContent || "";
-                    const match = text.match(/(\d+)/);
+                    const match = text.match(/^\D*(\d+)\D*$/);
                     currentWeek =
                         match && match[1] ? parseInt(match[1], 10) : 0;
+                    if (!match) {
+                        log.debug(
+                            "Attendance row without a week number; its VODs get no status"
+                        );
+                    }
 
                     const rowspanAttr = td.getAttribute("rowspan");
                     const rowspan = rowspanAttr ? parseInt(rowspanAttr, 10) : 1;
@@ -2525,7 +2630,7 @@ export class Crawler {
 
     /**
      * Get all VOD lecture items for a course, along with learning period and attendance status.
-     * Respects the exact attendance status (O/X/△) from Online Attendance without recalculation.
+     * Respects the exact attendance status (O/X/▲) from Online Attendance without recalculation.
      * @param courseId - The course ID
      */
     async getVods(courseId: string): Promise<VodItem[]> {
@@ -2542,6 +2647,9 @@ export class Crawler {
 
         const attByWeek = new Map<number, AttendanceItem[]>();
         for (const item of attItems) {
+            // Week 0 holds the rows whose week cell could not be read, from
+            // any week: they must not be paired with the VODs of section 0.
+            if (item.week === 0) continue;
             if (!attByWeek.has(item.week)) {
                 attByWeek.set(item.week, []);
             }
@@ -2554,16 +2662,18 @@ export class Crawler {
 
         const vods: VodItem[] = [];
         const seenCmid = new Set<string>();
-        const vodCountByWeek = new Map<number, number>();
 
         for (const section of getCourseSections(doc)) {
             const sectionNameEl = section.querySelector(
                 ".sectionname, .section-title"
             );
             const weekTitle = normalizeText(sectionNameEl?.textContent);
+            // The section number is the week. Only a section without a usable
+            // id falls back to the first number in its title.
             const weekMatch = weekTitle.match(/(\d+)/);
             const weekNum =
-                weekMatch && weekMatch[1] ? parseInt(weekMatch[1], 10) : 0;
+                sectionNumber(section) ??
+                (weekMatch?.[1] ? parseInt(weekMatch[1], 10) : 0);
 
             const vodEls = section.querySelectorAll("li.activity.modtype_vod");
             for (const actEl of vodEls) {
@@ -2612,28 +2722,6 @@ export class Crawler {
                     }
                 }
 
-                // Match with attendance by week and index in week, fallback to title match
-                const weekIdx = vodCountByWeek.get(weekNum) || 0;
-                vodCountByWeek.set(weekNum, weekIdx + 1);
-
-                const weekAttList = attByWeek.get(weekNum) || [];
-                const att =
-                    weekAttList[weekIdx] ||
-                    weekAttList.find((a) => a.title === name);
-
-                // Respect original status as requested
-                const status = att?.status
-                    ? normalizeText(att.status)
-                    : att
-                      ? "X"
-                      : "-";
-                const watchedTime = att?.watchedTime
-                    ? normalizeText(att.watchedTime)
-                    : "-";
-                const requiredTime = att?.requiredTime
-                    ? normalizeText(att.requiredTime)
-                    : "";
-
                 vods.push({
                     id: cmid,
                     week: weekNum,
@@ -2642,12 +2730,34 @@ export class Crawler {
                     duration,
                     period,
                     latePeriod: latePeriod || undefined,
-                    status: status || "-",
-                    watchedTime,
-                    requiredTime,
+                    status: "-",
+                    watchedTime: "-",
+                    requiredTime: "",
                     url,
                 });
             }
+        }
+
+        // Join each week's VODs with that week's attendance rows.
+        const vodsByWeek = new Map<number, VodItem[]>();
+        for (const vod of vods) {
+            const list = vodsByWeek.get(vod.week) ?? [];
+            list.push(vod);
+            vodsByWeek.set(vod.week, list);
+        }
+        for (const [week, weekVods] of vodsByWeek) {
+            const matches = matchAttendance(
+                weekVods.map((v) => v.name),
+                attByWeek.get(week) ?? []
+            );
+            weekVods.forEach((vod, index) => {
+                const att = matches[index];
+                if (!att) return;
+                // Respect the original status (O/X/▲) without recalculation
+                vod.status = normalizeText(att.status) || "X";
+                vod.watchedTime = normalizeText(att.watchedTime) || "-";
+                vod.requiredTime = normalizeText(att.requiredTime);
+            });
         }
 
         log.info(`Found ${vods.length} VOD items`);

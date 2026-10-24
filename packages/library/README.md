@@ -102,12 +102,26 @@ interface Course {
 }
 
 interface AttendanceItem {
-    week: number;
+    week: number; // 주차 (출석 표 첫 칸의 번호 = 코스 섹션 번호, VodItem.week와 같음, 번호를 읽을 수 없으면 0)
     title: string;
     requiredTime: string; // 필수 시청 시간
     watchedTime: string; // 시청한 시간
     status: string; // 제출 상태
     weekStatus: string; // 주차별 상태
+}
+
+interface VodItem {
+    id: string; // 강의(cmid)
+    week: number; // 주차 = 코스 섹션 번호 (section-N 은 N주차). 제목의 숫자나 "N회차"가 아님
+    weekTitle: string; // 섹션 제목 ("-" 이거나 비어 있을 수 있음)
+    name: string;
+    duration: string;
+    period: string;
+    latePeriod?: string;
+    status: string; // 출석 표의 O / X / ▲ (출석 행이 없으면 "-", 행은 있지만 상태가 비어 있으면 "X")
+    watchedTime: string;
+    requiredTime: string;
+    url: string;
 }
 
 interface AssignmentItem {

@@ -581,7 +581,7 @@ describe("Crawler", () => {
                     buildAssignmentHtml({
                         fileRows: [
                             {
-                                name: "202500041.zip",
+                                name: "300123456.zip",
                                 url: "https://ecampus.kangnam.ac.kr/pluginfile.php?file=/submission.zip",
                             },
                         ],
@@ -592,7 +592,7 @@ describe("Crawler", () => {
 
             const assignment = await crawler.getAssignmentDetail("426033");
             expect(assignment.files).toHaveLength(1);
-            expect(assignment.files[0]?.name).toBe("202500041.zip");
+            expect(assignment.files[0]?.name).toBe("300123456.zip");
             expect(assignment.files[0]?.url).toContain("pluginfile.php");
         });
 
@@ -1286,7 +1286,7 @@ describe("Crawler", () => {
                 new Response(buildCourseWithVodsHtml(), { status: 200 })
             );
 
-            const vods = await crawler.getVods("365524");
+            const vods = await crawler.getVods("340524");
             expect(vods).toHaveLength(1);
             expect(vods[0]?.id).toBe("1001");
             expect(vods[0]?.name).toBe("1주차 1차시 영상");

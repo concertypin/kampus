@@ -87,7 +87,7 @@ describe("vod download command", () => {
             .spyOn(console, "error")
             .mockImplementation(() => {});
 
-        await program.parseAsync(["vod", "download", "456468"], {
+        await program.parseAsync(["vod", "download", "350468"], {
             from: "user",
         });
 
@@ -99,7 +99,7 @@ describe("vod download command", () => {
     it("should download vod using ffmpeg with -c:v copy -c:a copy and mkv format", async () => {
         vi.spyOn(downloadModule, "isFfmpegAvailable").mockReturnValue(true);
         getVodDetailMock.mockResolvedValue({
-            id: "456468",
+            id: "350468",
             name: "2주차 강의1",
             description: "",
             period: "2026-09-14 ~ 2026-09-21",
@@ -118,7 +118,7 @@ describe("vod download command", () => {
             .mockImplementation(() => {});
 
         await program.parseAsync(
-            ["vod", "download", "456468", "-o", "custom.mkv"],
+            ["vod", "download", "350468", "-o", "custom.mkv"],
             { from: "user" }
         );
 
