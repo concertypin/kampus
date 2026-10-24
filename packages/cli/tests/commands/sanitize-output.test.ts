@@ -60,16 +60,25 @@ vi.mock("node:child_process", () => ({
 }));
 
 // The browser (assignments submit)
-const mockState = {
-    launchError: undefined as Error | undefined,
+const mockState: {
+    launchError: Error | undefined;
+    pageUrl: string;
+    filled: number;
+    /** The login form's `action`; an Error when the form is not found. */
+    formAction: string | null | Error;
+} = {
+    launchError: undefined,
     pageUrl: "https://ecampus.kangnam.ac.kr/login/index.php",
     filled: 0,
-    formAction: "/login/index.php" as string | null,
+    formAction: "/login/index.php",
 };
 function fakePage() {
     const locator = (selector: string) => ({
         first: () => locator(selector),
-        getAttribute: () => Promise.resolve(mockState.formAction),
+        getAttribute: () =>
+            mockState.formAction instanceof Error
+                ? Promise.reject(mockState.formAction)
+                : Promise.resolve(mockState.formAction),
         textContent: () =>
             Promise.resolve(
                 selector === ".submissionstatustable" ? HOSTILE : null
@@ -273,6 +282,40 @@ describe("text output of server-provided values", () => {
             await run(assignmentsCommand, args);
 
             expect(mockState.filled).toBe(0);
+            expect(process.exitCode).toBe(1);
+        });
+
+        it("types no credentials when the login form is missing", async () => {
+            mockState.formAction = new Error("Timeout 2000ms exceeded");
+            mockState.filled = 0;
+
+            await run(assignmentsCommand, args);
+
+            expect(mockState.filled).toBe(0);
+            expect(process.exitCode).toBe(1);
+        });
+
+        it("logs in through a form without an action (it posts to the page)", async () => {
+            mockState.formAction = null;
+            mockState.filled = 0;
+
+            await run(assignmentsCommand, args);
+
+            expect(mockState.filled).toBe(2);
+            expect(process.exitCode).toBeUndefined();
+        });
+
+        it("rejects a non-numeric assignment id before anything else", async () => {
+            await run(assignmentsCommand, [
+                "assignments",
+                "submit",
+                "1&action=x",
+                import.meta.filename,
+                "--yes",
+            ]);
+
+            expect(getCredentialsMock).not.toHaveBeenCalled();
+            expect(output.text()).toContain("Invalid assignment ID");
             expect(process.exitCode).toBe(1);
         });
 
@@ -489,7 +532,9 @@ describe("text output of server-provided values", () => {
     });
 
     describe("vod download", () => {
-        const args = ["vod", "download", "1", "--output", ".tmp/sanitize.mkv"];
+        // No directory part: the command creates the parent directory, and "."
+        // already exists. ffmpeg is mocked, so no file is written.
+        const args = ["vod", "download", "1", "--output", "sanitize.mkv"];
 
         beforeEach(() => {
             getVodDetailMock.mockResolvedValue({

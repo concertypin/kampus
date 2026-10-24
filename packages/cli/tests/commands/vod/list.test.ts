@@ -10,7 +10,7 @@ vi.mock("@/crawler", () => ({
 }));
 
 vi.mock("@/log-level", () => ({
-    getLogLevel: vi.fn<() => LogLevel | undefined>(() => undefined),
+    getLogLevel: vi.fn<() => LogLevel>(() => "warn"),
 }));
 
 const getVodsMock = vi.fn<(courseId: string) => Promise<VodItem[]>>();
@@ -43,7 +43,7 @@ describe("vod list command", () => {
     it("should call getVods with courseId", async () => {
         getVodsMock.mockResolvedValue([
             {
-                id: "456468",
+                id: "350468",
                 week: 2,
                 weekTitle: "2주차",
                 name: "2주차 강의1",
@@ -53,7 +53,7 @@ describe("vod list command", () => {
                 status: "O",
                 watchedTime: "26:20 View: 3 time(s)",
                 requiredTime: "23:00",
-                url: "https://ecampus.kangnam.ac.kr/mod/vod/view.php?id=456468",
+                url: "https://ecampus.kangnam.ac.kr/mod/vod/view.php?id=350468",
             },
         ]);
 
@@ -65,11 +65,11 @@ describe("vod list command", () => {
             .spyOn(process.stdout, "write")
             .mockImplementation(() => true);
 
-        await program.parseAsync(["vod", "list", "365524"], {
+        await program.parseAsync(["vod", "list", "340524"], {
             from: "user",
         });
 
-        expect(getVodsMock).toHaveBeenCalledWith("365524");
+        expect(getVodsMock).toHaveBeenCalledWith("340524");
 
         stdoutSpy.mockRestore();
     });
@@ -77,7 +77,7 @@ describe("vod list command", () => {
     describe("week line", () => {
         function vod(week: number, weekTitle: string): VodItem {
             return {
-                id: "456468",
+                id: "350468",
                 week,
                 weekTitle,
                 name: "lecture",
@@ -98,7 +98,7 @@ describe("vod list command", () => {
             const program = new Command();
             program.addCommand(vodCommand);
             program.exitOverride();
-            await program.parseAsync(["vod", "list", "365524"], {
+            await program.parseAsync(["vod", "list", "340524"], {
                 from: "user",
             });
             return logSpy.mock.calls
@@ -131,6 +131,18 @@ describe("vod list command", () => {
             expect(lines[1]).toMatch(/7주차$/);
             expect(lines[2]).toMatch(/8주차$/);
         });
+
+        it("prints only the section title for section 0", async () => {
+            const lines = await weekLines([
+                vod(0, "Course Summary"),
+                vod(0, "-"),
+            ]);
+
+            expect(lines).toHaveLength(2);
+            expect(lines[0]).toMatch(/: Course Summary$/);
+            expect(lines[0]).not.toContain("0주차");
+            expect(lines[1]).toMatch(/: -$/);
+        });
     });
 
     it("should handle empty VOD list", async () => {
@@ -144,11 +156,11 @@ describe("vod list command", () => {
             .spyOn(process.stdout, "write")
             .mockImplementation(() => true);
 
-        await program.parseAsync(["vod", "list", "365524"], {
+        await program.parseAsync(["vod", "list", "340524"], {
             from: "user",
         });
 
-        expect(getVodsMock).toHaveBeenCalledWith("365524");
+        expect(getVodsMock).toHaveBeenCalledWith("340524");
         stdoutSpy.mockRestore();
     });
 
@@ -167,7 +179,7 @@ describe("vod list command", () => {
             .mockImplementation(() => true);
 
         try {
-            await program.parseAsync(["vod", "list", "365524"], {
+            await program.parseAsync(["vod", "list", "340524"], {
                 from: "user",
             });
         } catch {

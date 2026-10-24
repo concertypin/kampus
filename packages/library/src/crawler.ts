@@ -410,9 +410,13 @@ function sectionNumber(section: Element): number | undefined {
  * Pairs the VODs of one week with that week's attendance rows (same order as
  * `names`; `undefined` where a VOD has no row). The attendance table has no
  * module id, so rows are matched by title: exact first, then one containing
- * the other. Only when titles settle nothing and the week has as many rows as
- * VODs are the rest paired by position. With different counts a VOD without a
- * title match gets no row rather than a wrong one.
+ * the other. Containment is ambiguous when titles share a prefix ("Lecture 1"
+ * is in "Lecture 10 (VOD)"), so a VOD takes a row by containment only while
+ * that row is its single remaining candidate and no other VOD has it as its
+ * single candidate; each pairing narrows the others, so the step repeats.
+ * Only when no unpaired VOD has a containment candidate left and the week has
+ * as many rows as VODs are the rest paired by position. Otherwise a VOD
+ * without a title match gets no row rather than a wrong one.
  */
 function matchAttendance(
     names: string[],
@@ -422,26 +426,49 @@ function matchAttendance(
     const wanted = names.map((name) => normalizeText(name));
     const result: (AttendanceItem | undefined)[] = wanted.map(() => undefined);
     const used = new Set<number>();
-
-    const pair = (accepts: (title: string, name: string) => boolean): void => {
-        wanted.forEach((name, vodIndex) => {
-            if (result[vodIndex]) return;
-            const rowIndex = titles.findIndex(
-                (title, i) => !used.has(i) && title && accepts(title, name)
-            );
-            if (rowIndex < 0) return;
-            used.add(rowIndex);
-            result[vodIndex] = rows[rowIndex];
-        });
+    const take = (vodIndex: number, rowIndex: number): void => {
+        used.add(rowIndex);
+        result[vodIndex] = rows[rowIndex];
     };
 
-    pair((title, name) => title === name);
-    pair(
-        (title, name) =>
-            name !== "" && (title.includes(name) || name.includes(title))
-    );
+    wanted.forEach((name, vodIndex) => {
+        const rowIndex = titles.findIndex(
+            (title, i) => !used.has(i) && title !== "" && title === name
+        );
+        if (rowIndex >= 0) take(vodIndex, rowIndex);
+    });
 
-    if (names.length === rows.length) {
+    const contains = (title: string, name: string): boolean =>
+        title !== "" &&
+        name !== "" &&
+        (title.includes(name) || name.includes(title));
+    const candidates = (): number[][] =>
+        wanted.map((name, vodIndex) =>
+            result[vodIndex]
+                ? []
+                : titles.flatMap((title, i) =>
+                      !used.has(i) && contains(title, name) ? [i] : []
+                  )
+        );
+
+    let progressed = true;
+    while (progressed) {
+        progressed = false;
+        const current = candidates();
+        const single = current.map((list) =>
+            list.length === 1 ? list[0] : undefined
+        );
+        single.forEach((rowIndex, vodIndex) => {
+            if (rowIndex === undefined || used.has(rowIndex)) return;
+            const rivals = single.filter((other) => other === rowIndex);
+            if (rivals.length !== 1) return;
+            take(vodIndex, rowIndex);
+            progressed = true;
+        });
+    }
+
+    const ambiguous = candidates().some((list) => list.length > 0);
+    if (names.length === rows.length && !ambiguous) {
         const free = rows.filter((_, i) => !used.has(i));
         for (let i = 0; i < result.length && free.length > 0; i++) {
             if (!result[i]) result[i] = free.shift();
@@ -1525,11 +1552,18 @@ export class Crawler {
                     // The first cell of a week's first row is the week number
                     // (the course's `section-N`), repeated for every VOD of
                     // the week through its rowspan. Weeks without a VOD still
-                    // get one row with empty cells.
+                    // get one row with empty cells. Text around the number
+                    // ("1주차") is allowed; a cell with no number or with more
+                    // than one is not a week.
                     const text = td.textContent || "";
-                    const match = text.match(/^\s*(\d+)\s*$/);
+                    const match = text.match(/^\D*(\d+)\D*$/);
                     currentWeek =
                         match && match[1] ? parseInt(match[1], 10) : 0;
+                    if (!currentWeek) {
+                        log.debug(
+                            "Attendance row without a week number; its VODs get no status"
+                        );
+                    }
 
                     const rowspanAttr = td.getAttribute("rowspan");
                     const rowspan = rowspanAttr ? parseInt(rowspanAttr, 10) : 1;
@@ -1963,7 +1997,12 @@ export class Crawler {
 
         if (!isQuizPage) {
             // Moodle error page, e.g. "Invalid course module ID" (HTTP 404).
-            if (doc.querySelector(".errormessage") || response.status >= 400) {
+            if (
+                normalizeText(
+                    doc.querySelector(".errormessage")?.textContent
+                ) ||
+                response.status >= 400
+            ) {
                 throw new Error(
                     `Failed to load quiz ${cmid}: ${pageLoadError(doc, response.status)}`
                 );
@@ -2366,7 +2405,10 @@ export class Crawler {
         const doc = this.parseHtml(await response.text());
 
         // Moodle error page, e.g. "Invalid course module ID" (HTTP 404)
-        if (doc.querySelector(".errormessage") || response.status >= 400) {
+        if (
+            normalizeText(doc.querySelector(".errormessage")?.textContent) ||
+            response.status >= 400
+        ) {
             throw fail(pageLoadError(doc, response.status));
         }
 
@@ -2788,7 +2830,6 @@ export class Crawler {
             m3u8Url,
         };
 
-        log.debug(`VOD detail: ${name} (${m3u8Url})`);
         log.debug("VOD detail:", detail);
         return detail;
     }

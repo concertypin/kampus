@@ -161,7 +161,7 @@ describe("sanitizeFilename: invisible characters", () => {
     });
 
     it("still turns tabs and line breaks into a single space", () => {
-        expect(sanitizeFilename("a\tb\r\nc d.pdf")).toBe("a b c d.pdf");
+        expect(sanitizeFilename("a\tb\r\nc\u2028d.pdf")).toBe("a b c d.pdf");
     });
 
     it("returns an empty name when only invisible characters were given", () => {

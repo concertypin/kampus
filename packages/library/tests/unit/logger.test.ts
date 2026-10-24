@@ -7,6 +7,7 @@ import {
     vi,
     type MockInstance,
 } from "vitest";
+import { LogLevels } from "consola";
 import {
     createTaggedLogger,
     getLogger,
@@ -96,19 +97,45 @@ describe("message formatting", () => {
         const err = new Error("boom");
         err.stack = "Error: boom\n    at somewhere (file.ts:1:1)";
         const tagged = createTaggedLogger("fetch");
-        tagged.level = 4;
+        tagged.level = LogLevels.debug;
         tagged.error(err);
         expect(stderr).toHaveBeenLastCalledWith(`fetch:error ${err.stack}`);
 
-        tagged.level = 1;
+        tagged.level = LogLevels.warn;
         setLogLevel("debug");
         tagged.error(err);
         expect(stderr).toHaveBeenLastCalledWith("fetch:error Error: boom");
     });
 
     it("replaces control and bidi characters but keeps newlines and tabs", () => {
-        getLogger().info("a\u001b[2Jb‮c\u0000d\ne\tf");
-        expect(stderr).toHaveBeenCalledWith("info a�[2Jb�c�d\ne\tf");
+        getLogger().info("a\u001b[2Jb\u202ec\u0000d\ne\tf");
+        expect(stderr).toHaveBeenCalledWith(
+            "info a\ufffd[2Jb\ufffdc\ufffdd\ne\tf"
+        );
+    });
+
+    it("prints the cause chain of an Error", () => {
+        const err = new Error("outer", {
+            cause: new TypeError("inner", { cause: "root" }),
+        });
+        getLogger().error(err);
+        expect(stderr).toHaveBeenCalledWith(
+            "error Error: outer\nCaused by: TypeError: inner\nCaused by: root"
+        );
+    });
+
+    it("stops at a cause cycle", () => {
+        const err = new Error("loop");
+        err.cause = err;
+        getLogger().error(err);
+        expect(stderr).toHaveBeenCalledWith("error Error: loop");
+    });
+
+    it("prints an Error nested in an object as name: message", () => {
+        getLogger().info("x", { error: new RangeError("bad") });
+        expect(stderr).toHaveBeenCalledWith(
+            'info x {"error":"RangeError: bad"}'
+        );
     });
 
     it("falls back to String() for circular objects", () => {

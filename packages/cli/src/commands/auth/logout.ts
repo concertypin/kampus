@@ -38,7 +38,7 @@ ${pc.bold("예시:")}
         } catch (err: unknown) {
             if (err instanceof KeychainDeleteError) {
                 console.error(
-                    `${pc.red(stripEmoji("❌ OS 키체인(Windows 자격 증명 관리자)의 인증 정보를 삭제하지 못했습니다. 세션 파일은 정리되었습니다. 자격 증명 관리자에서 'kampus' 항목을 직접 삭제해 주세요."))}`
+                    `${pc.red(stripEmoji("❌ OS 키체인(Windows 자격 증명 관리자)의 인증 정보를 삭제하지 못했습니다. 세션 파일은 정리되었습니다. 자격 증명 관리자에 'kampus' 항목이 남아 있다면 직접 삭제해 주세요."))}`
                 );
             } else {
                 const message = errorText(err);

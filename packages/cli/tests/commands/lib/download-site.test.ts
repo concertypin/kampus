@@ -51,36 +51,39 @@ describe("downloadFile on a configured site", () => {
         rmSync(dir, { recursive: true, force: true });
     });
 
-    it("downloads from a loopback site and sends the cookie within it", async () => {
-        stubFetch((url) =>
-            url.pathname === "/pluginfile.php/1/a.pdf"
-                ? redirect("/pluginfile.php/1/b.pdf")
-                : new Response("PDF")
-        );
-        const dest = join(dir, "a.pdf");
+    it.each([LOOPBACK_SITE, "http://localhost:8080", "http://[::1]:8080"])(
+        "downloads from the loopback site %s and sends the cookie within it",
+        async (site) => {
+            stubFetch((url) =>
+                url.pathname === "/pluginfile.php/1/a.pdf"
+                    ? redirect("/pluginfile.php/1/b.pdf")
+                    : new Response("PDF")
+            );
+            const dest = join(dir, "a.pdf");
 
-        await downloadFile(
-            `${LOOPBACK_SITE}/pluginfile.php/1/a.pdf`,
-            dest,
-            SESSION,
-            {
-                allowedDir: dir,
-                siteOrigin: LOOPBACK_SITE,
-            }
-        );
+            await downloadFile(
+                `${site}/pluginfile.php/1/a.pdf`,
+                dest,
+                SESSION,
+                {
+                    allowedDir: dir,
+                    siteOrigin: site,
+                }
+            );
 
-        expect(sent).toEqual([
-            {
-                url: `${LOOPBACK_SITE}/pluginfile.php/1/a.pdf`,
-                cookie: `MoodleSession=${SESSION}`,
-            },
-            {
-                url: `${LOOPBACK_SITE}/pluginfile.php/1/b.pdf`,
-                cookie: `MoodleSession=${SESSION}`,
-            },
-        ]);
-        expect(readFileSync(dest, "utf8")).toBe("PDF");
-    });
+            expect(sent).toEqual([
+                {
+                    url: `${site}/pluginfile.php/1/a.pdf`,
+                    cookie: `MoodleSession=${SESSION}`,
+                },
+                {
+                    url: `${site}/pluginfile.php/1/b.pdf`,
+                    cookie: `MoodleSession=${SESSION}`,
+                },
+            ]);
+            expect(readFileSync(dest, "utf8")).toBe("PDF");
+        }
+    );
 
     it("drops the cookie when a redirect leaves the site", async () => {
         stubFetch((url) =>

@@ -14,11 +14,15 @@ import {
 
 /**
  * "N주차 (title)", or just "N주차" when the section title is empty or "-"
- * (a placeholder some courses leave in unused weeks).
+ * (a placeholder some courses leave in unused weeks). Section 0 prints only
+ * its title.
  */
 function formatWeek(week: number, weekTitle: string): string {
     const title = plainText(weekTitle).trim();
-    return title && title !== "-" ? `${week}주차 (${title})` : `${week}주차`;
+    const named = title !== "" && title !== "-";
+    // Section 0 is the course intro, not a week.
+    if (week === 0) return named ? title : "-";
+    return named ? `${week}주차 (${title})` : `${week}주차`;
 }
 
 export const listCommand = new Command("list")
@@ -54,7 +58,7 @@ ${pc.bold("예시:")}
             }
 
             for (const v of vods) {
-                let statusStr = plainText(v.status);
+                let statusStr: string;
                 if (v.status === "O") {
                     statusStr = pc.green("O (출석)");
                 } else if (v.status === "X") {

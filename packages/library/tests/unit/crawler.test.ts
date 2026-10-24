@@ -1119,7 +1119,7 @@ describe("Crawler", () => {
                 const message = error instanceof Error ? error.message : "";
                 expect(message).toContain("schl_smst");
                 expect(message).not.toContain("EVIL");
-                expect(message).not.toContain("");
+                expect(message).not.toContain("\u001b");
             });
         });
 
@@ -1286,7 +1286,7 @@ describe("Crawler", () => {
                 new Response(buildCourseWithVodsHtml(), { status: 200 })
             );
 
-            const vods = await crawler.getVods("365524");
+            const vods = await crawler.getVods("340524");
             expect(vods).toHaveLength(1);
             expect(vods[0]?.id).toBe("1001");
             expect(vods[0]?.name).toBe("1주차 1차시 영상");

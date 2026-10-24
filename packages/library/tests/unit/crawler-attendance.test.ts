@@ -53,9 +53,9 @@ function courseWith(
     return `<html><body><ul class="weeks">${items}</ul></body></html>`;
 }
 
-/** An attendance table; each row is [week, title, required, watched, status]. */
+/** An attendance table; each row is [week cell, title, required, watched, status]. */
 function attendanceWith(
-    rows: [number, string, string, string, string][]
+    rows: [number | string, string, string, string, string][]
 ): string {
     const body = rows
         .map(
@@ -106,6 +106,29 @@ describe("Crawler VOD and attendance weeks", () => {
 
             expect(items).toHaveLength(1);
             expect(items[0]?.week).toBe(3);
+        });
+
+        it("reads a week cell with text around the number", async () => {
+            respondWith(
+                attendanceWith([["3주차", "Lecture", "10:00", "11:00", "O"]])
+            );
+
+            const items = await crawler.getAttendance("340001");
+
+            expect(items[0]?.week).toBe(3);
+        });
+
+        it("gives week 0 to a week cell without exactly one number", async () => {
+            respondWith(
+                attendanceWith([
+                    ["Midterm", "Lecture", "10:00", "11:00", "O"],
+                    ["09-01 ~ 09-07", "Lecture", "10:00", "11:00", "O"],
+                ])
+            );
+
+            const items = await crawler.getAttendance("340001");
+
+            expect(items.map((i) => i.week)).toEqual([0, 0]);
         });
     });
 
@@ -377,6 +400,30 @@ describe("Crawler VOD and attendance weeks", () => {
                     ]
                 )
             ).toEqual(["X", "O"]);
+        });
+
+        it("pairs a title that is a prefix of another with its own row", async () => {
+            expect(
+                await statuses(
+                    ["Lecture 1", "Lecture 10"],
+                    [
+                        ["Lecture 10 (VOD)", "O"],
+                        ["Lecture 1 (VOD)", "X"],
+                    ]
+                )
+            ).toEqual(["X", "O"]);
+        });
+
+        it("leaves VODs without status when containment cannot tell them apart", async () => {
+            expect(
+                await statuses(
+                    ["Part", "Part"],
+                    [
+                        ["Part A", "O"],
+                        ["Part B", "X"],
+                    ]
+                )
+            ).toEqual(["-", "-"]);
         });
 
         it("pairs by position only when the counts are equal and titles settle nothing", async () => {
