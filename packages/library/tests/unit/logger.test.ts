@@ -7,6 +7,7 @@ import {
     vi,
     type MockInstance,
 } from "vitest";
+import { LogLevels } from "consola";
 import {
     createTaggedLogger,
     getLogger,
@@ -96,11 +97,11 @@ describe("message formatting", () => {
         const err = new Error("boom");
         err.stack = "Error: boom\n    at somewhere (file.ts:1:1)";
         const tagged = createTaggedLogger("fetch");
-        tagged.level = 4;
+        tagged.level = LogLevels.debug;
         tagged.error(err);
         expect(stderr).toHaveBeenLastCalledWith(`fetch:error ${err.stack}`);
 
-        tagged.level = 1;
+        tagged.level = LogLevels.warn;
         setLogLevel("debug");
         tagged.error(err);
         expect(stderr).toHaveBeenLastCalledWith("fetch:error Error: boom");

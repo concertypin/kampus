@@ -11,7 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 #### CLI (`@concertypin/kampus`)
 
-- `--verbose` showed no info output, and warnings were hidden by default (log level mapping was off by one); warnings are now shown by default and `--verbose` shows info messages
+- Warnings were hidden by default (without a flag the library stayed silent), and the log level mapping was off by one, so `--verbose` showed no info output, `--debug` no debug output and `--trace` no request/response headers; warnings are now shown by default and each flag shows its own level
 - With `--verbose` or a more verbose flag, request and login errors were printed twice
 - An auto-login failure is now one warning that carries the error (it was an `error` line plus a `warn` line), so it is shown by default
 

@@ -45,12 +45,12 @@ for (const course of courses) {
 
 크롤러의 메인 클래스입니다. 생성자 옵션:
 
-| 옵션       | 타입             | 기본값                          | 설명                         |
-| ---------- | ---------------- | ------------------------------- | ---------------------------- |
-| `storage`  | `SessionStorage` | `MemoryStorage`                 | 세션 저장소                  |
-| `baseUrl`  | `string`         | `https://ecampus.kangnam.ac.kr` | 대상 사이트 (아래 참고)      |
-| `timeout`  | `number`         | `10000`                         | 요청 타임아웃 (ms)           |
-| `logLevel` | `LogLevel`       | -                               | 로깅 레벨 (trace/debug/info) |
+| 옵션       | 타입             | 기본값                          | 설명                       |
+| ---------- | ---------------- | ------------------------------- | -------------------------- |
+| `storage`  | `SessionStorage` | `MemoryStorage`                 | 세션 저장소                |
+| `baseUrl`  | `string`         | `https://ecampus.kangnam.ac.kr` | 대상 사이트 (아래 참고)    |
+| `timeout`  | `number`         | `10000`                         | 요청 타임아웃 (ms)         |
+| `logLevel` | `LogLevel`       | `warn`                          | 로깅 레벨 (아래 로깅 참고) |
 
 `baseUrl`은 요청을 보낼 사이트의 origin입니다 (모의 서버를 가리킬 때 사용). 모든 요청과 로그인, 그리고 크롤러가 돌려주는 모든 URL이 이 origin을 쓰며, 세션 쿠키와 저장된 자격증명은 이 origin에만 전송됩니다. `https`여야 하고(`http`는 `localhost`만 허용) 경로를 포함할 수 없습니다. 그렇지 않으면 생성자가 예외를 던집니다.
 

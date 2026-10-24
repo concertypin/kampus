@@ -2679,7 +2679,6 @@ export class Crawler {
             m3u8Url,
         };
 
-        log.debug(`VOD detail: ${name} (${m3u8Url})`);
         log.debug("VOD detail:", detail);
         return detail;
     }
