@@ -35,6 +35,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 #### CLI (`@concertypin/kampus`)
 
+- `attendance list` shows week 0 for a row whose week cell does not hold exactly one number (it used to take the first number)
 - `vod list` prints `N주차 (title)` for the week of each lecture, and only `N주차` when the section title is `-` or empty; a VOD in section 0 (the course intro) shows only the section title, or `-` without one
 - Internal: `createCrawler` accepts a `baseUrl` so the code can target another e-campus origin (a local mock server). There is no flag or environment variable for it, so the real site cannot be redirected by configuration. Another origin gets its own session file (`session-<host>-<hash>.json`, the host with characters other than `a-z0-9.-` replaced and the first 12 hex digits of the origin's SHA-256) and its own keychain account; the default `session.json` and account are unchanged. Downloads, `assignments submit` and the cookie scope follow the crawler's origin; the private/loopback host refusal stays, except for URLs inside a loopback site
 - New dependency `@napi-rs/keyring` (native addon with prebuilt per-platform binaries, no install script); it is only loaded on Windows
