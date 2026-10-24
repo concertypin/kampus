@@ -402,9 +402,13 @@ function spanOf(cell: Element, name: "rowspan" | "colspan"): number {
 /**
  * The cells of each row of a table section by column, with every `rowspan`
  * and `colspan` resolved: a spanned cell appears in each row and column it
- * covers. Rows without cells still use up the spans that cross them.
+ * covers. Rows without cells still use up the spans that cross them. Only
+ * the first `columns` columns are resolved, so a huge `colspan` costs nothing.
  */
-function tableGrid(rows: Element[]): (Element | undefined)[][] {
+function tableGrid(
+    rows: Element[],
+    columns: number
+): (Element | undefined)[][] {
     const carried: ({ cell: Element; rows: number } | undefined)[] = [];
     const takeCarried = (
         line: (Element | undefined)[],
@@ -423,15 +427,17 @@ function tableGrid(rows: Element[]): (Element | undefined)[][] {
             ["td", "th"].includes(el.tagName.toLowerCase())
         );
         for (const cell of cells) {
-            while (takeCarried(line, col)) col++;
+            while (col < columns && takeCarried(line, col)) col++;
+            if (col >= columns) break;
             const rowspan = spanOf(cell, "rowspan");
-            for (let i = 0; i < spanOf(cell, "colspan"); i++, col++) {
+            const colspan = spanOf(cell, "colspan");
+            for (let i = 0; i < colspan && col < columns; i++, col++) {
                 line[col] = cell;
                 carried[col] =
                     rowspan > 1 ? { cell, rows: rowspan - 1 } : undefined;
             }
         }
-        for (; col < carried.length; col++) takeCarried(line, col);
+        for (; col < columns; col++) takeCarried(line, col);
         return line;
     });
 }
@@ -507,9 +513,20 @@ function matchAttendance(
     const sameLecture = (title: string, name: string): boolean =>
         title === name || contains(title, name);
 
+    // A row whose title is exactly another VOD's name belongs to that VOD,
+    // unless it is also exactly the name at its own position (repeated
+    // titles), so the ordered shortcut must not hand it to a neighbour.
+    const exactElsewhere = (name: string, i: number): boolean =>
+        titles.some(
+            (title, j) => j !== i && title === name && wanted[j] !== title
+        );
     if (
         names.length === rows.length &&
-        wanted.every((name, i) => sameLecture(titles[i] ?? "", name))
+        wanted.every(
+            (name, i) =>
+                sameLecture(titles[i] ?? "", name) &&
+                (titles[i] === name || !exactElsewhere(name, i))
+        )
     ) {
         return [...rows];
     }
@@ -1626,7 +1643,7 @@ export class Crawler {
             const rows = Array.from(section.children).filter(
                 (el: Element) => el.tagName.toLowerCase() === "tr"
             );
-            const grid = tableGrid(rows);
+            const grid = tableGrid(rows, 6);
             rows.forEach((row, index) => {
                 // Header rows, and rows with no cells of their own, list no
                 // lecture (their spanned cells were already accounted for).

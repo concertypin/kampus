@@ -176,6 +176,21 @@ describe("Crawler VOD and attendance weeks", () => {
             );
         });
 
+        it("ignores columns past the six it reads, however wide a cell is", async () => {
+            respondWith(
+                table(
+                    "<tr><td>4</td><td>A</td><td>10:00</td><td>10:00</td><td>O</td><td>O</td>" +
+                        '<td colspan="100000000">extra</td></tr>'
+                )
+            );
+
+            const items = await crawler.getAttendance("340001");
+
+            expect(items.map((i) => [i.week, i.title, i.status])).toEqual([
+                [4, "A", "O"],
+            ]);
+        });
+
         it("gives week 0 to a week cell without exactly one number", async () => {
             respondWith(
                 attendanceWith([
@@ -545,6 +560,18 @@ describe("Crawler VOD and attendance weeks", () => {
                     ]
                 )
             ).toEqual(["X", "O"]);
+        });
+
+        it("prefers an exact title over the row order", async () => {
+            expect(
+                await statuses(
+                    ["Data structures", "Data structures (extra)"],
+                    [
+                        ["Data structures (extra)", "X"],
+                        ["Data structures", "O"],
+                    ]
+                )
+            ).toEqual(["O", "X"]);
         });
 
         it("does not take a number prefix for the same lecture", async () => {
