@@ -46,7 +46,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - `VodItem.week` is now the course section number (section N is week N) instead of the first number found in the section title, so a title with another number (e.g. a date) can no longer change the week. `getAttendance` reads the week from the first cell of the attendance table, which is the same number (a cell without exactly one number gives week 0, and such rows are never paired with a VOD). `getVods` now pairs the VODs and attendance rows of a week by title first (exact, then one containing the other, only where that is unambiguous) and by position only when the week has equally many of both and no ambiguous title is left; a VOD without a match has no status (`-`) instead of the status of a neighbouring row
 - `FileStorage` creates a missing directory with mode 0700
-- `FileStorage` writes the session file through a temporary file (`<file>.tmp`) and a rename, so a crash during a write leaves the previous file (and any credentials in it) intact; a temporary file left by a crash is overwritten by the next write and removed by `clear()`
+- `FileStorage` writes the session file through a temporary file (`<file>.tmp`) and a rename, so a crash during a write leaves the previous file (and any credentials in it) intact; a temporary file left by a crash is replaced by the next write and removed by `delete()` (so also by `auth logout`) and `clear()`
 
 ### Fixed
 

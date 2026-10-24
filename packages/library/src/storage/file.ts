@@ -45,13 +45,17 @@ export class FileStorage implements SessionStorage {
         // Write a temporary file next to the target and rename it over the
         // target, so a crash mid-write leaves the old file intact instead of
         // a truncated one (which would lose the stored credentials). The
-        // name is fixed, so a temporary file left by a crash is overwritten by
-        // the next write and removed by clear().
+        // name is fixed, so a temporary file left by a crash is replaced by
+        // the next write and removed by delete() and clear(). It is removed
+        // and then created exclusively, so the new file gets mode 0600 from
+        // the start and a link planted at that path is not followed.
         const tmpPath = this.tmpPath();
         try {
+            await this.removeTmp();
             await fs.writeFile(tmpPath, JSON.stringify(data, null, 2), {
                 encoding: "utf-8",
                 mode: 0o600,
+                flag: "wx",
             });
             await fs.chmod(tmpPath, 0o600);
             await fs.rename(tmpPath, this.filePath);
@@ -78,17 +82,31 @@ export class FileStorage implements SessionStorage {
             delete data[key];
             await this.writeData(data);
         }
+        // A temporary file left by a crashed write can hold the deleted
+        // value (logout deletes keys, it does not clear the file).
+        await this.removeTmp();
     }
 
     async clear(): Promise<void> {
         const fs = await import("node:fs/promises");
-        for (const path of [this.filePath, this.tmpPath()]) {
-            try {
-                await fs.unlink(path);
-            } catch (err: unknown) {
-                if ((err as { code?: string }).code !== "ENOENT") {
-                    throw err;
-                }
+        try {
+            await fs.unlink(this.filePath);
+        } catch (err: unknown) {
+            if ((err as { code?: string }).code !== "ENOENT") {
+                throw err;
+            }
+        }
+        await this.removeTmp();
+    }
+
+    /** Removes the staging file, if any. */
+    private async removeTmp(): Promise<void> {
+        const fs = await import("node:fs/promises");
+        try {
+            await fs.unlink(this.tmpPath());
+        } catch (err: unknown) {
+            if ((err as { code?: string }).code !== "ENOENT") {
+                throw err;
             }
         }
     }

@@ -9,7 +9,7 @@ declare module "node:fs/promises" {
     export function writeFile(
         path: string,
         data: string | Uint8Array,
-        options?: string | { encoding?: string; mode?: number }
+        options?: string | { encoding?: string; mode?: number; flag?: string }
     ): Promise<void>;
     export function rename(oldPath: string, newPath: string): Promise<void>;
     export function mkdir(
