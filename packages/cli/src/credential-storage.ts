@@ -85,6 +85,13 @@ export class KeychainCredentialStorage implements SessionStorage {
     private entry: KeyringEntry | undefined;
 
     constructor(file: SessionStorage, opts: KeychainCredentialStorageOptions) {
+        // Every instance shares one queue, so an instance waiting on the one
+        // it wraps would wait on itself.
+        if (file instanceof KeychainCredentialStorage) {
+            throw new Error(
+                "KeychainCredentialStorage cannot wrap another KeychainCredentialStorage"
+            );
+        }
         this.file = file;
         this.service = opts.service;
         this.account = opts.account;
