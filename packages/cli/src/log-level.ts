@@ -12,13 +12,14 @@ export function setProgramOptsFn(fn: () => Record<string, unknown>): void {
 
 /**
  * Get the log level from global CLI options (--verbose, --debug, --trace).
+ * Defaults to "warn" when no flag is given.
  * Must be called after Commander parses argv (e.g., inside a .action() handler).
  */
-export function getLogLevel(): LogLevel | undefined {
-    if (!_optsFn) return undefined;
+export function getLogLevel(): LogLevel {
+    if (!_optsFn) return "warn";
     const opts = _optsFn();
     if (opts.trace) return "trace";
     if (opts.debug) return "debug";
     if (opts.verbose) return "info";
-    return undefined;
+    return "warn";
 }

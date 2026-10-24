@@ -23,8 +23,7 @@ const SESSION_FILE = getSessionFilePath();
 /**
  * Returns a Crawler instance backed by the user's home-directory session file.
  */
-export function createCrawler(logLevel?: LogLevel): Crawler {
+export function createCrawler(logLevel: LogLevel): Crawler {
     const storage = new FileStorage(SESSION_FILE);
-    const options = logLevel ? { storage, logLevel } : { storage };
-    return new Crawler(options);
+    return new Crawler({ storage, logLevel });
 }
