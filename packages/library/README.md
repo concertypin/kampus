@@ -45,45 +45,47 @@ for (const course of courses) {
 
 크롤러의 메인 클래스입니다. 생성자 옵션:
 
-| 옵션       | 타입             | 기본값                          | 설명                         |
-| ---------- | ---------------- | ------------------------------- | ---------------------------- |
-| `storage`  | `SessionStorage` | `MemoryStorage`                 | 세션 저장소                  |
-| `baseUrl`  | `string`         | `https://ecampus.kangnam.ac.kr` | 대상 사이트 (아래 참고)      |
-| `timeout`  | `number`         | `10000`                         | 요청 타임아웃 (ms)           |
-| `logLevel` | `LogLevel`       | -                               | 로깅 레벨 (trace/debug/info) |
+| 옵션       | 타입             | 기본값                          | 설명                       |
+| ---------- | ---------------- | ------------------------------- | -------------------------- |
+| `storage`  | `SessionStorage` | `MemoryStorage`                 | 세션 저장소                |
+| `baseUrl`  | `string`         | `https://ecampus.kangnam.ac.kr` | 대상 사이트 (아래 참고)    |
+| `timeout`  | `number`         | `10000`                         | 요청 타임아웃 (ms)         |
+| `logLevel` | `LogLevel`       | `warn`                          | 로깅 레벨 (아래 로깅 참고) |
 
 `baseUrl`은 요청을 보낼 사이트의 origin입니다 (모의 서버를 가리킬 때 사용). 모든 요청과 로그인, 그리고 크롤러가 돌려주는 모든 URL이 이 origin을 쓰며, 세션 쿠키와 저장된 자격증명은 이 origin에만 전송됩니다. `https`여야 하고(`http`는 `localhost`만 허용) 경로를 포함할 수 없습니다. 그렇지 않으면 생성자가 예외를 던집니다.
 
 제공 메서드:
 
-| 메서드                                | 반환 타입                                    | 설명                                         |
-| ------------------------------------- | -------------------------------------------- | -------------------------------------------- |
-| `login(username, password)`           | `Promise<void>`                              | e-campus 로그인, 세션 저장 + 자격증명 저장   |
-| `checkSession()`                      | `Promise<boolean>`                           | 현재 세션 유효성 확인                        |
-| `getCourses(type?)`                   | `Promise<Course[]>`                          | 수강 과목 목록 조회                          |
-| `getAttendance(courseId)`             | `Promise<AttendanceItem[]>`                  | 출석 현황 조회                               |
-| `getMessages(page?)`                  | `Promise<MessageItem[]>`                     | 메시지 목록 조회                             |
-| `getAssignments(courseId)`            | `Promise<AssignmentItem[]>`                  | 과제 목록 조회                               |
-| `getAssignmentDetail(cmid)`           | `Promise<AssignmentDetail>`                  | 과제 상세 정보 조회 (다른 페이지면 예외)     |
-| `getQuizzes(courseId)`                | `Promise<QuizItem[]>`                        | 퀴즈 목록 조회                               |
-| `getQuizDetail(cmid)`                 | `Promise<QuizDetail>`                        | 퀴즈 상세 정보 조회 (다른 페이지면 예외)     |
-| `getResources(courseId)`              | `Promise<ResourceItem[]>`                    | 강의자료 목록 조회                           |
-| `getResourceDetail(cmid, type?)`      | `Promise<ResourceDetail>`                    | 강의자료 상세 정보 조회 (다른 페이지면 예외) |
-| `getNoticeBoard(courseId)`            | `Promise<NoticeBoard \| null>`               | 과목 공지사항 게시판 조회 (없으면 `null`)    |
-| `getNotices(courseId, options?)`      | `Promise<NoticeList>`                        | 공지사항 목록 조회                           |
-| `getNoticeDetail(courseId, postId)`   | `Promise<NoticeDetail>`                      | 공지사항 본문/첨부파일 조회                  |
-| `getSyllabusParams(courseId)`         | `Promise<SyllabusParams>`                    | 강의계획서 파라미터 정보 추출                |
-| `downloadSyllabusPdf(courseId, out)`  | `Promise<string>`                            | 강의계획서 공식 PDF 다운로드                 |
-| `getWeeklyActivities(courseId)`       | `Promise<WeeklyActivity[]>`                  | 주차별 학습 활동 조회                        |
-| `getSession()`                        | `Promise<string \| undefined>`               | 저장된 세션 쿠키 조회                        |
-| `setSession(cookie)`                  | `Promise<void>`                              | 세션 쿠키 저장                               |
-| `clearSession()`                      | `Promise<void>`                              | 세션 쿠키 삭제                               |
-| `saveCredentials(username, password)` | `Promise<void>`                              | 로그인 자격증명 저장                         |
-| `getCredentials()`                    | `Promise<{username, password} \| undefined>` | 저장된 자격증명 조회                         |
-| `clearCredentials()`                  | `Promise<void>`                              | 저장된 자격증명 삭제                         |
-| `hasCredentials()`                    | `Promise<boolean>`                           | 자격증명 저장 여부 확인                      |
-| `tryAutoLogin()`                      | `Promise<boolean>`                           | 저장된 자격증명으로 자동 재로그인 시도       |
-| `fetch(url, init?, behavior?)`        | `Promise<Response>`                          | 세션 쿠키를 붙여 사이트의 페이지 요청        |
+| 메서드                                | 반환 타입                                    | 설명                                           |
+| ------------------------------------- | -------------------------------------------- | ---------------------------------------------- |
+| `login(username, password)`           | `Promise<void>`                              | e-campus 로그인, 세션 저장 + 자격증명 저장     |
+| `checkSession()`                      | `Promise<boolean>`                           | 현재 세션 유효성 확인                          |
+| `getCourses(type?)`                   | `Promise<Course[]>`                          | 수강 과목 목록 조회                            |
+| `getAttendance(courseId)`             | `Promise<AttendanceItem[]>`                  | 출석 현황 조회                                 |
+| `getMessages(page?)`                  | `Promise<MessageItem[]>`                     | 메시지 목록 조회                               |
+| `getAssignments(courseId)`            | `Promise<AssignmentItem[]>`                  | 과제 목록 조회                                 |
+| `getAssignmentDetail(cmid)`           | `Promise<AssignmentDetail>`                  | 과제 상세 정보 조회 (다른 페이지면 예외)       |
+| `getQuizzes(courseId)`                | `Promise<QuizItem[]>`                        | 퀴즈 목록 조회                                 |
+| `getQuizDetail(cmid)`                 | `Promise<QuizDetail>`                        | 퀴즈 상세 정보 조회 (다른 페이지면 예외)       |
+| `getResources(courseId)`              | `Promise<ResourceItem[]>`                    | 강의자료 목록 조회                             |
+| `getResourceDetail(cmid, type?)`      | `Promise<ResourceDetail>`                    | 강의자료 상세 정보 조회 (다른 페이지면 예외)   |
+| `getNoticeBoard(courseId)`            | `Promise<NoticeBoard \| null>`               | 과목 공지사항 게시판 조회 (없으면 `null`)      |
+| `getNotices(courseId, options?)`      | `Promise<NoticeList>`                        | 공지사항 목록 조회                             |
+| `getNoticeDetail(courseId, postId)`   | `Promise<NoticeDetail>`                      | 공지사항 본문/첨부파일 조회                    |
+| `getSyllabusParams(courseId)`         | `Promise<SyllabusParams>`                    | 강의계획서 파라미터 정보 추출                  |
+| `downloadSyllabusPdf(courseId, out)`  | `Promise<string>`                            | 강의계획서 공식 PDF 다운로드                   |
+| `getWeeklyActivities(courseId)`       | `Promise<WeeklyActivity[]>`                  | 주차별 학습 활동 조회                          |
+| `getVods(courseId)`                   | `Promise<VodItem[]>`                         | VOD 강의 목록 + 출석 상태 조회                 |
+| `getVodDetail(cmid)`                  | `Promise<VodDetail>`                         | VOD 상세/스트림 주소 조회 (다른 페이지면 예외) |
+| `getSession()`                        | `Promise<string \| undefined>`               | 저장된 세션 쿠키 조회                          |
+| `setSession(cookie)`                  | `Promise<void>`                              | 세션 쿠키 저장                                 |
+| `clearSession()`                      | `Promise<void>`                              | 세션 쿠키 삭제                                 |
+| `saveCredentials(username, password)` | `Promise<void>`                              | 로그인 자격증명 저장                           |
+| `getCredentials()`                    | `Promise<{username, password} \| undefined>` | 저장된 자격증명 조회                           |
+| `clearCredentials()`                  | `Promise<void>`                              | 저장된 자격증명 삭제                           |
+| `hasCredentials()`                    | `Promise<boolean>`                           | 자격증명 저장 여부 확인                        |
+| `tryAutoLogin()`                      | `Promise<boolean>`                           | 저장된 자격증명으로 자동 재로그인 시도         |
+| `fetch(url, init?, behavior?)`        | `Promise<Response>`                          | 세션 쿠키를 붙여 사이트의 페이지 요청          |
 
 `fetch(url)`의 `url`은 경로(`/course/view.php?id=1`) 또는 사이트의 절대 URL입니다. 다른 origin을 가리키는 URL(`//host/x`, `/\host/x` 포함)과 사이트 밖으로 나가는 리다이렉트는 요청하지 않고 예외를 던집니다. 리다이렉트(301/302/303/307/308)는 최대 10번까지 따라가며, 로그인 페이지(`/login/...`)로의 리다이렉트는 세션 만료로 처리합니다. `fetchWithBase(url, options)`도 같은 origin 검사를 하고 리다이렉트를 스스로 따라가지 않습니다.
 
@@ -353,7 +355,7 @@ CLI는 플래그가 없으면 `warn`을 사용하고, `--verbose`(info), `--debu
 | `debug`  | `--debug`   | 디버그 정보와 오류 스택, 요청 실패 상세 출력       |
 | `trace`  | `--trace`   | 모든 HTTP 요청/응답 헤더까지 출력 (쿠키 값은 가림) |
 
-로그 인자는 각각 따로 포맷됩니다. 문자열은 그대로, `Error`는 `이름: 메시지`(`debug` 이상에서는 스택 포함), 그 외 값은 JSON으로 출력됩니다. 호출자에게 다시 던져지는 오류(요청 실패, 로그인 실패)는 중복 출력을 피하려고 `debug`에서만 기록합니다.
+로그 인자는 각각 따로 포맷됩니다. 문자열은 그대로, `Error`는 `이름: 메시지`(`debug` 이상에서는 스택 포함)와 그 뒤의 `cause` 체인(`Caused by: ...`), 그 외 값은 JSON으로 출력됩니다(객체 안의 `Error`는 `이름: 메시지` 문자열로). 포맷한 결과의 제어 문자(줄바꿈과 탭 제외), 서식 문자(양방향 제어, 폭 없는 문자 등)와 줄/문단 구분자는 U+FFFD로 바뀌므로, 서버가 보낸 텍스트가 로그를 통해 터미널을 조작할 수 없습니다. 호출자에게 다시 던져지는 오류(요청 실패, 로그인 실패)는 중복 출력을 피하려고 `debug`에서만 기록합니다.
 
 ### 자동 세션 갱신
 

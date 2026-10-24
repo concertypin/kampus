@@ -60,7 +60,9 @@ vi.mock("node:child_process", () => ({
 }));
 
 // The browser (assignments submit)
-const mockState = { launchError: undefined as Error | undefined };
+const mockState: { launchError: Error | undefined } = {
+    launchError: undefined,
+};
 function fakePage() {
     const locator = (selector: string) => ({
         first: () => locator(selector),
@@ -455,7 +457,9 @@ describe("text output of server-provided values", () => {
     });
 
     describe("vod download", () => {
-        const args = ["vod", "download", "1", "--output", ".tmp/sanitize.mkv"];
+        // No directory part: the command creates the parent directory, and "."
+        // already exists. ffmpeg is mocked, so no file is written.
+        const args = ["vod", "download", "1", "--output", "sanitize.mkv"];
 
         beforeEach(() => {
             getVodDetailMock.mockResolvedValue({
