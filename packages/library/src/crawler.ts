@@ -1559,7 +1559,7 @@ export class Crawler {
                     const match = text.match(/^\D*(\d+)\D*$/);
                     currentWeek =
                         match && match[1] ? parseInt(match[1], 10) : 0;
-                    if (!currentWeek) {
+                    if (!match) {
                         log.debug(
                             "Attendance row without a week number; its VODs get no status"
                         );
@@ -2647,6 +2647,9 @@ export class Crawler {
 
         const attByWeek = new Map<number, AttendanceItem[]>();
         for (const item of attItems) {
+            // Week 0 holds the rows whose week cell could not be read, from
+            // any week: they must not be paired with the VODs of section 0.
+            if (item.week === 0) continue;
             if (!attByWeek.has(item.week)) {
                 attByWeek.set(item.week, []);
             }

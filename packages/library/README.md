@@ -102,7 +102,7 @@ interface Course {
 }
 
 interface AttendanceItem {
-    week: number; // 주차 (출석 표 첫 칸의 번호 = 코스 섹션 번호, VodItem.week와 같음)
+    week: number; // 주차 (출석 표 첫 칸의 번호 = 코스 섹션 번호, VodItem.week와 같음, 번호를 읽을 수 없으면 0)
     title: string;
     requiredTime: string; // 필수 시청 시간
     watchedTime: string; // 시청한 시간

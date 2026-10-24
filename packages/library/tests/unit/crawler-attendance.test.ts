@@ -270,6 +270,26 @@ describe("Crawler VOD and attendance weeks", () => {
             expect(vods[0]?.status).toBe("▲");
         });
 
+        it("does not pair a section-0 VOD with a row whose week cell is unreadable", async () => {
+            respondWith(
+                attendanceWith([
+                    ["Midterm", "Lecture 1-1", "10:00", "10:30", "O"],
+                ]),
+                courseWith([
+                    {
+                        id: "section-0",
+                        title: "Course Summary",
+                        vods: [{ cmid: "350104", name: "Orientation" }],
+                    },
+                ])
+            );
+
+            const vods = await crawler.getVods("340001");
+
+            expect(vods[0]?.week).toBe(0);
+            expect(vods[0]?.status).toBe("-");
+        });
+
         it("falls back to the title number only for a section without a section id", async () => {
             respondWith(
                 attendanceWith([[7, "Lecture", "10:00", "10:30", "O"]]),
@@ -395,11 +415,23 @@ describe("Crawler VOD and attendance weeks", () => {
                 await statuses(
                     ["Lecture 4 (part 2)", "Lecture 4 (part 1)"],
                     [
-                        ["Lecture 4 (part 1)", "O"],
-                        ["Lecture 4 (part 2)", "X"],
+                        ["Lecture 4 (part 1) VOD", "O"],
+                        ["Lecture 4 (part 2) VOD", "X"],
                     ]
                 )
             ).toEqual(["X", "O"]);
+        });
+
+        it("gives a contained row to neither VOD when both have it as their only candidate", async () => {
+            expect(
+                await statuses(
+                    ["Lecture", "Lecture"],
+                    [
+                        ["Lecture (VOD)", "O"],
+                        ["Other", "X"],
+                    ]
+                )
+            ).toEqual(["-", "-"]);
         });
 
         it("pairs a title that is a prefix of another with its own row", async () => {
