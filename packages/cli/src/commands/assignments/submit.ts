@@ -3,6 +3,7 @@ import { resolve } from "node:path";
 import { existsSync } from "node:fs";
 import { Command } from "commander";
 import { chromium } from "playwright";
+import { isSiteUrl, parseSiteUrl } from "@concertypin/ecampus-crawler";
 import { createCrawler } from "../../crawler.ts";
 import { getLogLevel } from "../../log-level.ts";
 import {
@@ -15,6 +16,44 @@ import {
     spinnerStop,
     stripEmoji,
 } from "../lib/format.ts";
+
+/**
+ * Fails unless `currentUrl` is on the site at `origin` (same scheme, host and
+ * port). Called before the stored credentials are typed or submitted, so a
+ * redirect to another host cannot receive them.
+ *
+ * @throws With a short message that does not repeat the URL.
+ */
+export function assertOnSite(currentUrl: string, origin: string): void {
+    if (!isSiteUrl(currentUrl, parseSiteUrl(origin))) {
+        throw new Error("The page left the e-campus site; stopped");
+    }
+}
+
+/** The e-campus login page of the site at `origin`. */
+export function loginPageUrl(origin: string): string {
+    return new URL("/login/index.php", origin).href;
+}
+
+/**
+ * The page where a submission to an assignment is edited.
+ *
+ * @param assignmentId - The assignment's course module id: digits only, it is
+ *   put into the URL.
+ * @throws If `assignmentId` is not a decimal number.
+ */
+export function editSubmissionUrl(
+    origin: string,
+    assignmentId: string
+): string {
+    if (!/^\d+$/.test(assignmentId)) {
+        throw new Error(`Invalid assignment ID: ${assignmentId}`);
+    }
+    return new URL(
+        `/mod/assign/view.php?id=${assignmentId}&action=editsubmission`,
+        origin
+    ).href;
+}
 
 async function askConfirmation(prompt: string): Promise<boolean> {
     const rl = createInterface({
@@ -73,6 +112,21 @@ ${pc.bold("예시:")}
                 )
             );
 
+            const crawler = createCrawler(getLogLevel());
+            let submissionUrl: string;
+            try {
+                submissionUrl = editSubmissionUrl(
+                    crawler.siteOrigin,
+                    assignmentId
+                );
+            } catch (err: unknown) {
+                console.error(
+                    `${pc.red(stripEmoji(`❌ 오류: ${errorText(err)}`))}`
+                );
+                process.exitCode = 1;
+                return;
+            }
+
             const absolutePath = resolve(filePath);
             if (!existsSync(absolutePath)) {
                 console.error(
@@ -82,7 +136,6 @@ ${pc.bold("예시:")}
                 return;
             }
 
-            const crawler = createCrawler(getLogLevel());
             const credentials = await crawler
                 .getCredentials()
                 .catch(() => undefined);
@@ -121,14 +174,36 @@ ${pc.bold("예시:")}
                 const context = await browser.newContext();
                 const page = await context.newPage();
 
-                await page.goto(
-                    "https://ecampus.kangnam.ac.kr/login/index.php"
-                );
+                await page.goto(loginPageUrl(crawler.siteOrigin));
+                // The credentials are typed only into a page of the site,
+                // and only into a form that posts back to it.
+                assertOnSite(page.url(), crawler.siteOrigin);
+                // `action` may be relative: resolve it against the page. A
+                // form without one posts to the page itself. No login form
+                // at all stops here rather than typing into another page.
+                const rawAction = await page
+                    .locator("form:has(#input-password)")
+                    .first()
+                    .getAttribute("action", { timeout: 2000 })
+                    .catch(() => {
+                        throw new Error(
+                            "The login form was not found; stopped"
+                        );
+                    });
+                if (rawAction) {
+                    assertOnSite(
+                        new URL(rawAction, page.url()).href,
+                        crawler.siteOrigin
+                    );
+                }
                 await page.fill("#input-username", credentials.username);
+                assertOnSite(page.url(), crawler.siteOrigin);
                 await page.fill("#input-password", credentials.password);
 
+                assertOnSite(page.url(), crawler.siteOrigin);
                 await page.click('input[type="submit"][value="로그인"]');
                 await page.waitForLoadState("networkidle");
+                assertOnSite(page.url(), crawler.siteOrigin);
 
                 // Verify login succeeded
                 const content = await page.content();
@@ -145,9 +220,8 @@ ${pc.bold("예시:")}
                 spinnerStart(
                     `과제 제출 페이지 로딩 중 (ID: ${assignmentId})...`
                 );
-                await page.goto(
-                    `https://ecampus.kangnam.ac.kr/mod/assign/view.php?id=${assignmentId}&action=editsubmission`
-                );
+                await page.goto(submissionUrl);
+                assertOnSite(page.url(), crawler.siteOrigin);
                 await page.waitForTimeout(3000); // wait for Moodle file manager resources
 
                 // Check if filemanager element is present

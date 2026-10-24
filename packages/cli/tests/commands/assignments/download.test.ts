@@ -52,6 +52,7 @@ const getSessionMock = vi.fn<() => Promise<string | undefined>>();
 const mockCrawler = fragile<Crawler>({
     getAssignmentDetail: getAssignmentDetailMock,
     getSession: getSessionMock,
+    siteOrigin: "https://ecampus.kangnam.ac.kr",
 });
 
 const sampleAssignment: AssignmentDetail = {

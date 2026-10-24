@@ -60,12 +60,25 @@ vi.mock("node:child_process", () => ({
 }));
 
 // The browser (assignments submit)
-const mockState: { launchError: Error | undefined } = {
+const mockState: {
+    launchError: Error | undefined;
+    pageUrl: string;
+    filled: number;
+    /** The login form's `action`; an Error when the form is not found. */
+    formAction: string | null | Error;
+} = {
     launchError: undefined,
+    pageUrl: "https://ecampus.kangnam.ac.kr/login/index.php",
+    filled: 0,
+    formAction: "/login/index.php",
 };
 function fakePage() {
     const locator = (selector: string) => ({
         first: () => locator(selector),
+        getAttribute: () =>
+            mockState.formAction instanceof Error
+                ? Promise.reject(mockState.formAction)
+                : Promise.resolve(mockState.formAction),
         textContent: () =>
             Promise.resolve(
                 selector === ".submissionstatustable" ? HOSTILE : null
@@ -77,7 +90,11 @@ function fakePage() {
     };
     return {
         goto: () => Promise.resolve(),
-        fill: () => Promise.resolve(),
+        url: () => mockState.pageUrl,
+        fill: () => {
+            mockState.filled++;
+            return Promise.resolve();
+        },
         click: () => Promise.resolve(),
         waitForLoadState: () => Promise.resolve(),
         waitForTimeout: () => Promise.resolve(),
@@ -122,6 +139,7 @@ const downloadSyllabusPdfMock =
     vi.fn<(courseId: string, outputPath: string) => Promise<string>>();
 
 const mockCrawler = fragile<Crawler>({
+    siteOrigin: "https://ecampus.kangnam.ac.kr",
     getAssignmentDetail: getAssignmentDetailMock,
     getAssignments: getAssignmentsMock,
     getQuizDetail: getQuizDetailMock,
@@ -157,6 +175,8 @@ describe("text output of server-provided values", () => {
         vi.clearAllMocks();
         process.exitCode = undefined;
         mockState.launchError = undefined;
+        mockState.pageUrl = "https://ecampus.kangnam.ac.kr/login/index.php";
+        mockState.formAction = "/login/index.php";
         output = captureOutput();
     });
 
@@ -242,6 +262,61 @@ describe("text output of server-provided values", () => {
 
             expectClean(output.text(), HOSTILE_HEAD);
             expect(process.exitCode).toBeUndefined();
+        });
+
+        it("types no credentials when the login page is not on the site", async () => {
+            mockState.pageUrl = "https://evil.example/login/index.php";
+            mockState.filled = 0;
+
+            await run(assignmentsCommand, args);
+
+            expect(mockState.filled).toBe(0);
+            expect(output.text()).not.toContain("evil.example");
+            expect(process.exitCode).toBe(1);
+        });
+
+        it("types no credentials when the login form posts to another host", async () => {
+            mockState.formAction = "https://evil.example/collect";
+            mockState.filled = 0;
+
+            await run(assignmentsCommand, args);
+
+            expect(mockState.filled).toBe(0);
+            expect(process.exitCode).toBe(1);
+        });
+
+        it("types no credentials when the login form is missing", async () => {
+            mockState.formAction = new Error("Timeout 2000ms exceeded");
+            mockState.filled = 0;
+
+            await run(assignmentsCommand, args);
+
+            expect(mockState.filled).toBe(0);
+            expect(process.exitCode).toBe(1);
+        });
+
+        it("logs in through a form without an action (it posts to the page)", async () => {
+            mockState.formAction = null;
+            mockState.filled = 0;
+
+            await run(assignmentsCommand, args);
+
+            expect(mockState.filled).toBe(2);
+            expect(process.exitCode).toBeUndefined();
+        });
+
+        it("rejects a non-numeric assignment id before anything else", async () => {
+            await run(assignmentsCommand, [
+                "assignments",
+                "submit",
+                "1&action=x",
+                import.meta.filename,
+                "--yes",
+            ]);
+
+            expect(getCredentialsMock).not.toHaveBeenCalled();
+            expect(output.text()).toContain("Invalid assignment ID");
+            expect(process.exitCode).toBe(1);
         });
 
         it("prints a failure cleanly", async () => {

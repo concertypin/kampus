@@ -67,6 +67,7 @@ const mockCrawler = fragile<Crawler>({
     getResourceDetail: getResourceDetailMock,
     getResources: getResourcesMock,
     getSession: getSessionMock,
+    siteOrigin: "https://ecampus.kangnam.ac.kr",
 });
 
 const sampleResource: ResourceDetail = {

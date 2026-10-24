@@ -15,9 +15,10 @@ import {
 import { pipeline } from "node:stream/promises";
 import { Readable } from "node:stream";
 import {
-    isEcampusUrl,
     isLoginUrl,
     isPluginfileUrl,
+    isSiteUrl,
+    parseSiteUrl,
 } from "@concertypin/ecampus-crawler";
 
 /**
@@ -195,6 +196,8 @@ function assertInsideCanonicalDir(destPath: string, realAllowed: string): void {
     }
 }
 
+const LOOPBACK_HOSTS = new Set(["localhost", "127.0.0.1", "[::1]"]);
+
 /** Redirect hops followed for one download. */
 const MAX_REDIRECTS = 10;
 
@@ -204,7 +207,8 @@ const MAX_REDIRECTS = 10;
  *
  * Security features:
  * - Cookie scoping: the session cookie is attached only to a request whose
- *   URL is the e-campus origin over https, decided again for every redirect
+ *   URL is the site origin (the e-campus over https, unless `siteOrigin`
+ *   names another site), decided again for every redirect
  *   hop. A request to any other host, or over plain http, is still made but
  *   without the cookie (the way a browser scopes a cookie) instead of being
  *   refused: a file the site hands off to external storage keeps working,
@@ -216,7 +220,10 @@ const MAX_REDIRECTS = 10;
  *   carries a `Content-Disposition` header (Moodle sends one with every
  *   file it serves, and with none of its pages). A login, error or notice
  *   page answered with 200 fails the download instead.
- * - SSRF protection: validates URL and redirect targets before fetching
+ * - SSRF protection: validates URL and redirect targets before fetching. The
+ *   one exception is a site that is itself loopback (a local mock server,
+ *   `siteOrigin`): URLs inside that origin are allowed, everything else
+ *   still goes through the check.
  * - Path traversal protection: validates destination path is within allowed directory
  * - The content is written to a temporary file next to the destination and
  *   renamed into place when it is complete, so a failed download leaves an
@@ -231,8 +238,21 @@ export async function downloadFile(
     sessionCookie: string,
     options?: {
         allowedDir?: string;
+        /**
+         * Origin of the site the session belongs to (`Crawler.siteOrigin`).
+         * Defaults to the e-campus.
+         */
+        siteOrigin?: string;
     }
 ): Promise<void> {
+    const site = parseSiteUrl(options?.siteOrigin);
+    // Only a loopback site is allowed to be reached on a loopback address,
+    // and only on its own origin.
+    const siteIsLoopback = LOOPBACK_HOSTS.has(site.hostname);
+    const isBlockedHost = async (target: URL): Promise<boolean> =>
+        !(siteIsLoopback && isSiteUrl(target, site)) &&
+        (await isPrivateHost(target.hostname));
+
     // Validate URL scheme
     let parsedUrl: URL;
     try {
@@ -245,7 +265,7 @@ export async function downloadFile(
     }
 
     // SSRF protection: validate initial URL hostname
-    if (await isPrivateHost(parsedUrl.hostname)) {
+    if (await isBlockedHost(parsedUrl)) {
         throw new Error(
             `Blocked download to internal host: ${parsedUrl.hostname}`
         );
@@ -268,9 +288,9 @@ export async function downloadFile(
             "User-Agent":
                 "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:151.0) Gecko/20100101 Firefox/151.0",
         };
-        // The session belongs to the e-campus origin (https) and to nothing
-        // else: neither the first URL nor a redirect target is trusted.
-        if (isEcampusUrl(currentUrl)) {
+        // The session belongs to the site origin and to nothing else:
+        // neither the first URL nor a redirect target is trusted.
+        if (isSiteUrl(currentUrl, site)) {
             headers.Cookie = `MoodleSession=${sessionCookie}`;
         }
         response = await fetch(currentUrl.toString(), {
@@ -317,14 +337,14 @@ export async function downloadFile(
 
             // The site answers a request without a valid session with a
             // redirect to its login page; that page is not the file.
-            if (isLoginUrl(redirectUrl)) {
+            if (isLoginUrl(redirectUrl, site)) {
                 throw new Error(
                     "Login required: the session is missing or expired for this file"
                 );
             }
 
             // SSRF protection: validate redirect target
-            if (await isPrivateHost(redirectUrl.hostname)) {
+            if (await isBlockedHost(redirectUrl)) {
                 throw new Error(
                     `Blocked redirect to internal host: ${redirectUrl.hostname}`
                 );
@@ -349,14 +369,14 @@ export async function downloadFile(
     // that answers 200 has neither.
     const contentType = response.headers.get("content-type") ?? "";
     if (
-        isEcampusUrl(currentUrl) &&
+        isSiteUrl(currentUrl, site) &&
         /^\s*(text\/html|application\/xhtml\+xml)\s*(;|$)/i.test(contentType) &&
-        !isPluginfileUrl(currentUrl) &&
+        !isPluginfileUrl(currentUrl, site) &&
         response.headers.get("content-disposition") === null
     ) {
         await response.body?.cancel().catch(() => {});
         throw new Error(
-            isLoginUrl(currentUrl)
+            isLoginUrl(currentUrl, site)
                 ? "Login required: the session is missing or expired for this file"
                 : "The e-campus answered with a web page instead of a file (login, error or notice page)"
         );
