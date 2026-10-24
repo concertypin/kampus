@@ -56,7 +56,6 @@ export class KeychainDeleteError extends Error {
 /** Marks a failed keychain call; the caller falls back to the file. */
 const KEYCHAIN_FAILED = Symbol("keychain failed");
 
-/** The outcome of a keychain call, with the error when it failed. */
 /**
  * One queue for every instance in the process. The CLI creates more than one
  * storage over the same session file and keychain entry (the crawler, and
@@ -66,6 +65,7 @@ const KEYCHAIN_FAILED = Symbol("keychain failed");
  */
 let sharedQueue: Promise<void> = Promise.resolve();
 
+/** The outcome of a keychain call, with the error when it failed. */
 type KeychainResult<T> = { ok: true; value: T } | { ok: false; error: unknown };
 
 /**
