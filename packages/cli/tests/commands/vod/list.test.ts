@@ -74,6 +74,33 @@ describe("vod list command", () => {
         stdoutSpy.mockRestore();
     });
 
+    it.each(["▲", "△"])("labels the late mark %s as late", async (mark) => {
+        getVodsMock.mockResolvedValue([
+            {
+                id: "350468",
+                week: 1,
+                weekTitle: "-",
+                name: "lecture",
+                duration: "",
+                period: "",
+                status: mark,
+                watchedTime: "",
+                requiredTime: "",
+                url: "",
+            },
+        ]);
+        const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+        const program = new Command();
+        program.addCommand(vodCommand);
+        program.exitOverride();
+        await program.parseAsync(["vod", "list", "340524"], {
+            from: "user",
+        });
+
+        const text = logSpy.mock.calls.map((c) => String(c[0])).join("\n");
+        expect(text).toContain("▲ (지각)");
+    });
+
     describe("week line", () => {
         function vod(week: number, weekTitle: string): VodItem {
             return {

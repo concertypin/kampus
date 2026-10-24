@@ -2630,7 +2630,7 @@ export class Crawler {
 
     /**
      * Get all VOD lecture items for a course, along with learning period and attendance status.
-     * Respects the exact attendance status (O/X/△) from Online Attendance without recalculation.
+     * Respects the exact attendance status (O/X/▲) from Online Attendance without recalculation.
      * @param courseId - The course ID
      */
     async getVods(courseId: string): Promise<VodItem[]> {
@@ -2750,7 +2750,7 @@ export class Crawler {
             weekVods.forEach((vod, index) => {
                 const att = matches[index];
                 if (!att) return;
-                // Respect the original status (O/X/△) without recalculation
+                // Respect the original status (O/X/▲) without recalculation
                 vod.status = normalizeText(att.status) || "X";
                 vod.watchedTime = normalizeText(att.watchedTime) || "-";
                 vod.requiredTime = normalizeText(att.requiredTime);

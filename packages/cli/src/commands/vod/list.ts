@@ -63,8 +63,9 @@ ${pc.bold("예시:")}
                     statusStr = pc.green("O (출석)");
                 } else if (v.status === "X") {
                     statusStr = pc.red("X (결석/미달)");
-                } else if (v.status === "△") {
-                    statusStr = pc.yellow("△ (지각)");
+                } else if (v.status === "▲" || v.status === "△") {
+                    // The site marks a late view with ▲; △ is accepted too.
+                    statusStr = pc.yellow("▲ (지각)");
                 } else {
                     statusStr = pc.dim(plainText(v.status) || "-");
                 }
