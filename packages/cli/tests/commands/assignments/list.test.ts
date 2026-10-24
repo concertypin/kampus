@@ -14,7 +14,7 @@ vi.mock("@/crawler", () => ({
 }));
 
 vi.mock("@/log-level", () => ({
-    getLogLevel: vi.fn<() => LogLevel | undefined>(() => undefined),
+    getLogLevel: vi.fn<() => LogLevel>(() => "warn"),
 }));
 
 const getAssignmentsMock =

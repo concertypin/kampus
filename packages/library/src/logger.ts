@@ -27,16 +27,41 @@ const LOG_LEVEL_MAP = {
     trace: LogLevels.trace,
 } satisfies Record<LogLevel, number>;
 
+/**
+ * An Error as `name: message` (or its stack), followed by its `cause` chain.
+ * `seen` stops a cause cycle.
+ */
+function formatError(
+    err: Error,
+    includeStack: boolean,
+    seen = new Set<Error>()
+): string {
+    seen.add(err);
+    const head =
+        includeStack && err.stack ? err.stack : `${err.name}: ${err.message}`;
+    const { cause } = err;
+    if (cause === undefined || (cause instanceof Error && seen.has(cause))) {
+        return head;
+    }
+    const causeText =
+        cause instanceof Error
+            ? formatError(cause, includeStack, seen)
+            : formatArg(cause, includeStack);
+    return `${head}\nCaused by: ${causeText}`;
+}
+
 /** Format one log argument without relying on node:util (Deno compatible). */
 function formatArg(arg: unknown, includeStack: boolean): string {
     if (typeof arg === "string") return arg;
-    if (arg instanceof Error) {
-        const head = `${arg.name}: ${arg.message}`;
-        return includeStack && arg.stack ? arg.stack : head;
-    }
+    if (arg instanceof Error) return formatError(arg, includeStack);
     try {
-        // JSON.stringify yields undefined for e.g. functions and symbols
-        return JSON.stringify(arg) ?? String(arg);
+        // JSON.stringify drops an Error's own fields, so a nested Error
+        // (`{ error }`) is written as `name: message` instead of `{}`.
+        // It yields undefined for e.g. functions and symbols.
+        const json = JSON.stringify(arg, (_key, value: unknown) =>
+            value instanceof Error ? `${value.name}: ${value.message}` : value
+        );
+        return json ?? String(arg);
     } catch {
         // Circular structures, BigInt, ...
         return String(arg);

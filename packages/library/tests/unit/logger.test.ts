@@ -106,6 +106,30 @@ describe("message formatting", () => {
         expect(stderr).toHaveBeenLastCalledWith("fetch:error Error: boom");
     });
 
+    it("prints the cause chain of an Error", () => {
+        const err = new Error("outer", {
+            cause: new TypeError("inner", { cause: "root" }),
+        });
+        getLogger().error(err);
+        expect(stderr).toHaveBeenCalledWith(
+            "error Error: outer\nCaused by: TypeError: inner\nCaused by: root"
+        );
+    });
+
+    it("stops at a cause cycle", () => {
+        const err = new Error("loop");
+        err.cause = err;
+        getLogger().error(err);
+        expect(stderr).toHaveBeenCalledWith("error Error: loop");
+    });
+
+    it("prints an Error nested in an object as name: message", () => {
+        getLogger().info("x", { error: new RangeError("bad") });
+        expect(stderr).toHaveBeenCalledWith(
+            'info x {"error":"RangeError: bad"}'
+        );
+    });
+
     it("falls back to String() for circular objects", () => {
         const circular: Record<string, unknown> = {};
         circular["self"] = circular;
