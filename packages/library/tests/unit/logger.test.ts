@@ -138,6 +138,14 @@ describe("message formatting", () => {
         );
     });
 
+    it("prints an Error with an empty stack by name and message", () => {
+        setLogLevel("debug");
+        const err = new Error("boom");
+        err.stack = "";
+        getLogger().debug("x", err);
+        expect(stderr).toHaveBeenCalledWith("debug x Error: boom");
+    });
+
     it("prints an Error whose stack is not a string by name and message", () => {
         setLogLevel("debug");
         const err = new Error("boom");

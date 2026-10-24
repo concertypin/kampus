@@ -392,6 +392,88 @@ function getCourseSections(doc: Document): Element[] {
     });
 }
 
+/** A cell's span attribute as a count; `rowspan="0"` spans the rest of its group. */
+function spanOf(cell: Element, name: "rowspan" | "colspan"): number {
+    const value = parseInt(cell.getAttribute(name) ?? "", 10);
+    if (name === "rowspan" && value === 0) return Number.POSITIVE_INFINITY;
+    return Number.isFinite(value) && value > 0 ? value : 1;
+}
+
+/**
+ * The cells of each row of a table section by column, with every `rowspan`
+ * and `colspan` resolved: a spanned cell appears in each row and column it
+ * covers. Rows without cells still use up the spans that cross them. Only
+ * the first `columns` columns are resolved, so a huge `colspan` costs nothing.
+ */
+function tableGrid(
+    rows: Element[],
+    columns: number
+): (Element | undefined)[][] {
+    const carried: ({ cell: Element; rows: number } | undefined)[] = [];
+    const takeCarried = (
+        line: (Element | undefined)[],
+        col: number
+    ): boolean => {
+        const span = carried[col];
+        if (!span || span.rows <= 0) return false;
+        line[col] = span.cell;
+        span.rows--;
+        return true;
+    };
+    return rows.map((row) => {
+        const line: (Element | undefined)[] = [];
+        let col = 0;
+        const cells = Array.from(row.children).filter((el: Element) =>
+            ["td", "th"].includes(el.tagName.toLowerCase())
+        );
+        for (const cell of cells) {
+            while (col < columns && takeCarried(line, col)) col++;
+            if (col >= columns) break;
+            const rowspan = spanOf(cell, "rowspan");
+            const colspan = spanOf(cell, "colspan");
+            for (let i = 0; i < colspan && col < columns; i++, col++) {
+                line[col] = cell;
+                carried[col] =
+                    rowspan > 1 ? { cell, rows: rowspan - 1 } : undefined;
+            }
+        }
+        for (; col < columns; col++) takeCarried(line, col);
+        return line;
+    });
+}
+
+/**
+ * Whether `part` occurs in `text` as whole words: the characters around the
+ * occurrence, if any, are not letters or digits. "Lecture 1" is in
+ * "Lecture 1 (VOD)" but not in "Lecture 10".
+ */
+function containsWord(text: string, part: string): boolean {
+    const isWordChar = (ch: string | undefined): boolean =>
+        ch !== undefined && /[\p{L}\p{N}]/u.test(ch);
+    for (
+        let at = text.indexOf(part);
+        at >= 0;
+        at = text.indexOf(part, at + 1)
+    ) {
+        // A joiner between letters or digits continues the word: "1-1",
+        // "1.5" and "1_2" are one token, so "Lecture 1" is not in them.
+        const isJoiner = (ch: string | undefined): boolean =>
+            ch === "-" || ch === "." || ch === "_";
+        const before = text[at - 1];
+        const after = text[at + part.length];
+        const continuesBefore =
+            isWordChar(before) ||
+            (isJoiner(before) && isWordChar(text[at - 2]));
+        const continuesAfter =
+            isWordChar(after) ||
+            (isJoiner(after) && isWordChar(text[at + part.length + 1]));
+        const startsWord = !continuesBefore || !isWordChar(part[0]);
+        const endsWord = !continuesAfter || !isWordChar(part.at(-1));
+        if (startsWord && endsWord) return true;
+    }
+    return false;
+}
+
 /**
  * The section number of a course-page section, read from its `section-N` id,
  * or `undefined` when the id is missing or has another shape.
@@ -409,9 +491,14 @@ function sectionNumber(section: Element): number | undefined {
 /**
  * Pairs the VODs of one week with that week's attendance rows (same order as
  * `names`; `undefined` where a VOD has no row). The attendance table has no
- * module id, so rows are matched by title: exact first, then one containing
- * the other. Containment is ambiguous when titles share a prefix ("Lecture 1"
- * is in "Lecture 10 (VOD)"), so a VOD takes a row by containment only while
+ * module id, so rows are matched by title. When the week has as many rows as
+ * VODs and each row's title matches the VOD at the same position, the rows
+ * are taken in order: this keeps repeated titles apart, which a title search
+ * cannot; a row whose title is exactly another VOD's name is not taken that
+ * way. Otherwise: exact title first, then one title containing the other as
+ * whole words ("Lecture 1" is not in "Lecture 10" or "Lecture 1-1").
+ * Containment can still be ambiguous ("Part" is in "Part A" and "Part B"),
+ * so a VOD takes a row by containment only while
  * that row is its single remaining candidate and no other VOD has it as its
  * single candidate; each pairing narrows the others, so the step repeats.
  * Only when no unpaired VOD has a containment candidate left and the week has
@@ -431,6 +518,31 @@ function matchAttendance(
         result[vodIndex] = rows[rowIndex];
     };
 
+    const contains = (title: string, name: string): boolean =>
+        title !== "" &&
+        name !== "" &&
+        (containsWord(title, name) || containsWord(name, title));
+    const sameLecture = (title: string, name: string): boolean =>
+        title === name || contains(title, name);
+
+    // A row whose title is exactly another VOD's name belongs to that VOD,
+    // unless it is also exactly the name at its own position (repeated
+    // titles), so the ordered shortcut must not hand it to a neighbour.
+    const exactElsewhere = (name: string, i: number): boolean =>
+        titles.some(
+            (title, j) => j !== i && title === name && wanted[j] !== title
+        );
+    if (
+        names.length === rows.length &&
+        wanted.every(
+            (name, i) =>
+                sameLecture(titles[i] ?? "", name) &&
+                (titles[i] === name || !exactElsewhere(name, i))
+        )
+    ) {
+        return [...rows];
+    }
+
     wanted.forEach((name, vodIndex) => {
         const rowIndex = titles.findIndex(
             (title, i) => !used.has(i) && title !== "" && title === name
@@ -438,10 +550,6 @@ function matchAttendance(
         if (rowIndex >= 0) take(vodIndex, rowIndex);
     });
 
-    const contains = (title: string, name: string): boolean =>
-        title !== "" &&
-        name !== "" &&
-        (title.includes(name) || name.includes(title));
     const candidates = (): number[][] =>
         wanted.map((name, vodIndex) =>
             result[vodIndex]
@@ -1538,80 +1646,52 @@ export class Crawler {
         const doc = this.parseHtml(html);
 
         const items: AttendanceItem[] = [];
-        const rows = doc.querySelectorAll(".user_progress_table tbody tr");
-
-        let weekRowspanRemaining = 0;
-        let currentWeek = 0;
-        let statusRowspanRemaining = 0;
-        let currentWeekStatus = "";
-
-        for (const row of rows) {
-            if (
-                row.querySelector("th") ||
-                row.querySelectorAll("td").length === 0
-            ) {
-                continue;
-            }
-
-            const tds = Array.from(row.querySelectorAll("td"));
-
-            if (weekRowspanRemaining > 0) {
-                weekRowspanRemaining--;
-            } else {
-                const td = tds.shift();
-                if (td) {
-                    // The first cell of a week's first row is the week number
-                    // (the course's `section-N`), repeated for every VOD of
-                    // the week through its rowspan. Weeks without a VOD still
-                    // get one row with empty cells. Text around the number
-                    // ("1주차") is allowed; a cell with no number or with more
-                    // than one is not a week.
-                    const text = td.textContent || "";
-                    const match = text.match(/^\D*(\d+)\D*$/);
-                    currentWeek =
-                        match && match[1] ? parseInt(match[1], 10) : 0;
-                    if (!match) {
-                        log.debug(
-                            "Attendance row without a week number; its VODs get no status"
-                        );
-                    }
-
-                    const rowspanAttr = td.getAttribute("rowspan");
-                    const rowspan = rowspanAttr ? parseInt(rowspanAttr, 10) : 1;
-                    weekRowspanRemaining = rowspan - 1;
+        // Columns: week, title, required time, watched time, status, week
+        // status. The week cell spans all rows of its week, and other cells
+        // may span rows too, so the table is resolved into a grid first.
+        const sections = doc.querySelectorAll(".user_progress_table tbody");
+        let unreadableWeekCell: Element | undefined;
+        for (const section of sections) {
+            const rows = Array.from(section.children).filter(
+                (el: Element) => el.tagName.toLowerCase() === "tr"
+            );
+            const grid = tableGrid(rows, 6);
+            rows.forEach((row, index) => {
+                // Header rows, and rows with no cells of their own, list no
+                // lecture (their spanned cells were already accounted for).
+                if (
+                    row.querySelector("th") ||
+                    row.querySelectorAll("td").length === 0
+                ) {
+                    return;
                 }
-            }
+                const line = grid[index] ?? [];
+                const text = (col: number): string =>
+                    normalizeText(line[col]?.textContent);
 
-            const titleTd = tds.shift();
-            const requiredTimeTd = tds.shift();
-            const watchedTimeTd = tds.shift();
-            const statusTd = tds.shift();
-
-            const title = normalizeText(titleTd?.textContent);
-            const requiredTime = normalizeText(requiredTimeTd?.textContent);
-            const watchedTime = normalizeText(watchedTimeTd?.textContent);
-            const status = normalizeText(statusTd?.textContent);
-
-            if (statusRowspanRemaining > 0) {
-                statusRowspanRemaining--;
-            } else {
-                const td = tds.shift();
-                if (td) {
-                    currentWeekStatus = normalizeText(td.textContent);
-
-                    const rowspanAttr = td.getAttribute("rowspan");
-                    const rowspan = rowspanAttr ? parseInt(rowspanAttr, 10) : 1;
-                    statusRowspanRemaining = rowspan - 1;
+                // The week cell is the course's `section-N`. Weeks without a
+                // VOD still get one row with empty cells. Text around the
+                // number ("1주차") is allowed; a cell with no number or with
+                // more than one is not a week.
+                const weekCell = line[0];
+                const match = (weekCell?.textContent ?? "").match(
+                    /^\D*(\d+)\D*$/
+                );
+                if (!match && weekCell && weekCell !== unreadableWeekCell) {
+                    unreadableWeekCell = weekCell;
+                    log.debug(
+                        "Attendance row without a week number; its VODs get no status"
+                    );
                 }
-            }
 
-            items.push({
-                week: currentWeek,
-                title,
-                requiredTime,
-                watchedTime,
-                status,
-                weekStatus: currentWeekStatus,
+                items.push({
+                    week: match?.[1] ? parseInt(match[1], 10) : 0,
+                    title: text(1),
+                    requiredTime: text(2),
+                    watchedTime: text(3),
+                    status: text(4),
+                    weekStatus: text(5),
+                });
             });
         }
 
