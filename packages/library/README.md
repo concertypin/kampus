@@ -45,12 +45,12 @@ for (const course of courses) {
 
 크롤러의 메인 클래스입니다. 생성자 옵션:
 
-| 옵션       | 타입             | 기본값                          | 설명                       |
-| ---------- | ---------------- | ------------------------------- | -------------------------- |
-| `storage`  | `SessionStorage` | `MemoryStorage`                 | 세션 저장소                |
-| `baseUrl`  | `string`         | `https://ecampus.kangnam.ac.kr` | 대상 사이트 (아래 참고)    |
-| `timeout`  | `number`         | `10000`                         | 요청 타임아웃 (ms)         |
-| `logLevel` | `LogLevel`       | `warn`                          | 로깅 레벨 (아래 로깅 참고) |
+| 옵션       | 타입             | 기본값                            | 설명                              |
+| ---------- | ---------------- | --------------------------------- | --------------------------------- |
+| `storage`  | `SessionStorage` | `MemoryStorage`                   | 세션 저장소                       |
+| `baseUrl`  | `string`         | `https://ecampus.kangnam.ac.kr`   | 대상 사이트 (아래 참고)           |
+| `timeout`  | `number`         | `10000`                           | 요청 타임아웃 (ms)                |
+| `logLevel` | `LogLevel`       | 없음 (전역 로거의 현재 레벨 유지) | 전역 로거의 레벨 (아래 로깅 참고) |
 
 `baseUrl`은 요청을 보낼 사이트의 origin입니다 (모의 서버를 가리킬 때 사용). 모든 요청과 로그인, 그리고 크롤러가 돌려주는 모든 URL이 이 origin을 쓰며, 세션 쿠키와 저장된 자격증명은 이 origin에만 전송됩니다. `https`여야 하고(`http`는 `localhost`만 허용) 경로를 포함할 수 없습니다. 그렇지 않으면 생성자가 예외를 던집니다.
 
@@ -367,7 +367,7 @@ STORAGE_KEYS.credentials; // "credentials": JSON 문자열 {"username": "...", "
 
 ### 로깅
 
-`LogLevel` 타입을 지원하며 생성자의 `logLevel` 옵션 또는 `setLogLevel()`로 설정할 수 있습니다. 로그는 stderr로 출력되며, 기본 레벨은 `warn`입니다.
+`LogLevel` 타입을 지원하며 생성자의 `logLevel` 옵션 또는 `setLogLevel()`로 설정할 수 있습니다. 로거는 프로세스 전역에 하나뿐이므로 `logLevel` 옵션은 모든 인스턴스에 적용되는 전역 레벨을 바꾸고, 옵션을 생략하면 전역 로거에 이미 설정된 레벨을 그대로 둡니다. 로그는 stderr로 출력되며, 전역 로거의 초기 레벨은 `warn`입니다.
 
 ```typescript
 type LogLevel = "silent" | "error" | "warn" | "info" | "debug" | "trace";

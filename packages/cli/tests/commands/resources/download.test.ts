@@ -298,6 +298,26 @@ describe("resources download command", () => {
         );
     });
 
+    it("should print a multi-line download error on the file's own line", async () => {
+        getSessionMock.mockResolvedValue("MoodleSession=abc123; path=/");
+        getResourceDetailMock.mockResolvedValue(sampleResource);
+        vi.stubGlobal(
+            "fetch",
+            vi.fn<typeof fetch>(() =>
+                Promise.reject(new Error("first line\nsecond\r\nthird\tend"))
+            )
+        );
+
+        const { stdout } = await run(["123456", "-o", out]);
+
+        const failLine = stdout
+            .split("\n")
+            .find((line) => line.includes("lecture1.pdf"));
+        expect(failLine).toContain("lecture1.pdf - first line");
+        expect(failLine).toContain("first line second  third end");
+        expect(stdout).not.toMatch(/^second/m);
+    });
+
     it("should report a resource the site itself reports as unavailable, without downloading", async () => {
         getSessionMock.mockResolvedValue("MoodleSession=abc123; path=/");
         getResourceDetailMock.mockResolvedValue({

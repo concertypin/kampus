@@ -154,6 +154,14 @@ describe("sanitizeFilename: invisible characters", () => {
         );
     });
 
+    it("removes Unicode tag characters, which can hide text in a name", () => {
+        // U+E0041 TAG LATIN CAPITAL LETTER A and U+E007F CANCEL TAG,
+        // each a surrogate pair in UTF-16
+        expect(sanitizeFilename("notes\u{E0041}\u{E007F}.pdf")).toBe(
+            "notes.pdf"
+        );
+    });
+
     it("removes terminal escape sequences' control characters", () => {
         expect(sanitizeFilename("\u001b[31mred\u001b[0m\u0007.txt")).toBe(
             "[31mred[0m.txt"

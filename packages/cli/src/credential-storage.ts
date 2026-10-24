@@ -42,16 +42,22 @@ function warnKeychainUnavailable(): void {
     );
 }
 
-/** Thrown when the credentials could not be removed from the OS keychain. */
+/**
+ * Thrown when the credentials could not be removed from the OS keychain.
+ * The message is fixed; the keyring's own error is the `cause`.
+ */
 export class KeychainDeleteError extends Error {
-    constructor() {
-        super("Could not remove the credentials from the OS keychain");
+    constructor(options?: ErrorOptions) {
+        super("Could not remove the credentials from the OS keychain", options);
         this.name = "KeychainDeleteError";
     }
 }
 
 /** Marks a failed keychain call; the caller falls back to the file. */
 const KEYCHAIN_FAILED = Symbol("keychain failed");
+
+/** The outcome of a keychain call, with the error when it failed. */
+type KeychainResult<T> = { ok: true; value: T } | { ok: false; error: unknown };
 
 /**
  * Keeps the `credentials` key in the Windows Credential Manager and every
@@ -83,16 +89,27 @@ export class KeychainCredentialStorage implements SessionStorage {
         return this.useKeychain && key === STORAGE_KEYS.credentials;
     }
 
-    /** Creates the entry once and reuses it; undefined (after a warning) on failure. */
-    private async getEntry(): Promise<KeyringEntry | undefined> {
+    /** Creates the entry once and reuses it; throws if the keyring cannot be loaded. */
+    private async getEntry(): Promise<KeyringEntry> {
         if (this.entry) return this.entry;
+        const { Entry } = await this.loadKeyring();
+        this.entry = new Entry(this.service, this.account);
+        return this.entry;
+    }
+
+    /**
+     * Runs `fn` on the entry and reports the error if loading the keyring or
+     * `fn` throws (after a warning).
+     */
+    private async tryEntry<T>(
+        fn: (entry: KeyringEntry) => T
+    ): Promise<KeychainResult<T>> {
         try {
-            const { Entry } = await this.loadKeyring();
-            this.entry = new Entry(this.service, this.account);
-            return this.entry;
-        } catch {
+            const entry = await this.getEntry();
+            return { ok: true, value: fn(entry) };
+        } catch (error: unknown) {
             warnKeychainUnavailable();
-            return undefined;
+            return { ok: false, error };
         }
     }
 
@@ -100,14 +117,8 @@ export class KeychainCredentialStorage implements SessionStorage {
     private async withEntry<T>(
         fn: (entry: KeyringEntry) => T
     ): Promise<T | typeof KEYCHAIN_FAILED> {
-        const entry = await this.getEntry();
-        if (!entry) return KEYCHAIN_FAILED;
-        try {
-            return fn(entry);
-        } catch {
-            warnKeychainUnavailable();
-            return KEYCHAIN_FAILED;
-        }
+        const result = await this.tryEntry(fn);
+        return result.ok ? result.value : KEYCHAIN_FAILED;
     }
 
     /** Writes `value`, reads it back and compares; removes the entry on a mismatch. */
@@ -119,12 +130,19 @@ export class KeychainCredentialStorage implements SessionStorage {
         throw new Error("Keychain read-back mismatch");
     }
 
-    /** Moves `value` into the keychain and drops the file copy only once it reads back. */
+    /**
+     * Moves `value` into the keychain and drops the file copy only once it
+     * reads back. Dropping it is best effort, like the duplicate cleanup in
+     * get(): the value is safe in the keychain, the read must not fail, and
+     * the next get() finds an identical copy and tries again.
+     */
     private async migrate(key: string, value: string): Promise<void> {
         const done = await this.withEntry((entry) =>
             KeychainCredentialStorage.writeVerified(entry, value)
         );
-        if (done !== KEYCHAIN_FAILED) await this.file.delete(key);
+        if (done !== KEYCHAIN_FAILED) {
+            await this.file.delete(key).catch(() => undefined);
+        }
     }
 
     /**
@@ -221,20 +239,22 @@ export class KeychainCredentialStorage implements SessionStorage {
 
     private async deleteNow(key: string): Promise<void> {
         const keychainRemoved = this.isCredentials(key)
-            ? await this.withEntry((entry) => entry.deletePassword())
+            ? await this.tryEntry((entry) => entry.deletePassword())
             : undefined;
         await this.file.delete(key);
-        if (keychainRemoved === KEYCHAIN_FAILED)
-            throw new KeychainDeleteError();
+        if (keychainRemoved && !keychainRemoved.ok) {
+            throw new KeychainDeleteError({ cause: keychainRemoved.error });
+        }
     }
 
     private async clearNow(): Promise<void> {
         const keychainRemoved = this.useKeychain
-            ? await this.withEntry((entry) => entry.deletePassword())
+            ? await this.tryEntry((entry) => entry.deletePassword())
             : undefined;
         await this.file.clear();
-        if (keychainRemoved === KEYCHAIN_FAILED)
-            throw new KeychainDeleteError();
+        if (keychainRemoved && !keychainRemoved.ok) {
+            throw new KeychainDeleteError({ cause: keychainRemoved.error });
+        }
     }
 
     /**

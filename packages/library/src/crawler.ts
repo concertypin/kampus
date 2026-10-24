@@ -560,12 +560,23 @@ function isModulePage(doc: Document, pageId: string, cmid: string): boolean {
  * The short error for a page that is not the activity page asked for: the
  * text of Moodle's `.errormessage` (e.g. "Invalid course module ID"), else
  * the HTTP status. Never the page itself, which is server-controlled.
+ *
+ * @param pageName - When given and the page has no error message, the error
+ * says the page is not this page (`not the assignment page (HTTP 200)`)
+ * instead of a bare status that reads like success.
  */
-function pageLoadError(doc: Document, status: number): string {
-    return (
-        normalizeText(doc.querySelector(".errormessage")?.textContent) ||
-        `HTTP ${status}`
+function pageLoadError(
+    doc: Document,
+    status: number,
+    pageName?: string
+): string {
+    const message = normalizeText(
+        doc.querySelector(".errormessage")?.textContent
     );
+    if (message) return message;
+    return pageName
+        ? `not the ${pageName} page (HTTP ${status})`
+        : `HTTP ${status}`;
 }
 
 /**
@@ -1723,7 +1734,7 @@ export class Crawler {
 
         if (!isModulePage(doc, "page-mod-assign-view", cmid)) {
             throw new Error(
-                `Failed to load assignment ${cmid}: ${pageLoadError(doc, response.status)}`
+                `Failed to load assignment ${cmid}: ${pageLoadError(doc, response.status, "assignment")}`
             );
         }
 
@@ -2778,7 +2789,7 @@ export class Crawler {
         const viewDoc = this.parseHtml(viewHtml);
         if (!isModulePage(viewDoc, "page-mod-vod-view", cmid)) {
             throw new Error(
-                `Failed to load VOD ${cmid}: ${pageLoadError(viewDoc, viewResponse.status)}`
+                `Failed to load VOD ${cmid}: ${pageLoadError(viewDoc, viewResponse.status, "VOD")}`
             );
         }
         const description =

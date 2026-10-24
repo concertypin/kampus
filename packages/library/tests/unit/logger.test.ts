@@ -149,4 +149,23 @@ describe("message formatting", () => {
         getLogger().info(undefined, 10n);
         expect(stderr).toHaveBeenCalledWith("info undefined 10");
     });
+
+    it("does not throw for a circular object without a prototype", () => {
+        const circular: Record<string, unknown> = {};
+        Object.setPrototypeOf(circular, null);
+        circular["self"] = circular;
+        expect(() => getLogger().info(circular)).not.toThrow();
+        expect(stderr).toHaveBeenCalledWith("info [object Object]");
+    });
+
+    it("does not throw when toString throws", () => {
+        const hostile = {
+            toJSON: () => undefined,
+            toString: () => {
+                throw new Error("boom");
+            },
+        };
+        expect(() => getLogger().info(hostile)).not.toThrow();
+        expect(stderr).toHaveBeenCalledWith("info [object Object]");
+    });
 });

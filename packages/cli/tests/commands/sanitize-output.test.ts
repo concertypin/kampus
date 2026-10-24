@@ -47,12 +47,14 @@ vi.mock("@/log-level", () => ({
     getLogLevel: vi.fn<() => LogLevel | undefined>(() => undefined),
 }));
 
-// ffmpeg (vod download)
-const mockSpawnProc = Object.assign(new EventEmitter(), {
-    stderr: new EventEmitter(),
-});
-const mockSpawn = vi.fn<(cmd: string, args: string[]) => typeof mockSpawnProc>(
-    () => mockSpawnProc
+// ffmpeg (vod download). Each spawn gets a process of its own, so no
+// listener or event of one run reaches another.
+type MockProc = EventEmitter & { stderr: EventEmitter };
+function newMockProc(): MockProc {
+    return Object.assign(new EventEmitter(), { stderr: new EventEmitter() });
+}
+const mockSpawn = vi.fn<(cmd: string, args: string[]) => MockProc>(() =>
+    newMockProc()
 );
 vi.mock("node:child_process", () => ({
     spawn: (cmd: string, args: string[]) => mockSpawn(cmd, args),
@@ -548,8 +550,9 @@ describe("text output of server-provided values", () => {
 
         it("prints the lecture name cleanly", async () => {
             mockSpawn.mockImplementation(() => {
-                setTimeout(() => mockSpawnProc.emit("close", 0), 5);
-                return mockSpawnProc;
+                const proc = newMockProc();
+                setTimeout(() => proc.emit("close", 0), 5);
+                return proc;
             });
 
             await run(vodCommand, args);
@@ -560,17 +563,15 @@ describe("text output of server-provided values", () => {
 
         it("keeps the last 10 lines of ffmpeg's log, sanitised", async () => {
             mockSpawn.mockImplementation(() => {
+                const proc = newMockProc();
                 setTimeout(() => {
                     for (let i = 1; i <= 30; i++) {
                         const line = i === 30 ? HOSTILE : `log-line-${i}`;
-                        mockSpawnProc.stderr.emit(
-                            "data",
-                            Buffer.from(`${line}\r\n`)
-                        );
+                        proc.stderr.emit("data", Buffer.from(`${line}\r\n`));
                     }
-                    mockSpawnProc.emit("close", 1);
+                    proc.emit("close", 1);
                 }, 5);
-                return mockSpawnProc;
+                return proc;
             });
 
             await run(vodCommand, args);

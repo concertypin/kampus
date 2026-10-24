@@ -4,11 +4,20 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { downloadFile } from "@/commands/lib/download-utils";
 
-// Host names resolve to a public address (no real DNS); IP literals such as
-// 127.0.0.1 are checked as they are.
+// No real DNS: `localhost` resolves to the loopback address, as the hosts
+// file makes it, and every other host name to a public address. IP literals
+// such as 127.0.0.1 are checked as they are.
 vi.mock("node:dns/promises", () => ({
-    lookup: vi.fn<() => Promise<Array<{ address: string; family: number }>>>(
-        () => Promise.resolve([{ address: "203.0.113.10", family: 4 }])
+    lookup: vi.fn<
+        (
+            hostname: string
+        ) => Promise<Array<{ address: string; family: number }>>
+    >((hostname) =>
+        Promise.resolve([
+            hostname === "localhost"
+                ? { address: "127.0.0.1", family: 4 }
+                : { address: "203.0.113.10", family: 4 },
+        ])
     ),
 }));
 
@@ -192,6 +201,16 @@ describe("downloadFile on a configured site", () => {
         await expect(
             downloadFile(
                 "http://127.0.0.1:8080/pluginfile.php/1/a.pdf",
+                join(dir, "a.pdf"),
+                SESSION,
+                { allowedDir: dir }
+            )
+        ).rejects.toThrow("Blocked download to internal host");
+        // A name that resolves to loopback, so only the waiver lets the
+        // localhost row of the loopback-site test through
+        await expect(
+            downloadFile(
+                "http://localhost:8080/pluginfile.php/1/a.pdf",
                 join(dir, "a.pdf"),
                 SESSION,
                 { allowedDir: dir }
