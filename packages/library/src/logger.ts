@@ -47,7 +47,7 @@ function formatError(
 ): string {
     seen.add(err);
     const head =
-        includeStack && typeof err.stack === "string"
+        includeStack && typeof err.stack === "string" && err.stack !== ""
             ? err.stack
             : `${err.name}: ${err.message}`;
     const { cause } = err;

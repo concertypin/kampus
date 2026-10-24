@@ -574,6 +574,30 @@ describe("Crawler VOD and attendance weeks", () => {
             ).toEqual(["O", "X"]);
         });
 
+        it("does not take a lecture for its sub-lectures (1-1, 1.5)", async () => {
+            expect(
+                await statuses(
+                    ["Lecture 1", "Lecture 2"],
+                    [["Lecture 1-1", "O"]]
+                )
+            ).toEqual(["-", "-"]);
+            expect(
+                await statuses(["Lecture 1", "Other"], [["Lecture 1.5", "O"]])
+            ).toEqual(["-", "-"]);
+        });
+
+        it("pairs repeated contained titles in order when they follow the VOD order", async () => {
+            expect(
+                await statuses(
+                    ["Part", "Part"],
+                    [
+                        ["Part A", "O"],
+                        ["Part B", "X"],
+                    ]
+                )
+            ).toEqual(["O", "X"]);
+        });
+
         it("does not take a number prefix for the same lecture", async () => {
             expect(
                 await statuses(

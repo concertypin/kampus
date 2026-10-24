@@ -455,10 +455,20 @@ function containsWord(text: string, part: string): boolean {
         at >= 0;
         at = text.indexOf(part, at + 1)
     ) {
+        // A joiner between letters or digits continues the word: "1-1",
+        // "1.5" and "1_2" are one token, so "Lecture 1" is not in them.
+        const isJoiner = (ch: string | undefined): boolean =>
+            ch === "-" || ch === "." || ch === "_";
         const before = text[at - 1];
         const after = text[at + part.length];
-        const startsWord = !isWordChar(before) || !isWordChar(part[0]);
-        const endsWord = !isWordChar(after) || !isWordChar(part.at(-1));
+        const continuesBefore =
+            isWordChar(before) ||
+            (isJoiner(before) && isWordChar(text[at - 2]));
+        const continuesAfter =
+            isWordChar(after) ||
+            (isJoiner(after) && isWordChar(text[at + part.length + 1]));
+        const startsWord = !continuesBefore || !isWordChar(part[0]);
+        const endsWord = !continuesAfter || !isWordChar(part.at(-1));
         if (startsWord && endsWord) return true;
     }
     return false;
@@ -484,9 +494,11 @@ function sectionNumber(section: Element): number | undefined {
  * module id, so rows are matched by title. When the week has as many rows as
  * VODs and each row's title matches the VOD at the same position, the rows
  * are taken in order: this keeps repeated titles apart, which a title search
- * cannot. Otherwise: exact title first, then one title containing the other
- * as whole words ("Lecture 1" is not in "Lecture 10"). Containment is ambiguous when titles share a prefix ("Lecture 1"
- * is in "Lecture 10 (VOD)"), so a VOD takes a row by containment only while
+ * cannot; a row whose title is exactly another VOD's name is not taken that
+ * way. Otherwise: exact title first, then one title containing the other as
+ * whole words ("Lecture 1" is not in "Lecture 10" or "Lecture 1-1").
+ * Containment can still be ambiguous ("Part" is in "Part A" and "Part B"),
+ * so a VOD takes a row by containment only while
  * that row is its single remaining candidate and no other VOD has it as its
  * single candidate; each pairing narrows the others, so the step repeats.
  * Only when no unpaired VOD has a containment candidate left and the week has
