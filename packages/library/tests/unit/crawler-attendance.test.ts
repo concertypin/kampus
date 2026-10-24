@@ -586,6 +586,18 @@ describe("Crawler VOD and attendance weeks", () => {
             ).toEqual(["-", "-"]);
         });
 
+        it("still matches a title that goes on after a joiner and a space", async () => {
+            expect(
+                await statuses(
+                    ["Lecture 1", "Lecture 2", "Lecture 3"],
+                    [
+                        ["Lecture 2. Intro", "X"],
+                        ["Lecture 1 - intro", "O"],
+                    ]
+                )
+            ).toEqual(["O", "X", "-"]);
+        });
+
         it("pairs repeated contained titles in order when they follow the VOD order", async () => {
             expect(
                 await statuses(

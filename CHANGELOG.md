@@ -61,7 +61,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 #### Library (`@concertypin/ecampus-crawler`)
 
 - Log levels now use consola's `LogLevels`; the default level is `warn`
-- Log arguments are formatted individually, so plain objects print as JSON instead of `[object Object]` (an Error inside an object prints as `name: message`), and an Error's `cause` chain is printed. Formatting never throws: a value whose `toString` throws or is missing (e.g. a circular object without a prototype) prints as `[object Object]`, and a value that cannot be formatted at all (e.g. a revoked Proxy passed next to a message) as `[unprintable]`; an Error whose `stack` is not a string prints as `name: message`
+- Log arguments are formatted individually, so plain objects print as JSON instead of `[object Object]` (an Error inside an object prints as `name: message`), and an Error's `cause` chain is printed. Formatting never throws: a value whose `toString` throws or is missing (e.g. a circular object without a prototype) prints as `[object Object]`, and a value that cannot be formatted at all (e.g. a revoked Proxy passed next to a message) as `[unprintable]`; an Error whose `stack` is empty or not a string prints as `name: message`
 - Errors that are rethrown to the caller are logged at `debug` instead of `error`; download URLs are logged at `debug`
 
 ## [0.3.1] - 2026-10-21
