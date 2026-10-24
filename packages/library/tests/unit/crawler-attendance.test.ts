@@ -313,6 +313,24 @@ describe("Crawler VOD and attendance weeks", () => {
             expect(vods[0]?.status).toBe("O");
         });
 
+        it("does not pair a VOD with the empty placeholder row of its week", async () => {
+            // A week without a tracked VOD still has one row with empty cells.
+            respondWith(
+                attendanceWith([[6, "", "", "", ""]]),
+                courseWith([
+                    {
+                        id: "section-6",
+                        title: "-",
+                        vods: [{ cmid: "350109", name: "Not tracked yet" }],
+                    },
+                ])
+            );
+
+            const vods = await crawler.getVods("340001");
+
+            expect(vods.map((v) => [v.week, v.status])).toEqual([[6, "-"]]);
+        });
+
         it("keeps a VOD without an attendance row, with no status", async () => {
             respondWith(
                 attendanceWith([[2, "Lecture", "10:00", "10:30", "O"]]),
